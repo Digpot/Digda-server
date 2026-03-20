@@ -7,7 +7,7 @@ spring:
       - file:env/prod.env[.properties]
 
   application:
-    name: history-prod
+    name: digda-prod
 
   aot:
     enabled: false  # AOT 비활성화

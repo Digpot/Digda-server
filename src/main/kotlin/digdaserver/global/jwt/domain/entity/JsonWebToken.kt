@@ -1,6 +1,6 @@
 package digdaserver.global.jwt.domain.entity
 
-import digdaserver.domain.member.domain.entity.Role
+import digdaserver.domain.user.domain.entity.Role
 import org.springframework.data.annotation.Id
 import org.springframework.data.redis.core.RedisHash
 

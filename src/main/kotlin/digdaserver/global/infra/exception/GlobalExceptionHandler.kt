@@ -1,7 +1,7 @@
 package digdaserver.global.infra.exception
 
+import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
-import digdaserver.global.infra.exception.error.HistoryException
 import digdaserver.global.infra.exception.error.response.ErrorResponse
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
@@ -15,13 +15,9 @@ class GlobalExceptionHandler {
 
     private val log = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
 
-    @ExceptionHandler(HistoryException::class)
-    fun handleFlowException(e: HistoryException): ResponseEntity<ErrorResponse> {
-        log.error(
-            "HistoryException caught - ErrorCode: {}, Message: {}",
-            e.errorCode,
-            e.message
-        )
+    @ExceptionHandler(DigdaException::class)
+    fun handleDigdaException(e: DigdaException): ResponseEntity<ErrorResponse> {
+        log.error("DigdaException - code: {}, message: {}", e.errorCode.code, e.message)
 
         return ResponseEntity
             .status(e.httpStatusCode)
@@ -30,11 +26,11 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception::class)
     fun handleUnexpectedException(e: Exception): ResponseEntity<ErrorResponse> {
-        log.error("Unexpected exception caught", e)
+        log.error("Unexpected exception", e)
 
         return ResponseEntity
             .status(500)
-            .body(ErrorResponse.of(ErrorCode.SERVER_UNTRACKED_ERROR))
+            .body(ErrorResponse.of(ErrorCode.SERVER_ERROR))
     }
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
@@ -42,7 +38,7 @@ class GlobalExceptionHandler {
         val root = e.rootCause
 
         return when (root) {
-            is HistoryException ->
+            is DigdaException ->
                 ResponseEntity
                     .status(root.httpStatusCode)
                     .body(ErrorResponse.of(root))
@@ -60,11 +56,13 @@ class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
-    fun handleValidationException(ex: MethodArgumentNotValidException): ResponseEntity<Map<String, String>> {
-        val errors = ex.bindingResult.fieldErrors.associate {
+    fun handleValidationException(ex: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
+        val details = ex.bindingResult.fieldErrors.associate {
             it.field to (it.defaultMessage ?: "잘못된 값입니다.")
         }
 
-        return ResponseEntity.badRequest().body(errors)
+        return ResponseEntity
+            .badRequest()
+            .body(ErrorResponse.of(ErrorCode.PARAMETER_VALIDATION_ERROR, details))
     }
 }

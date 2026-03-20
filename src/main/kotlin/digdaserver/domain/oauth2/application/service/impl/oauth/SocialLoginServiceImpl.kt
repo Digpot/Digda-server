@@ -1,8 +1,8 @@
 package digdaserver.domain.oauth2.application.service.impl.oauth
 
-import digdaserver.domain.member.domain.entity.Member
-import digdaserver.domain.member.domain.entity.Role
-import digdaserver.domain.member.domain.repository.MemberRepository
+import digdaserver.domain.user.domain.entity.Role
+import digdaserver.domain.user.domain.entity.User
+import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.domain.oauth2.application.service.CreateAccessTokenAndRefreshTokenService
 import digdaserver.domain.oauth2.application.service.OAuth2Service
 import digdaserver.domain.oauth2.application.service.SocialLoginService
@@ -11,10 +11,8 @@ import digdaserver.domain.oauth2.presentation.dto.req.SocialTokenRequest
 import digdaserver.domain.oauth2.presentation.dto.res.LoginToken
 import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoTokenResponse
 import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoUserResponse
-import digdaserver.domain.point.domain.entity.Point
-import digdaserver.domain.point.domain.repository.PointRepository
 import digdaserver.global.infra.exception.error.ErrorCode
-import digdaserver.global.infra.exception.error.HistoryException
+import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.jwt.domain.entity.SocialToken
 import digdaserver.global.jwt.domain.repository.SocialTokenRepository
 import jakarta.transaction.Transactional
@@ -28,9 +26,8 @@ import java.time.LocalDateTime
 class SocialLoginServiceImpl(
     oauth2Services: List<OAuth2Service>,
     private val tokenService: CreateAccessTokenAndRefreshTokenService,
-    private val userRepository: MemberRepository,
+    private val userRepository: UserRepository,
     private val socialTokenRepository: SocialTokenRepository,
-    private val pointRepository: PointRepository,
 
     @Value("\${oauth2.apple.profile}")
     private val appleProfile: String
@@ -53,7 +50,7 @@ class SocialLoginServiceImpl(
         }
 
         if (!isValidToken!!) {
-            throw HistoryException(ErrorCode.INVALID_PARAMETER, "유효하지 않은 토큰입니다")
+            throw DigdaException(ErrorCode.INVALID_PARAMETER, "유효하지 않은 토큰입니다")
         }
 
         val userResponse: KakaoUserResponse =
@@ -67,10 +64,11 @@ class SocialLoginServiceImpl(
 
         val tokenResponse = oauth2Service.convertToTokenResponse(tokenRequest)
 
-        val user = createSocialUser(provider, tokenResponse, userResponse)
+        // TODO: Auth API 구현 시 소셜 로그인 → User 생성/조회 로직 재설계 필요
+        val user = findOrCreateUser(provider, userResponse)
 
         return tokenService.createAccessTokenAndRefreshToken(
-            user.id,
+            user.id.toString(),
             user.role,
             user.email
         )
@@ -81,22 +79,15 @@ class SocialLoginServiceImpl(
 
         val tokenResponse = oauth2Service.getTokens(code)
 
-        log.info("===== 소셜에서 받은 토큰 정보 =====")
-        log.info("Access Token: {}", tokenResponse.accessToken)
-        log.info("Refresh Token: {}", tokenResponse.refreshToken)
-        log.info("Expires In: {}", tokenResponse.expiresIn)
-        log.info("================================")
-
-        // accessToken 없으면 바로 예외
         val accessToken = tokenResponse.accessToken
-            ?: throw HistoryException(ErrorCode.INVALID_PARAMETER, "access token 없음")
+            ?: throw DigdaException(ErrorCode.INVALID_PARAMETER, "access token 없음")
 
         val userResponse = oauth2Service.getUserInfo(accessToken)
 
-        val user = createSocialUser(provider, tokenResponse, userResponse)
+        val user = findOrCreateUser(provider, userResponse)
 
         return tokenService.createAccessTokenAndRefreshToken(
-            user.id,
+            user.id.toString(),
             user.role,
             user.email
         )
@@ -111,91 +102,36 @@ class SocialLoginServiceImpl(
 
     private fun getOAuth2Service(provider: SocialProvider): OAuth2Service {
         val service = oauth2ServicesMap[provider]
-            ?: throw HistoryException(ErrorCode.INVALID_PARAMETER)
+            ?: throw DigdaException(ErrorCode.INVALID_PARAMETER)
 
         log.info("OAuth2Service 조회 성공: {}", service::class.simpleName)
         return service
     }
 
-    private fun createSocialUser(
+    // TODO: Auth API 구현 시 전면 재설계 필요 (User 엔티티 구조 변경됨)
+    private fun findOrCreateUser(
         provider: SocialProvider,
-        tokenResponse: KakaoTokenResponse,
         userResponse: KakaoUserResponse
-    ): Member {
-        if (userResponse.id == null || userResponse.id.isBlank()) {
-            throw IllegalArgumentException("소셜 사용자 ID가 유효하지 않습니다.")
+    ): User {
+        val email = userResponse.getEmail()
+            ?: throw DigdaException(ErrorCode.INVALID_PARAMETER, "이메일 정보가 없습니다")
+
+        val existingUser = userRepository.findByEmail(email).orElse(null)
+
+        if (existingUser != null) {
+            return existingUser
         }
 
-        var user = userRepository.findById(userResponse.id).orElse(null)
+        val profileImage = if (provider == SocialProvider.APPLE) appleProfile else userResponse.getProfile()
 
-        if (user == null) {
-            val existingEmail = userResponse.getEmail()?.let { userRepository.findByEmail(it) }
-            if (existingEmail != null) {
-                if (existingEmail.isPresent) {
-                    throw HistoryException(ErrorCode.DUPLICATE_EMAIL)
-                }
-            }
-
-            val profileImage = if (provider == SocialProvider.APPLE) appleProfile else userResponse.getProfile()
-
-            user = userResponse.getEmail()?.let {
-                Member(
-                    id = userResponse.id,
-                    email = it,
-                    name = userResponse.getName()!!,
-                    profile = profileImage,
-                    socialProvider = provider,
-                    role = Role.USER
-                )
-            }
-
-            userRepository.save(user)
-
-            pointRepository.save(Point(member = user))
-        } else {
-            if (user.email != userResponse.getEmail()) {
-                val duplicate = userResponse.getEmail()?.let { userRepository.findByEmail(it) }
-                if (duplicate != null) {
-                    if (duplicate.isPresent && duplicate.get().id != user.id) {
-                        throw HistoryException(ErrorCode.DUPLICATE_EMAIL)
-                    }
-                }
-            }
-
-            userResponse.getEmail()?.let { user.updateEmail(it) }
-            user.updateIsActivateNameFlag()
-        }
-
-        saveSocialToken(user.id, provider, tokenResponse)
-
-        return user
-    }
-
-    private fun saveSocialToken(
-        userId: String,
-        provider: SocialProvider,
-        tokenResponse: KakaoTokenResponse
-    ) {
-        val expiresAt = LocalDateTime.now().plusSeconds(
-            tokenResponse.expiresIn ?: 3600L
+        val newUser = User(
+            email = email,
+            name = userResponse.getName() ?: "사용자",
+            profileImage = profileImage,
+            socialProvider = provider,
+            role = Role.USER
         )
 
-        val socialToken = tokenResponse.accessToken?.let {
-            tokenResponse.refreshToken?.let { it1 ->
-                SocialToken.of(
-                    userId = userId,
-                    provider = provider,
-                    accessToken = it,
-                    refreshToken = it1,
-                    expiresIn = expiresAt
-                )
-            }
-        }
-
-        socialTokenRepository.deleteByUserIdAndProvider(userId, provider)
-        if (socialToken == null) throw HistoryException(ErrorCode.JWT_ERROR_TOKEN)
-        socialTokenRepository.save(socialToken)
-
-        log.info("소셜 토큰 저장 완료: userId={}, provider={}", userId, provider)
+        return userRepository.save(newUser)
     }
 }

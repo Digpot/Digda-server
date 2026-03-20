@@ -1,7 +1,7 @@
 package digdaserver.domain.oauth2.infra
 
 import digdaserver.global.infra.exception.error.ErrorCode
-import digdaserver.global.infra.exception.error.HistoryException
+import digdaserver.global.infra.exception.error.DigdaException
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import org.slf4j.LoggerFactory
@@ -47,7 +47,7 @@ class AppleJwtUtils(
                 .compact()
         } catch (e: Exception) {
             log.error("Apple JWT 생성 실패", e)
-            throw HistoryException(ErrorCode.APPLE_JWT_ERROR)
+            throw DigdaException(ErrorCode.APPLE_JWT_ERROR)
         }
     }
 
@@ -66,7 +66,7 @@ class AppleJwtUtils(
             keyFactory.generatePrivate(spec)
         } catch (e: Exception) {
             log.error("Apple Private Key 파싱 실패", e)
-            throw HistoryException(ErrorCode.APPLE_ERROR_KEY)
+            throw DigdaException(ErrorCode.APPLE_KEY_PARSE_ERROR)
         }
     }
 }

@@ -6,7 +6,7 @@ import digdaserver.domain.oauth2.presentation.dto.req.SocialTokenRequest
 import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoTokenResponse
 import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoUserResponse
 import digdaserver.global.infra.exception.error.ErrorCode
-import digdaserver.global.infra.exception.error.HistoryException
+import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.feignclient.kakao.KakaoOAuth2URLFeignClient
 import digdaserver.global.infra.feignclient.kakao.KakaoOAuth2UserFeignClient
 import jakarta.transaction.Transactional
@@ -64,7 +64,7 @@ class KakaoOAuth2ServiceImpl(
             kakaoOAuth2UserFeignClient.getUserInfo("Bearer $accessToken")
         } catch (e: Exception) {
             log.error("카카오 사용자 정보 조회 실패: {}", e.message)
-            throw HistoryException(ErrorCode.INVALID_PROVIDER)
+            throw DigdaException(ErrorCode.INVALID_PROVIDER)
         }
     }
 

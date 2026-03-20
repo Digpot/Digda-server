@@ -86,7 +86,7 @@ class NaverOAuth2ServiceImpl(
             naverOAuth2UserFeignClient.getUserInfo("Bearer $accessToken")
         } catch (e: Exception) {
             log.error("카카오 사용자 정보 조회 실패: {}", e.message)
-            throw HistoryException(ErrorCode.INVALID_PROVIDER)
+            throw DigdaException(ErrorCode.INVALID_PROVIDER)
         }
     }*/
 

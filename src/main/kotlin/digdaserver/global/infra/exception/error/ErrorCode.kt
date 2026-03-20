@@ -1,51 +1,100 @@
 package digdaserver.global.infra.exception.error
 
 enum class ErrorCode(
-    val code: Int,
+    val code: String,
     val message: String,
     val httpCode: Int
 ) {
 
-    // Common
-    SERVER_UNTRACKED_ERROR(-100, "미등록 서버 에러입니다. 서버 팀에 연락주세요.", 500),
-    OBJECT_NOT_FOUND(-101, "조회된 객체가 없습니다.", 406),
-    INVALID_PARAMETER(-102, "잘못된 파라미터입니다.", 422),
-    PARAMETER_VALIDATION_ERROR(-103, "파라미터 검증 에러입니다.", 422),
-    PARAMETER_GRAMMAR_ERROR(-104, "파라미터 문법 에러입니다.", 422),
+    // ── Common ──
+    SERVER_ERROR("SERVER_ERROR", "서버 내부 오류가 발생했습니다.", 500),
+    INVALID_PARAMETER("INVALID_PARAMETER", "잘못된 파라미터입니다.", 400),
+    PARAMETER_VALIDATION_ERROR("PARAMETER_VALIDATION_ERROR", "파라미터 검증 에러입니다.", 400),
+    PARAMETER_GRAMMAR_ERROR("PARAMETER_GRAMMAR_ERROR", "잘못된 요청 형식입니다.", 400),
+    RESOURCE_NOT_FOUND("RESOURCE_NOT_FOUND", "요청한 리소스를 찾을 수 없습니다.", 404),
 
-    // Auth
-    UNAUTHORIZED(-200, "인증 자격이 없습니다.", 401),
-    FORBIDDEN(-201, "권한이 없습니다.", 403),
-    ID_ERROR_TOKEN(-202, "잘못된 ID 토큰입니다.", 401),
-    APPLE_ERROR_KEY(-202, "키 파싱 실패입니다.", 401),
-    JWT_ERROR_TOKEN(-202, "잘못된 토큰입니다.", 401),
-    JWT_EXPIRE_TOKEN(-203, "만료된 토큰입니다.", 401),
-    AUTHORIZED_ERROR(-204, "인증 과정 중 에러가 발생했습니다.", 500),
-    INVALID_ACCESS_TOKEN(-205, "Access Token이 유효하지 않습니다.", 401),
-    JWT_UNMATCHED_CLAIMS(-206, "토큰 인증 정보가 일치하지 않습니다", 401),
-    INVALID_REFRESH_TOKEN(-207, "Refresh Token이 유효하지 않습니다.", 401),
-    REFRESH_TOKEN_NOT_EXIST(-208, "Refresh Token이 DB에 존재하지 않습니다.", 401),
-    DUPLICATE_LOGIN_NOT_EXIST(-209, "중복 로그인은 허용되지 않습니다.", 401),
+    // ── Auth / JWT ──
+    UNAUTHORIZED("UNAUTHORIZED", "인증이 필요합니다.", 401),
+    FORBIDDEN("FORBIDDEN", "권한이 없습니다.", 403),
+    TOKEN_EXPIRED("TOKEN_EXPIRED", "토큰이 만료되었습니다. 재로그인이 필요합니다.", 401),
+    TOKEN_INVALID("TOKEN_INVALID", "유효하지 않은 토큰입니다.", 401),
+    ACCESS_TOKEN_INVALID("ACCESS_TOKEN_INVALID", "Access Token이 유효하지 않습니다.", 401),
+    REFRESH_TOKEN_INVALID("REFRESH_TOKEN_INVALID", "Refresh Token이 유효하지 않습니다.", 401),
+    REFRESH_TOKEN_NOT_FOUND("REFRESH_TOKEN_NOT_FOUND", "Refresh Token이 존재하지 않습니다.", 401),
+    DUPLICATE_LOGIN("DUPLICATE_LOGIN", "이미 로그인된 상태입니다.", 409),
 
-    // OAuth2
-    INVALID_PROVIDER(-220, "지원하지 않는 소셜 로그인 제공자입니다.", 400),
-    APPLE_JWT_ERROR(-221, "Apple JWT 생성 중 오류가 발생했습니다.", 500),
-    UNSUPPORTED_PROVIDER(-222, "지원하지 않는 OAuth2 제공자입니다.", 400),
+    // ── OAuth2 ──
+    INVALID_PROVIDER("INVALID_PROVIDER", "지원하지 않는 소셜 로그인 제공자입니다.", 400),
+    APPLE_JWT_ERROR("APPLE_JWT_ERROR", "Apple JWT 처리 중 오류가 발생했습니다.", 500),
+    APPLE_KEY_PARSE_ERROR("APPLE_KEY_PARSE_ERROR", "Apple 공개키 파싱에 실패했습니다.", 401),
+    ID_TOKEN_INVALID("ID_TOKEN_INVALID", "잘못된 ID 토큰입니다.", 401),
+    SOCIAL_AUTH_FAILED("SOCIAL_AUTH_FAILED", "소셜 인증에 실패했습니다.", 401),
 
-    // User
-    INVALID_ROLE(-210, "해당 역할이 존재하지 않습니다.", 400),
-    USER_NOT_EXIST(-211, "존재하지 않는 유저입니다.", 404),
-    DUPLICATE_EMAIL(-212, "이미 사용 중인 이메일입니다.", 409),
-    ADMIN_PERMISSION_REQUIRED(-213, "관리자 권한이 필요합니다.", 403),
+    // ── Auth (온보딩) ──
+    REQUIRED_TERMS_NOT_AGREED("REQUIRED_TERMS_NOT_AGREED", "필수 약관에 동의해야 합니다.", 400),
 
-    // OpenAI
-    OPENAI_NOT_EXIST(-300, "OpenAI 오류", 500),
-    IMAGE_UPLOAD_FAILED(-301, "이미지 주소가 존재하지 않습니다.", 404),
+    // ── User ──
+    USER_NOT_FOUND("USER_NOT_FOUND", "존재하지 않는 사용자입니다.", 404),
+    DUPLICATE_EMAIL("DUPLICATE_EMAIL", "이미 사용 중인 이메일입니다.", 409),
+    NAME_TOO_SHORT("NAME_TOO_SHORT", "닉네임은 2자 이상이어야 합니다.", 400),
+    NAME_TOO_LONG("NAME_TOO_LONG", "닉네임은 20자 이하여야 합니다.", 400),
+    STATUS_MESSAGE_TOO_LONG("STATUS_MESSAGE_TOO_LONG", "상태 메시지는 100자 이하여야 합니다.", 400),
+    INVALID_ROLE("INVALID_ROLE", "유효하지 않은 역할입니다.", 400),
 
-    // Point
-    POINT_NOT_EXIST(-1000, "해당 포인트가 존재하지 않습니다.", 404),
-    POINT_HISTORY_NOT_EXIST(-1001, "해당 포인트 내역이 존재하지 않습니다.", 404),
-    EVENT_PARTICIPATION_LIMIT_EXCEEDED(-1002, "이벤트 응모 가능 횟수를 초과했습니다.", 400),
-    INSUFFICIENT_POINT_FOR_HERITAGE(-1003, "포인트가 부족하여 문화재 이미지를 인식할 수 없습니다.", 400),
-    EVENT_NOT_EXIST(-1004, "존재하지 않는 이벤트입니다.", 404)
+    // ── Group ──
+    GROUP_NOT_FOUND("GROUP_NOT_FOUND", "존재하지 않는 그룹입니다.", 404),
+    GROUP_NAME_TOO_SHORT("GROUP_NAME_TOO_SHORT", "그룹명은 2자 이상이어야 합니다.", 400),
+    GROUP_NAME_TOO_LONG("GROUP_NAME_TOO_LONG", "그룹명은 20자 이하여야 합니다.", 400),
+    MAX_MEMBERS_BELOW_CURRENT("MAX_MEMBERS_BELOW_CURRENT", "현재 구성원 수보다 적은 값으로 설정할 수 없습니다.", 400),
+    GROUP_NOT_SCHEDULED_FOR_DELETION("GROUP_NOT_SCHEDULED_FOR_DELETION", "삭제 예약되지 않은 그룹입니다.", 400),
+    GROUP_ALREADY_DELETED("GROUP_ALREADY_DELETED", "이미 삭제된 그룹입니다.", 410),
+    OWNS_ACTIVE_GROUP("OWNS_ACTIVE_GROUP", "소유 중인 그룹이 있어 탈퇴할 수 없습니다. 방장을 양도해주세요.", 409),
+
+    // ── Invite ──
+    INVITE_CODE_INVALID("INVITE_CODE_INVALID", "존재하지 않는 초대 코드입니다.", 404),
+    INVITE_CODE_EXPIRED("INVITE_CODE_EXPIRED", "만료된 초대 코드입니다.", 410),
+    GROUP_FULL("GROUP_FULL", "그룹 인원이 초과되었습니다.", 409),
+    ALREADY_JOINED("ALREADY_JOINED", "이미 참여 중인 그룹입니다.", 409),
+
+    // ── Membership ──
+    NOT_GROUP_MEMBER("NOT_GROUP_MEMBER", "해당 그룹의 구성원이 아닙니다.", 403),
+    NOT_GROUP_OWNER("NOT_GROUP_OWNER", "방장 권한이 필요합니다.", 403),
+    CANNOT_REMOVE_OWNER("CANNOT_REMOVE_OWNER", "방장은 내보낼 수 없습니다.", 400),
+    USER_NOT_IN_GROUP("USER_NOT_IN_GROUP", "해당 그룹 구성원이 아닙니다.", 404),
+    OWNER_CANNOT_LEAVE("OWNER_CANNOT_LEAVE", "방장은 양도 후 탈퇴할 수 있습니다.", 400),
+
+    // ── Schedule ──
+    SCHEDULE_NOT_FOUND("SCHEDULE_NOT_FOUND", "존재하지 않는 일정입니다.", 404),
+    END_DATE_BEFORE_START("END_DATE_BEFORE_START", "종료일이 시작일보다 이전입니다.", 400),
+    END_TIME_BEFORE_START("END_TIME_BEFORE_START", "종료 시간이 시작 시간보다 이전입니다.", 400),
+    INVALID_PARTICIPANT("INVALID_PARTICIPANT", "참여자가 그룹 구성원이 아닙니다.", 400),
+
+    // ── Diary ──
+    DIARY_NOT_FOUND("DIARY_NOT_FOUND", "존재하지 않는 일기입니다.", 404),
+    FUTURE_DATE_NOT_ALLOWED("FUTURE_DATE_NOT_ALLOWED", "미래 날짜에는 일기를 작성할 수 없습니다.", 400),
+    INVALID_WEATHER_VALUE("INVALID_WEATHER_VALUE", "날씨 값은 0~3 범위여야 합니다.", 400),
+    INVALID_MOOD_VALUE("INVALID_MOOD_VALUE", "기분 값은 0~3 범위여야 합니다.", 400),
+    TOO_MANY_IMAGES("TOO_MANY_IMAGES", "이미지는 최대 5장까지 첨부할 수 있습니다.", 400),
+
+    // ── Comment ──
+    COMMENT_NOT_FOUND("COMMENT_NOT_FOUND", "존재하지 않는 댓글입니다.", 404),
+    COMMENT_TOO_LONG("COMMENT_TOO_LONG", "댓글은 200자 이하여야 합니다.", 400),
+
+    // ── Todo ──
+    TODO_NOT_FOUND("TODO_NOT_FOUND", "존재하지 않는 할 일입니다.", 404),
+    TODO_TEXT_TOO_LONG("TODO_TEXT_TOO_LONG", "할 일은 100자 이하여야 합니다.", 400),
+
+    // ── Notification ──
+    NOTIFICATION_NOT_FOUND("NOTIFICATION_NOT_FOUND", "존재하지 않는 알림입니다.", 404),
+
+    // ── Device ──
+    DEVICE_NOT_FOUND("DEVICE_NOT_FOUND", "존재하지 않는 디바이스입니다.", 404),
+
+    // ── Upload ──
+    FILE_TOO_LARGE("FILE_TOO_LARGE", "파일 크기가 5MB를 초과합니다.", 413),
+    INVALID_FILE_TYPE("INVALID_FILE_TYPE", "PNG 또는 JPEG 파일만 업로드할 수 있습니다.", 400),
+    IMAGE_NOT_FOUND("IMAGE_NOT_FOUND", "존재하지 않는 이미지입니다.", 404),
+
+    // ── Rate Limit ──
+    RATE_LIMIT_EXCEEDED("RATE_LIMIT_EXCEEDED", "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.", 429);
 }

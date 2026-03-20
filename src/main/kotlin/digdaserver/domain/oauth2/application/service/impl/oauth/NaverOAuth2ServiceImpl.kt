@@ -81,6 +81,15 @@ class NaverOAuth2ServiceImpl(
         TODO("Not yet implemented")
     }
 
+    /*override fun getUserInfo(accessToken: String): KakaoUserResponse {
+        return try {
+            naverOAuth2UserFeignClient.getUserInfo("Bearer $accessToken")
+        } catch (e: Exception) {
+            log.error("카카오 사용자 정보 조회 실패: {}", e.message)
+            throw DigdaException(ErrorCode.INVALID_PROVIDER)
+        }
+    }*/
+
     override fun getUserInfoFromIdToken(idToken: String): KakaoUserResponse {
         throw UnsupportedOperationException("네이버는 ID Token을 지원하지 않습니다")
     }

@@ -9,7 +9,7 @@ import digdaserver.domain.oauth2.presentation.dto.req.SocialTokenRequest
 import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoTokenResponse
 import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoUserResponse
 import digdaserver.global.infra.exception.error.ErrorCode
-import digdaserver.global.infra.exception.error.DigdaServerException
+import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.feignclient.ios.AppleOAuth2FeignClient
 import jakarta.transaction.Transactional
 import org.slf4j.LoggerFactory
@@ -83,7 +83,7 @@ class AppleOAuth2ServiceImpl(
     }
 
     override fun getUserInfo(accessToken: String): KakaoUserResponse {
-        throw DigdaServerException(ErrorCode.ID_ERROR_TOKEN)
+        throw DigdaException(ErrorCode.ID_TOKEN_INVALID)
     }
 
     override fun getUserInfoFromIdToken(idToken: String): KakaoUserResponse {
@@ -92,7 +92,7 @@ class AppleOAuth2ServiceImpl(
             return parseIdToken(idToken)
         } catch (e: Exception) {
             log.error("ID Token 파싱 실패", e)
-            throw DigdaServerException(ErrorCode.ID_ERROR_TOKEN)
+            throw DigdaException(ErrorCode.ID_TOKEN_INVALID)
         }
     }
 
@@ -115,13 +115,13 @@ class AppleOAuth2ServiceImpl(
     private fun parseIdToken(idToken: String): KakaoUserResponse {
         try {
             if (idToken.isBlank()) {
-                throw DigdaServerException(ErrorCode.ID_ERROR_TOKEN)
+                throw DigdaException(ErrorCode.ID_TOKEN_INVALID)
             }
 
             val parts = idToken.split(".")
             if (parts.size != 3) {
                 log.error("JWT 토큰 형식이 잘못됨. 파트 개수: {}", parts.size)
-                throw DigdaServerException(ErrorCode.JWT_ERROR_TOKEN)
+                throw DigdaException(ErrorCode.TOKEN_INVALID)
             }
 
             var payloadPart = parts[1]
@@ -133,14 +133,14 @@ class AppleOAuth2ServiceImpl(
                 Base64.getUrlDecoder().decode(payloadPart)
             } catch (e: Exception) {
                 log.error("Base64 디코딩 실패", e)
-                throw DigdaServerException(ErrorCode.ID_ERROR_TOKEN)
+                throw DigdaException(ErrorCode.ID_TOKEN_INVALID)
             }
 
             val payload = String(decodedBytes, StandardCharsets.UTF_8)
             val claims: JsonNode = objectMapper.readTree(payload)
 
             val sub = claims["sub"]?.asText()
-                ?: throw DigdaServerException(ErrorCode.ID_ERROR_TOKEN)
+                ?: throw DigdaException(ErrorCode.ID_TOKEN_INVALID)
 
             val email = claims["email"]?.asText()
 
@@ -161,7 +161,7 @@ class AppleOAuth2ServiceImpl(
             )
         } catch (e: Exception) {
             log.error("Apple ID Token 파싱 실패", e)
-            throw DigdaServerException(ErrorCode.ID_ERROR_TOKEN)
+            throw DigdaException(ErrorCode.ID_TOKEN_INVALID)
         }
     }
 }

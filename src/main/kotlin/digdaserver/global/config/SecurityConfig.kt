@@ -1,8 +1,8 @@
 package digdaserver.global.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import digdaserver.global.infra.exception.auth.DigdaServerExceptionFilter
-import digdaserver.global.infra.filter.DigdaServerJWTFilter
+import digdaserver.global.infra.exception.auth.DigdaAuthExceptionFilter
+import digdaserver.global.infra.filter.DigdaJWTFilter
 import digdaserver.global.jwt.util.JWTUtil
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -86,12 +86,12 @@ class SecurityConfig(
         }
 
         http.addFilterAfter(
-            DigdaServerExceptionFilter(objectMapper),
+            DigdaAuthExceptionFilter(objectMapper),
             CorsFilter::class.java
         )
 
         http.addFilterAfter(
-            DigdaServerJWTFilter(jwtUtil, excludedUrls),
+            DigdaJWTFilter(jwtUtil, excludedUrls),
             UsernamePasswordAuthenticationFilter::class.java
         )
 

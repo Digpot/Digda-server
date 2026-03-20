@@ -34,6 +34,15 @@ class AppleOAuth2FeignConfig {
                 response.reason()
             )
 
+            /**
+             * 필요하면 DigdaException으로 직접 감싸는 로직 활성화 가능
+             *
+             * when (response.status()) {
+             *     400, 401 -> throw DigdaException(ErrorCode.APPLE_JWT_ERROR)
+             *     in 500..599 -> throw DigdaException(ErrorCode.APPLE_JWT_ERROR)
+             * }
+             */
+
             return defaultDecoder.decode(methodKey, response)
         }
     }

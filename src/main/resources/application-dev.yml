@@ -4,7 +4,7 @@ spring:
       - file:env/dev.env[.properties]
 
   application:
-    name: history-dev
+    name: digda-dev
 
   aot:
     enabled: false  # AOT 비활성화

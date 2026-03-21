@@ -33,7 +33,8 @@ class DigdaJWTFilter(
         val method = request.method
 
         // 🔒 소셜 로그인 요청에 대한 중복 로그인 체크
-        if ((requestURI.contains("/api/oauth2/login") && method == "POST") ||
+        if ((requestURI == "/auth/login" && method == "POST") ||
+            (requestURI.contains("/api/oauth2/login") && method == "POST") ||
             (requestURI.contains("/api/oauth2/callback"))
         ) {
             val accessToken = jwtUtil.getAccessTokenFromHeaders(request)

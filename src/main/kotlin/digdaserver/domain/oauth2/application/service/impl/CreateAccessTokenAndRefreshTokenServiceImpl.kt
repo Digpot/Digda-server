@@ -41,13 +41,9 @@ class CreateAccessTokenAndRefreshTokenServiceImpl(
 
         jsonWebTokenRepository.save(jsonWebToken)
 
-        val nameFlag = onBoarding(userId)
+        val user = userRepository.findById(userId.toLong()).orElse(null)
+        val isNewUser = user?.terms == null
 
-        return LoginToken.of(accessToken, refreshToken, nameFlag)
-    }
-
-    // TODO: Auth API 구현 시 온보딩 로직 재설계 필요 (약관 동의 여부 기반)
-    private fun onBoarding(userId: String): Boolean {
-        return false
+        return LoginToken.of(accessToken, refreshToken, isNewUser)
     }
 }

@@ -5,8 +5,8 @@ import digdaserver.domain.oauth2.domain.entity.SocialProvider
 import digdaserver.domain.oauth2.presentation.dto.req.SocialTokenRequest
 import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoTokenResponse
 import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoUserResponse
-import digdaserver.global.infra.exception.error.ErrorCode
 import digdaserver.global.infra.exception.error.DigdaException
+import digdaserver.global.infra.exception.error.ErrorCode
 import digdaserver.global.infra.feignclient.kakao.KakaoOAuth2URLFeignClient
 import digdaserver.global.infra.feignclient.kakao.KakaoOAuth2UserFeignClient
 import jakarta.transaction.Transactional

@@ -1,8 +1,8 @@
 package digdaserver.global.jwt.util
 
 import digdaserver.domain.user.domain.entity.Role
-import digdaserver.global.infra.exception.error.ErrorCode
 import digdaserver.global.infra.exception.error.DigdaException
+import digdaserver.global.infra.exception.error.ErrorCode
 import io.jsonwebtoken.ExpiredJwtException
 import io.jsonwebtoken.JwtException
 import io.jsonwebtoken.Jwts

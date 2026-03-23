@@ -1,10 +1,5 @@
 package digdaserver.domain.oauth2.application.service.impl.oauth
 
-import digdaserver.domain.user.domain.entity.Role
-import digdaserver.domain.user.domain.entity.User
-import digdaserver.domain.user.domain.entity.UserNotificationSetting
-import digdaserver.domain.user.domain.entity.UserPrivacySetting
-import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.domain.oauth2.application.service.CreateAccessTokenAndRefreshTokenService
 import digdaserver.domain.oauth2.application.service.OAuth2Service
 import digdaserver.domain.oauth2.application.service.SocialLoginService
@@ -15,8 +10,13 @@ import digdaserver.domain.oauth2.presentation.dto.res.LoginResponse
 import digdaserver.domain.oauth2.presentation.dto.res.LoginToken
 import digdaserver.domain.oauth2.presentation.dto.res.UserResponse
 import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoUserResponse
-import digdaserver.global.infra.exception.error.ErrorCode
+import digdaserver.domain.user.domain.entity.Role
+import digdaserver.domain.user.domain.entity.User
+import digdaserver.domain.user.domain.entity.UserNotificationSetting
+import digdaserver.domain.user.domain.entity.UserPrivacySetting
+import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.global.infra.exception.error.DigdaException
+import digdaserver.global.infra.exception.error.ErrorCode
 import digdaserver.global.jwt.domain.repository.SocialTokenRepository
 import jakarta.transaction.Transactional
 import org.slf4j.LoggerFactory

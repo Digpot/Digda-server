@@ -1,12 +1,9 @@
 package digdaserver.domain.oauth2.application.service.impl
 
-import digdaserver.domain.user.domain.entity.Role
-import digdaserver.domain.user.domain.entity.User
-import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.domain.oauth2.application.service.CreateAccessTokenAndRefreshTokenService
 import digdaserver.domain.oauth2.presentation.dto.res.LoginToken
-import digdaserver.global.infra.exception.error.ErrorCode
-import digdaserver.global.infra.exception.error.DigdaException
+import digdaserver.domain.user.domain.entity.Role
+import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.global.jwt.domain.entity.JsonWebToken
 import digdaserver.global.jwt.domain.repository.JsonWebTokenRepository
 import digdaserver.global.jwt.util.JWTUtil

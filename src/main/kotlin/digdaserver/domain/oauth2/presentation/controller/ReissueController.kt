@@ -20,12 +20,17 @@ class ReissueController(
 
     @Operation(summary = "토큰 갱신", description = "Refresh Token으로 새로운 Access/Refresh Token을 발급합니다. (Rotation 적용)")
     @PostMapping("/auth/refresh")
-    fun refresh(@Valid @RequestBody request: RefreshRequest): ResponseEntity<RefreshResponse> {
+    fun refresh(
+        @Valid @RequestBody
+        request: RefreshRequest
+    ): ResponseEntity<RefreshResponse> {
         val loginToken = reissueService.reissue(request.refreshToken)
-        return ResponseEntity.ok(RefreshResponse(
-            accessToken = loginToken.accessToken,
-            refreshToken = loginToken.refreshToken
-        ))
+        return ResponseEntity.ok(
+            RefreshResponse(
+                accessToken = loginToken.accessToken,
+                refreshToken = loginToken.refreshToken
+            )
+        )
     }
 
     @Operation(summary = "[기존 호환] 토큰 재발급", description = "기존 호환용 토큰 재발급 API")

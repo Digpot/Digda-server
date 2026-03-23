@@ -8,8 +8,8 @@ import digdaserver.domain.oauth2.infra.AppleJwtUtils
 import digdaserver.domain.oauth2.presentation.dto.req.SocialTokenRequest
 import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoTokenResponse
 import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoUserResponse
-import digdaserver.global.infra.exception.error.ErrorCode
 import digdaserver.global.infra.exception.error.DigdaException
+import digdaserver.global.infra.exception.error.ErrorCode
 import digdaserver.global.infra.feignclient.ios.AppleOAuth2FeignClient
 import jakarta.transaction.Transactional
 import org.slf4j.LoggerFactory

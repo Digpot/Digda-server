@@ -1,7 +1,7 @@
 package digdaserver.domain.oauth2.infra
 
-import digdaserver.global.infra.exception.error.ErrorCode
 import digdaserver.global.infra.exception.error.DigdaException
+import digdaserver.global.infra.exception.error.ErrorCode
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import org.slf4j.LoggerFactory

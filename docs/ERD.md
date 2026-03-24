@@ -11,8 +11,8 @@
 erDiagram
     users["users (사용자)"] {
         binary_16 user_id PK "사용자 UUID"
-        varchar social_id "소셜 고유 ID"
-        enum social_provider "소셜 제공자 (KAKAO/NAVER/APPLE)"
+        varchar social_id "소셜 고유 ID (nullable — 관리자는 null)"
+        enum social_provider "제공자 (KAKAO/NAVER/APPLE/ADMIN)"
         varchar email "이메일 (nullable)"
         varchar name "닉네임 (2~20자)"
         varchar profile_image "프로필 이미지 URL"
@@ -256,7 +256,7 @@ erDiagram
 
 | Enum | 값 | 사용처 |
 |------|----|--------|
-| `SocialProvider` | KAKAO, NAVER, APPLE | users.social_provider |
+| `SocialProvider` | KAKAO, NAVER, APPLE, ADMIN | users.social_provider |
 | `Role` | USER, ADMIN | users.role |
 | `GroupRole` | OWNER, MEMBER | memberships.role |
 | `Platform` | IOS, ANDROID | devices.platform |

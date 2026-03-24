@@ -29,8 +29,8 @@ class User(
     @Column(name = "user_id", columnDefinition = "BINARY(16)")
     val id: UUID = UUID.randomUUID(),
 
-    @Column(name = "social_id", nullable = false)
-    val socialId: String,
+    @Column(name = "social_id")
+    val socialId: String? = null,
 
     var email: String?,
 

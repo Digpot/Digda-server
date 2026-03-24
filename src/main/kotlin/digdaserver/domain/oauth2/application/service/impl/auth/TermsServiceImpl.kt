@@ -10,6 +10,7 @@ import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
 import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
+import java.util.UUID
 
 @Service
 @Transactional
@@ -17,7 +18,7 @@ class TermsServiceImpl(
     private val userRepository: UserRepository
 ) : TermsService {
 
-    override fun agreeToTerms(userId: Long, request: TermsAgreeRequest): TermsAgreeResponse {
+    override fun agreeToTerms(userId: UUID, request: TermsAgreeRequest): TermsAgreeResponse {
         if (!request.termsOfService || !request.privacyPolicy || !request.ageConfirmation) {
             throw DigdaException(ErrorCode.REQUIRED_TERMS_NOT_AGREED)
         }

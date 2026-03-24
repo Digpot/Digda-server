@@ -70,16 +70,16 @@ class JWTUtil(
         }
     }
 
-    fun createAccessToken(id: String, role: Role, email: String): String =
+    fun createAccessToken(id: String, role: Role, email: String?): String =
         createJWT(id, role, email, "access", accessExpiration)
 
-    fun createRefreshToken(id: String, role: Role, email: String): String =
+    fun createRefreshToken(id: String, role: Role, email: String?): String =
         createJWT(id, role, email, "refresh", refreshExpiration)
 
     private fun createJWT(
         id: String,
         role: Role,
-        email: String,
+        email: String?,
         category: String,
         expiredMS: Long
     ): String {

@@ -10,6 +10,7 @@ import digdaserver.global.jwt.util.JWTUtil
 import jakarta.transaction.Transactional
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import java.util.UUID
 
 @Service
 @Transactional
@@ -24,7 +25,7 @@ class CreateAccessTokenAndRefreshTokenServiceImpl(
     override fun createAccessTokenAndRefreshToken(
         userId: String,
         role: Role,
-        email: String
+        email: String?
     ): LoginToken {
         val accessToken = jwtUtil.createAccessToken(userId, role, email)
         val refreshToken = jwtUtil.createRefreshToken(userId, role, email)
@@ -38,7 +39,7 @@ class CreateAccessTokenAndRefreshTokenServiceImpl(
 
         jsonWebTokenRepository.save(jsonWebToken)
 
-        val user = userRepository.findById(userId.toLong()).orElse(null)
+        val user = userRepository.findById(UUID.fromString(userId)).orElse(null)
         val isNewUser = user?.terms == null
 
         return LoginToken.of(accessToken, refreshToken, isNewUser)

@@ -136,10 +136,10 @@ class SocialLoginServiceImpl(
         provider: SocialProvider,
         userResponse: KakaoUserResponse
     ): Pair<User, Boolean> {
-        val email = userResponse.getEmail()
-            ?: throw DigdaException(ErrorCode.INVALID_PARAMETER, "이메일 정보가 없습니다")
+        val socialId = userResponse.id
+            ?: throw DigdaException(ErrorCode.INVALID_PARAMETER, "소셜 고유 ID가 없습니다")
 
-        val existingUser = userRepository.findByEmail(email).orElse(null)
+        val existingUser = userRepository.findBySocialIdAndSocialProvider(socialId, provider).orElse(null)
 
         if (existingUser != null) {
             val isNewUser = existingUser.terms == null
@@ -149,7 +149,8 @@ class SocialLoginServiceImpl(
         val profileImage = if (provider == SocialProvider.APPLE) appleProfile else userResponse.getProfile()
 
         val newUser = User(
-            email = email,
+            socialId = socialId,
+            email = userResponse.getEmail(),
             name = userResponse.getName() ?: "사용자",
             profileImage = profileImage,
             socialProvider = provider,

@@ -13,7 +13,7 @@ data class UserResponse(
     val name: String,
 
     @Schema(description = "이메일")
-    val email: String,
+    val email: String?,
 
     @Schema(description = "프로필 이미지 URL")
     val profileImage: String?,

@@ -84,10 +84,6 @@ oauth2:
     profile: ${APPLE_PROFILE}
 
 
-admin:
-  id: ${ADMIN_ID}
-
-
 cloud:
   aws:
     stack:
@@ -99,12 +95,4 @@ cloud:
     credentials:
       accessKey: ${S3_ACCESS_KEY}
       secretKey: ${S3_SECRET_KEY}
-
-openai:
-  api:
-    url: https://api.openai.com
-    key: ${OPENAI_API_KEY}
-  text:
-    model: gpt-4o
-
 

@@ -3,6 +3,7 @@ package digdaserver.domain.oauth2.presentation.controller
 import digdaserver.domain.oauth2.application.service.AccountService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
+import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -21,7 +22,7 @@ class AccountController(
     fun deleteAccount(
         @AuthenticationPrincipal userId: String
     ): ResponseEntity<Void> {
-        accountService.deleteAccount(userId.toLong())
+        accountService.deleteAccount(UUID.fromString(userId))
         return ResponseEntity.noContent().build()
     }
 }

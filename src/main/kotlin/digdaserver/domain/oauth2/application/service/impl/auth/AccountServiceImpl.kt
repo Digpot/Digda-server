@@ -11,6 +11,7 @@ import digdaserver.global.jwt.domain.repository.SocialTokenRepository
 import jakarta.transaction.Transactional
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import java.util.UUID
 
 @Service
 @Transactional
@@ -23,7 +24,7 @@ class AccountServiceImpl(
 
     private val log = LoggerFactory.getLogger(AccountServiceImpl::class.java)
 
-    override fun deleteAccount(userId: Long) {
+    override fun deleteAccount(userId: UUID) {
         val user = userRepository.findById(userId)
             .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
 

@@ -7,6 +7,7 @@ import digdaserver.domain.oauth2.presentation.dto.res.TermsAgreeResponse
 import digdaserver.domain.oauth2.presentation.dto.res.TermsDocumentResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
+import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
@@ -30,7 +31,7 @@ class TermsController(
         @AuthenticationPrincipal userId: String,
         @RequestBody request: TermsAgreeRequest
     ): ResponseEntity<TermsAgreeResponse> {
-        val response = termsService.agreeToTerms(userId.toLong(), request)
+        val response = termsService.agreeToTerms(UUID.fromString(userId), request)
         return ResponseEntity.ok(response)
     }
 

@@ -6,7 +6,7 @@
 
 **프로젝트**: DigDa — 그룹 기반 공유 다이어리 앱
 **플랫폼**: Flutter (iOS/Android)
-**인증 방식**: 소셜 로그인 (카카오, 네이버, 애플) + JWT
+**인증 방식**: 소셜 로그인 (카카오, 네이버, 애플) + 관리자 계정 + JWT
 **API 스타일**: RESTful JSON API
 **Base URL**: `https://api.digda.app/v1`
 
@@ -75,6 +75,7 @@
 **POST** `/auth/login`
 
 소셜 프로바이더 토큰으로 로그인. 최초 로그인 시 계정 자동 생성.
+유저 식별은 **소셜 고유 ID + provider 조합**으로 수행 (email 기반 아님).
 
 **Request Body**
 
@@ -221,7 +222,7 @@
 | email | string? | 소셜 계정 이메일 (nullable — provider가 미제공 시 null) |
 | profileImage | string? | 프로필 이미지 URL (null이면 기본 아바타) |
 | statusMessage | string? | 상태 메시지 (최대 100자) |
-| provider | string | `kakao` · `naver` · `apple` |
+| provider | string | `kakao` · `naver` · `apple` · `admin` |
 | createdAt | string | 가입일 |
 
 ---
@@ -529,7 +530,7 @@ Membership 객체:
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
-| userId | string | 사용자 ID |
+| userId | string | 사용자 UUID |
 | name | string | 닉네임 |
 | profileImage | string? | 프로필 이미지 URL |
 | color | string | 구성원 컬러 (hex, 캘린더 표시용) |
@@ -668,7 +669,7 @@ Schedule 객체:
 | startTime | string | ❌ | 시작 시간 (`HH:mm`, allDay=false일 때) |
 | endTime | string | ❌ | 종료 시간 (`HH:mm`) |
 | allDay | boolean | ✅ | 종일 여부 |
-| participantIds | string[] | ❌ | 참여자 사용자 ID 배열 |
+| participantIds | string[] | ❌ | 참여자 사용자 UUID 배열 |
 
 **Response** `201 Created` — Schedule 객체
 
@@ -1205,7 +1206,7 @@ Authorization: Bearer {accessToken}
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
-| id | string | 사용자 ID |
+| id | string | 사용자 UUID |
 | name | string | 닉네임 |
 | profileImage | string? | 프로필 이미지 URL |
 

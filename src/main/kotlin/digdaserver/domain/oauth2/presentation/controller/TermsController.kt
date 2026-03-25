@@ -35,7 +35,7 @@ class TermsController(
         return ResponseEntity.ok(response)
     }
 
-    @Operation(summary = "약관 문서 조회", description = "약관 전문 HTML을 조회합니다. 인증 불필요.")
+    @Operation(summary = "약관 문서 조회", description = "약관 전문 HTML을 조회합니다. 인증 불필요. 앱에 있음 폐지")
     @GetMapping("/terms/{type}")
     fun getTermsDocument(
         @PathVariable type: String

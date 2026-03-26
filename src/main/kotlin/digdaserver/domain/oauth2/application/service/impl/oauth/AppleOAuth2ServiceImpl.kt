@@ -113,55 +113,39 @@ class AppleOAuth2ServiceImpl(
     override fun getProvider(): SocialProvider = SocialProvider.APPLE
 
     private fun parseIdToken(idToken: String): KakaoUserResponse {
-        try {
-            if (idToken.isBlank()) {
-                throw DigdaException(ErrorCode.ID_TOKEN_INVALID)
-            }
-
-            val parts = idToken.split(".")
-            if (parts.size != 3) {
-                log.error("JWT 토큰 형식이 잘못됨. 파트 개수: {}", parts.size)
-                throw DigdaException(ErrorCode.TOKEN_INVALID)
-            }
-
-            var payloadPart = parts[1]
-            while (payloadPart.length % 4 != 0) {
-                payloadPart += "="
-            }
-
-            val decodedBytes = try {
-                Base64.getUrlDecoder().decode(payloadPart)
-            } catch (e: Exception) {
-                log.error("Base64 디코딩 실패", e)
-                throw DigdaException(ErrorCode.ID_TOKEN_INVALID)
-            }
-
-            val payload = String(decodedBytes, StandardCharsets.UTF_8)
-            val claims: JsonNode = objectMapper.readTree(payload)
-
-            val sub = claims["sub"]?.asText()
-                ?: throw DigdaException(ErrorCode.ID_TOKEN_INVALID)
-
-            val email = claims["email"]?.asText()
-
-            var name: String? = claims["name"]?.asText()
-            if (name == null && email != null && email.contains("@")) {
-                name = email.substringBefore("@")
-            }
-
-            return KakaoUserResponse(
-                sub,
-                KakaoUserResponse.KakaoAccount(
-                    KakaoUserResponse.Profile(
-                        name ?: "Apple User",
-                        null
-                    ),
-                    email
-                )
-            )
-        } catch (e: Exception) {
-            log.error("Apple ID Token 파싱 실패", e)
+        if (idToken.isBlank()) {
             throw DigdaException(ErrorCode.ID_TOKEN_INVALID)
         }
+
+        val parts = idToken.split(".")
+        if (parts.size != 3) {
+            log.error("JWT 토큰 형식이 잘못됨. 파트 개수: {}", parts.size)
+            throw DigdaException(ErrorCode.TOKEN_INVALID)
+        }
+
+        val decodedBytes = Base64.getUrlDecoder().decode(parts[1])
+        val payload = String(decodedBytes, StandardCharsets.UTF_8)
+        val claims: JsonNode = objectMapper.readTree(payload)
+
+        val sub = claims["sub"]?.asText()
+            ?: throw DigdaException(ErrorCode.ID_TOKEN_INVALID)
+
+        val email = claims["email"]?.asText()
+
+        var name: String? = claims["name"]?.asText()
+        if (name == null && email != null && email.contains("@")) {
+            name = email.substringBefore("@")
+        }
+
+        return KakaoUserResponse(
+            sub,
+            KakaoUserResponse.KakaoAccount(
+                KakaoUserResponse.Profile(
+                    name ?: "Apple User",
+                    null
+                ),
+                email
+            )
+        )
     }
 }

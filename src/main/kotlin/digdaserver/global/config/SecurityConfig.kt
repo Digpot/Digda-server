@@ -39,7 +39,8 @@ class SecurityConfig(
         "/api/admin/**",
         "/api/test/**",
         "/actuator/**",
-        "/api/callback/**"
+        "/api/callback/**",
+        "/api/test/oauth2/login/**"
     )
 
     @Bean
@@ -86,7 +87,7 @@ class SecurityConfig(
                 .requestMatchers("/favicon.ico", "/api/region").permitAll()
                 .requestMatchers("/api/app/reissue", "/api/web/reissue").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
-                .requestMatchers("/api/app/public/**", "/api/web/public/**").permitAll()
+                .requestMatchers("/api/app/public/**", "/api/web/public/**", "/api/test/oauth2/login/**").permitAll()
                 .anyRequest().authenticated()
         }
 

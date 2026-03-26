@@ -86,7 +86,7 @@ class KakaoOAuth2ServiceImpl(
         return KakaoTokenResponse(
             tokenRequest.accessToken,
             tokenRequest.refreshToken,
-            "idnull",
+            null,
             tokenRequest.expiresIn
         )
     }

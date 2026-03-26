@@ -17,7 +17,6 @@ import digdaserver.domain.user.domain.entity.UserPrivacySetting
 import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
-import digdaserver.global.jwt.domain.repository.SocialTokenRepository
 import jakarta.transaction.Transactional
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -29,7 +28,6 @@ class SocialLoginServiceImpl(
     oauth2Services: List<OAuth2Service>,
     private val tokenService: CreateAccessTokenAndRefreshTokenService,
     private val userRepository: UserRepository,
-    private val socialTokenRepository: SocialTokenRepository,
 
     @Value("\${oauth2.apple.profile}")
     private val appleProfile: String
@@ -68,12 +66,6 @@ class SocialLoginServiceImpl(
 
         val (user, isNewUser) = findOrCreateUser(provider, userResponse)
 
-        val tokenRequest = SocialTokenRequest(
-            accessToken = request.accessToken,
-            idToken = request.idToken
-        )
-        oauth2Service.convertToTokenResponse(tokenRequest)
-
         val loginToken = tokenService.createAccessTokenAndRefreshToken(
             user.id.toString(),
             user.role,
@@ -103,10 +95,15 @@ class SocialLoginServiceImpl(
 
         val tokenResponse = oauth2Service.getTokens(code)
 
-        val accessToken = tokenResponse.accessToken
-            ?: throw DigdaException(ErrorCode.INVALID_PARAMETER, "access token 없음")
-
-        val userResponse = oauth2Service.getUserInfo(accessToken)
+        val userResponse = if (provider == SocialProvider.APPLE) {
+            val idToken = tokenResponse.idToken
+                ?: throw DigdaException(ErrorCode.INVALID_PARAMETER, "Apple ID Token 없음")
+            oauth2Service.getUserInfoFromIdToken(idToken)
+        } else {
+            val accessToken = tokenResponse.accessToken
+                ?: throw DigdaException(ErrorCode.INVALID_PARAMETER, "access token 없음")
+            oauth2Service.getUserInfo(accessToken)
+        }
 
         val (user, _) = findOrCreateUser(provider, userResponse)
 

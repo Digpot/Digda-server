@@ -14,7 +14,7 @@ import jakarta.persistence.UniqueConstraint
 
 @Entity
 @Table(
-    name = "schedule_participants",
+    name = "schedule_participant",
     uniqueConstraints = [UniqueConstraint(columnNames = ["schedule_id", "user_id"])]
 )
 class ScheduleParticipant(

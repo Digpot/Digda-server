@@ -31,7 +31,6 @@ class SecurityConfig(
         "/favicon.ico",
         "/auth/login",
         "/auth/refresh",
-        "/auth/terms/**",
         "/api/app/reissue",
         "/api/oauth2/login/**",
         "/api/oauth2/callback/**",
@@ -79,7 +78,6 @@ class SecurityConfig(
             auth
                 .requestMatchers("/api/healthcheck").permitAll()
                 .requestMatchers("/auth/login", "/auth/refresh").permitAll()
-                .requestMatchers("/auth/terms/**").permitAll()
                 .requestMatchers("/api/oauth2/login/**").permitAll()
                 .requestMatchers("/api/oauth2/callback/**", "/api/test/**", "/api/callback/**").permitAll()
                 .requestMatchers("/api/admin/**").permitAll()

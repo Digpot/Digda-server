@@ -4,8 +4,8 @@ import digdaserver.domain.oauth2.application.service.OAuth2Service
 import digdaserver.domain.oauth2.domain.entity.SocialProvider
 import digdaserver.domain.oauth2.presentation.dto.req.SocialTokenRequest
 import digdaserver.domain.oauth2.presentation.dto.res.naver.NaverTokenResponse
-import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoTokenResponse
-import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoUserResponse
+import digdaserver.domain.oauth2.presentation.dto.res.oauth.OAuthTokenResponse
+import digdaserver.domain.oauth2.presentation.dto.res.oauth.OAuthUserResponse
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
 import digdaserver.global.infra.feignclient.naver.NaverOAuth2URLFeignClient
@@ -48,7 +48,7 @@ class NaverOAuth2ServiceImpl(
             "&state=$state"
     }
 
-    override fun getTokens(code: String): KakaoTokenResponse {
+    override fun getTokens(code: String): OAuthTokenResponse {
         val state = generateState()
         val response: NaverTokenResponse = naverOAuth2URLFeignClient.getAccessToken(
             "authorization_code",
@@ -59,7 +59,7 @@ class NaverOAuth2ServiceImpl(
             state
         )
 
-        return KakaoTokenResponse(
+        return OAuthTokenResponse(
             accessToken = response.accessToken,
             refreshToken = response.refreshToken,
             idToken = null,
@@ -67,7 +67,7 @@ class NaverOAuth2ServiceImpl(
         )
     }
 
-    override fun refreshTokens(refreshToken: String): KakaoTokenResponse {
+    override fun refreshTokens(refreshToken: String): OAuthTokenResponse {
         val response: NaverTokenResponse = naverOAuth2URLFeignClient.refreshToken(
             "refresh_token",
             clientId,
@@ -75,7 +75,7 @@ class NaverOAuth2ServiceImpl(
             refreshToken
         )
 
-        return KakaoTokenResponse(
+        return OAuthTokenResponse(
             accessToken = response.accessToken,
             refreshToken = response.refreshToken,
             idToken = null,
@@ -83,7 +83,7 @@ class NaverOAuth2ServiceImpl(
         )
     }
 
-    override fun getUserInfo(accessToken: String): KakaoUserResponse {
+    override fun getUserInfo(accessToken: String): OAuthUserResponse {
         return try {
             val naverUser = naverOAuth2UserFeignClient.getUserInfo("Bearer $accessToken")
             naverUser.toOAuth2UserResponse()
@@ -96,7 +96,7 @@ class NaverOAuth2ServiceImpl(
         }
     }
 
-    override fun getUserInfoFromIdToken(idToken: String): KakaoUserResponse {
+    override fun getUserInfoFromIdToken(idToken: String): OAuthUserResponse {
         throw UnsupportedOperationException("네이버는 ID Token을 지원하지 않습니다")
     }
 
@@ -109,8 +109,8 @@ class NaverOAuth2ServiceImpl(
         }
     }
 
-    override fun convertToTokenResponse(tokenRequest: SocialTokenRequest): KakaoTokenResponse {
-        return KakaoTokenResponse(
+    override fun convertToTokenResponse(tokenRequest: SocialTokenRequest): OAuthTokenResponse {
+        return OAuthTokenResponse(
             accessToken = tokenRequest.accessToken,
             refreshToken = tokenRequest.refreshToken,
             idToken = null,

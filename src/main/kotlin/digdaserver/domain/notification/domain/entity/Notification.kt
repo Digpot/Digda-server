@@ -17,7 +17,7 @@ import java.time.LocalDateTime
 
 @Entity
 @Table(
-    name = "notifications",
+    name = "notification",
     indexes = [
         Index(name = "idx_notification_user", columnList = "user_id"),
         Index(name = "idx_notification_user_read", columnList = "user_id, is_read")

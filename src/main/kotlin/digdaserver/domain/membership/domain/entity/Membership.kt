@@ -19,7 +19,7 @@ import java.time.LocalDateTime
 
 @Entity
 @Table(
-    name = "memberships",
+    name = "membership",
     uniqueConstraints = [UniqueConstraint(columnNames = ["user_id", "group_id"])]
 )
 class Membership(

@@ -1,8 +1,8 @@
-package digdaserver.domain.oauth2.presentation.dto.res.oatuh
+package digdaserver.domain.oauth2.presentation.dto.res.oauth
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
-data class KakaoTokenResponse(
+data class OAuthTokenResponse(
 
     @JsonProperty("access_token")
     val accessToken: String? = null,

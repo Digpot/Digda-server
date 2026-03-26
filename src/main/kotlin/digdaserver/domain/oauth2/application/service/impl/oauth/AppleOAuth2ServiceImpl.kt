@@ -6,8 +6,8 @@ import digdaserver.domain.oauth2.application.service.OAuth2Service
 import digdaserver.domain.oauth2.domain.entity.SocialProvider
 import digdaserver.domain.oauth2.infra.AppleJwtUtils
 import digdaserver.domain.oauth2.presentation.dto.req.SocialTokenRequest
-import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoTokenResponse
-import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoUserResponse
+import digdaserver.domain.oauth2.presentation.dto.res.oauth.OAuthTokenResponse
+import digdaserver.domain.oauth2.presentation.dto.res.oauth.OAuthUserResponse
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
 import digdaserver.global.infra.feignclient.ios.AppleOAuth2FeignClient
@@ -45,7 +45,7 @@ class AppleOAuth2ServiceImpl(
         return url.toString()
     }
 
-    override fun getTokens(code: String): KakaoTokenResponse {
+    override fun getTokens(code: String): OAuthTokenResponse {
         val clientSecret = appleJwtUtils.generateClientSecret()
 
         val appleResponse = appleOAuth2FeignClient.getAccessToken(
@@ -56,7 +56,7 @@ class AppleOAuth2ServiceImpl(
             redirectUri
         )
 
-        return KakaoTokenResponse(
+        return OAuthTokenResponse(
             appleResponse.accessToken,
             appleResponse.refreshToken,
             appleResponse.idToken,
@@ -64,7 +64,7 @@ class AppleOAuth2ServiceImpl(
         )
     }
 
-    override fun refreshTokens(refreshToken: String): KakaoTokenResponse {
+    override fun refreshTokens(refreshToken: String): OAuthTokenResponse {
         val clientSecret = appleJwtUtils.generateClientSecret()
 
         val appleResponse = appleOAuth2FeignClient.refreshToken(
@@ -74,7 +74,7 @@ class AppleOAuth2ServiceImpl(
             refreshToken
         )
 
-        return KakaoTokenResponse(
+        return OAuthTokenResponse(
             appleResponse.accessToken,
             appleResponse.refreshToken,
             appleResponse.idToken,
@@ -82,11 +82,11 @@ class AppleOAuth2ServiceImpl(
         )
     }
 
-    override fun getUserInfo(accessToken: String): KakaoUserResponse {
+    override fun getUserInfo(accessToken: String): OAuthUserResponse {
         throw DigdaException(ErrorCode.ID_TOKEN_INVALID)
     }
 
-    override fun getUserInfoFromIdToken(idToken: String): KakaoUserResponse {
+    override fun getUserInfoFromIdToken(idToken: String): OAuthUserResponse {
         try {
             log.info("Apple ID Token 파싱 시작")
             return parseIdToken(idToken)
@@ -101,8 +101,8 @@ class AppleOAuth2ServiceImpl(
         return accessToken.isNotBlank()
     }
 
-    override fun convertToTokenResponse(tokenRequest: SocialTokenRequest): KakaoTokenResponse {
-        return KakaoTokenResponse(
+    override fun convertToTokenResponse(tokenRequest: SocialTokenRequest): OAuthTokenResponse {
+        return OAuthTokenResponse(
             tokenRequest.accessToken,
             tokenRequest.refreshToken,
             tokenRequest.idToken,
@@ -112,7 +112,7 @@ class AppleOAuth2ServiceImpl(
 
     override fun getProvider(): SocialProvider = SocialProvider.APPLE
 
-    private fun parseIdToken(idToken: String): KakaoUserResponse {
+    private fun parseIdToken(idToken: String): OAuthUserResponse {
         if (idToken.isBlank()) {
             throw DigdaException(ErrorCode.ID_TOKEN_INVALID)
         }
@@ -137,10 +137,10 @@ class AppleOAuth2ServiceImpl(
             name = email.substringBefore("@")
         }
 
-        return KakaoUserResponse(
+        return OAuthUserResponse(
             sub,
-            KakaoUserResponse.KakaoAccount(
-                KakaoUserResponse.Profile(
+            OAuthUserResponse.OAuthAccount(
+                OAuthUserResponse.Profile(
                     name ?: "Apple User",
                     null
                 ),

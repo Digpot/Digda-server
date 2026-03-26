@@ -13,7 +13,7 @@ import jakarta.persistence.Table
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "invite_codes")
+@Table(name = "invite_code")
 class InviteCode(
 
     @Id

@@ -1,32 +1,29 @@
-package digdaserver.domain.oauth2.presentation.dto.res.oatuh
+package digdaserver.domain.oauth2.presentation.dto.res.oauth
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
-data class KakaoUserResponse(
+data class OAuthUserResponse(
 
     @JsonProperty("id")
     val id: String? = null,
 
     @JsonProperty("kakao_account")
-    val kakaoAccount: KakaoAccount? = null
+    val account: OAuthAccount? = null
 ) {
 
-    /** 프로필 이름 */
     fun getName(): String? {
-        return kakaoAccount?.profile?.nickname
+        return account?.profile?.nickname
     }
 
-    /** 이메일 */
     fun getEmail(): String? {
-        return kakaoAccount?.email
+        return account?.email
     }
 
-    /** 프로필 이미지 URL */
     fun getProfile(): String? {
-        return kakaoAccount?.profile?.profileImageUrl
+        return account?.profile?.profileImageUrl
     }
 
-    data class KakaoAccount(
+    data class OAuthAccount(
         @JsonProperty("profile")
         val profile: Profile? = null,
 

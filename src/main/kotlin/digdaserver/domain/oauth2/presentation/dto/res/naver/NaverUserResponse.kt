@@ -1,7 +1,7 @@
 package digdaserver.domain.oauth2.presentation.dto.res.naver
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoUserResponse
+import digdaserver.domain.oauth2.presentation.dto.res.oauth.OAuthUserResponse
 
 data class NaverUserResponse(
 
@@ -19,9 +19,6 @@ data class NaverUserResponse(
         @JsonProperty("id")
         val id: String? = null,
 
-        @JsonProperty("nickname")
-        val nickname: String? = null,
-
         @JsonProperty("name")
         val name: String? = null,
 
@@ -33,14 +30,14 @@ data class NaverUserResponse(
     )
 
     /** OAuth2UserResponse로 변환 */
-    fun toOAuth2UserResponse(): KakaoUserResponse? {
+    fun toOAuth2UserResponse(): OAuthUserResponse? {
         val r = response ?: return null
 
-        return KakaoUserResponse(
+        return OAuthUserResponse(
             r.id,
-            KakaoUserResponse.KakaoAccount(
-                KakaoUserResponse.Profile(
-                    r.nickname,
+            OAuthUserResponse.OAuthAccount(
+                OAuthUserResponse.Profile(
+                    r.name,
                     r.profileImage
                 ),
                 r.email

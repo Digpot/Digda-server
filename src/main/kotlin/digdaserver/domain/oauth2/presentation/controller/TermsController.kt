@@ -3,7 +3,6 @@ package digdaserver.domain.oauth2.presentation.controller
 import digdaserver.domain.oauth2.application.service.TermsDocumentService
 import digdaserver.domain.oauth2.application.service.TermsService
 import digdaserver.domain.oauth2.presentation.dto.req.TermsAgreeRequest
-import digdaserver.domain.oauth2.presentation.dto.res.TermsAgreeResponse
 import digdaserver.domain.oauth2.presentation.dto.res.TermsDocumentResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -30,9 +29,9 @@ class TermsController(
     fun agreeToTerms(
         @AuthenticationPrincipal userId: String,
         @RequestBody request: TermsAgreeRequest
-    ): ResponseEntity<TermsAgreeResponse> {
-        val response = termsService.agreeToTerms(UUID.fromString(userId), request)
-        return ResponseEntity.ok(response)
+    ): ResponseEntity<Void> {
+        termsService.agreeToTerms(UUID.fromString(userId), request)
+        return ResponseEntity.noContent().build()
     }
 
     @Operation(summary = "약관 문서 조회", description = "약관 전문 HTML을 조회합니다. 인증 불필요. 앱에 있음 폐지")

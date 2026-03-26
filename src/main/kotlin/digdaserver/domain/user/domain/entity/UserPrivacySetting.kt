@@ -11,7 +11,7 @@ import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 
 @Entity
-@Table(name = "user_privacy_settings")
+@Table(name = "user_privacy_setting")
 class UserPrivacySetting(
 
     @Id

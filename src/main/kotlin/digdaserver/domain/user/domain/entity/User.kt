@@ -18,7 +18,7 @@ import java.util.UUID
 
 @Entity
 @Table(
-    name = "users",
+    name = "user",
     uniqueConstraints = [UniqueConstraint(columnNames = ["social_id", "social_provider"])]
 )
 class User(

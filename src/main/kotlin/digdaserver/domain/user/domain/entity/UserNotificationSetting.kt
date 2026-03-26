@@ -11,7 +11,7 @@ import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 
 @Entity
-@Table(name = "user_notification_settings")
+@Table(name = "user_notification_setting")
 class UserNotificationSetting(
 
     @Id

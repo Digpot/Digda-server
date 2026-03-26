@@ -2,8 +2,6 @@ package digdaserver.domain.oauth2.application.service.impl.auth
 
 import digdaserver.domain.oauth2.application.service.TermsService
 import digdaserver.domain.oauth2.presentation.dto.req.TermsAgreeRequest
-import digdaserver.domain.oauth2.presentation.dto.res.TermsAgreeResponse
-import digdaserver.domain.oauth2.presentation.dto.res.UserResponse
 import digdaserver.domain.user.domain.entity.UserTerms
 import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.global.infra.exception.error.DigdaException
@@ -18,7 +16,7 @@ class TermsServiceImpl(
     private val userRepository: UserRepository
 ) : TermsService {
 
-    override fun agreeToTerms(userId: UUID, request: TermsAgreeRequest): TermsAgreeResponse {
+    override fun agreeToTerms(userId: UUID, request: TermsAgreeRequest) {
         if (!request.termsOfService || !request.privacyPolicy || !request.ageConfirmation) {
             throw DigdaException(ErrorCode.REQUIRED_TERMS_NOT_AGREED)
         }
@@ -42,7 +40,5 @@ class TermsServiceImpl(
             it.pushEnabled = request.pushConsent
             it.marketingConsent = request.marketingConsent
         }
-
-        return TermsAgreeResponse(user = UserResponse.from(user))
     }
 }

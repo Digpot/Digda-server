@@ -9,7 +9,7 @@ import digdaserver.domain.oauth2.presentation.dto.req.SocialTokenRequest
 import digdaserver.domain.oauth2.presentation.dto.res.LoginResponse
 import digdaserver.domain.oauth2.presentation.dto.res.LoginToken
 import digdaserver.domain.oauth2.presentation.dto.res.UserResponse
-import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoUserResponse
+import digdaserver.domain.oauth2.presentation.dto.res.oauth.OAuthUserResponse
 import digdaserver.domain.user.domain.entity.Role
 import digdaserver.domain.user.domain.entity.User
 import digdaserver.domain.user.domain.entity.UserNotificationSetting
@@ -55,7 +55,7 @@ class SocialLoginServiceImpl(
             throw DigdaException(ErrorCode.SOCIAL_AUTH_FAILED)
         }
 
-        val userResponse: KakaoUserResponse =
+        val userResponse: OAuthUserResponse =
             if (provider == SocialProvider.APPLE && request.idToken != null) {
                 oauth2Service.getUserInfoFromIdToken(request.idToken)
             } else {
@@ -131,7 +131,7 @@ class SocialLoginServiceImpl(
 
     private fun findOrCreateUser(
         provider: SocialProvider,
-        userResponse: KakaoUserResponse
+        userResponse: OAuthUserResponse
     ): Pair<User, Boolean> {
         val socialId = userResponse.id
             ?: throw DigdaException(ErrorCode.INVALID_PARAMETER, "소셜 고유 ID가 없습니다")

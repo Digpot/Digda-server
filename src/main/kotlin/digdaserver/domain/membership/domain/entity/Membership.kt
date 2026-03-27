@@ -1,7 +1,7 @@
 package digdaserver.domain.membership.domain.entity
 
-import digdaserver.domain.group.domain.entity.Group
-import digdaserver.domain.group.domain.entity.GroupRole
+import digdaserver.domain.group.domain.entity.GroupRoom
+import digdaserver.domain.group.domain.entity.GroupRoomRole
 import digdaserver.domain.user.domain.entity.User
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -34,12 +34,12 @@ class Membership(
     val user: User,
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_id", nullable = false)
-    val group: Group,
+    @JoinColumn(name = "group_room_id", nullable = false)
+    val groupRoom: GroupRoom,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    var role: GroupRole,
+    var role: GroupRoomRole,
 
     @Column(nullable = false, length = 7)
     var color: String,
@@ -48,10 +48,10 @@ class Membership(
     val joinedAt: LocalDateTime = LocalDateTime.now()
 ) {
 
-    fun changeRole(newRole: GroupRole) {
+    fun changeRole(newRole: GroupRoomRole) {
         this.role = newRole
     }
 
     val isOwner: Boolean
-        get() = role == GroupRole.OWNER
+        get() = role == GroupRoomRole.OWNER
 }

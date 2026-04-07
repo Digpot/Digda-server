@@ -1,6 +1,6 @@
 package digdaserver.domain.invite.domain.entity
 
-import digdaserver.domain.group.domain.entity.GroupRoom
+import digdaserver.domain.group_room.domain.entity.GroupRoom
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType

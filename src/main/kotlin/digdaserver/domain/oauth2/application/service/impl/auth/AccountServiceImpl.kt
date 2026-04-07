@@ -1,7 +1,7 @@
 package digdaserver.domain.oauth2.application.service.impl.auth
 
-import digdaserver.domain.group.domain.entity.GroupRoomRole
-import digdaserver.domain.group.domain.repository.GroupRoomRepository
+import digdaserver.domain.group_room.domain.entity.GroupRoomRole
+import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.domain.oauth2.application.service.AccountService
 import digdaserver.domain.user.domain.repository.UserRepository

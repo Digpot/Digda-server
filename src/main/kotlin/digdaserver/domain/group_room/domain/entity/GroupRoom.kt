@@ -1,4 +1,4 @@
-package digdaserver.domain.group.domain.entity
+package digdaserver.domain.group_room.domain.entity
 
 import digdaserver.domain.diary.domain.entity.Diary
 import digdaserver.domain.invite.domain.entity.InviteCode

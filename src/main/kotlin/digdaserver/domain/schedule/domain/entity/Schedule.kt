@@ -1,6 +1,6 @@
 package digdaserver.domain.schedule.domain.entity
 
-import digdaserver.domain.group.domain.entity.GroupRoom
+import digdaserver.domain.group_room.domain.entity.GroupRoom
 import digdaserver.domain.user.domain.entity.User
 import digdaserver.global.common.entity.BaseTimeEntity
 import jakarta.persistence.CascadeType

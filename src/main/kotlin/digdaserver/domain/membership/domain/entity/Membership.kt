@@ -1,7 +1,7 @@
 package digdaserver.domain.membership.domain.entity
 
-import digdaserver.domain.group.domain.entity.GroupRoom
-import digdaserver.domain.group.domain.entity.GroupRoomRole
+import digdaserver.domain.group_room.domain.entity.GroupRoom
+import digdaserver.domain.group_room.domain.entity.GroupRoomRole
 import digdaserver.domain.user.domain.entity.User
 import jakarta.persistence.Column
 import jakarta.persistence.Entity

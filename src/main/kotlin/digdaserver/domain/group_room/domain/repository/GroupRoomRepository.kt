@@ -1,6 +1,6 @@
-package digdaserver.domain.group.domain.repository
+package digdaserver.domain.group_room.domain.repository
 
-import digdaserver.domain.group.domain.entity.GroupRoom
+import digdaserver.domain.group_room.domain.entity.GroupRoom
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository

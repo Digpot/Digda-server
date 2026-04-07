@@ -1,6 +1,6 @@
 package digdaserver.domain.todo.domain.entity
 
-import digdaserver.domain.group.domain.entity.Group
+import digdaserver.domain.group.domain.entity.GroupRoom
 import digdaserver.domain.user.domain.entity.User
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -23,8 +23,8 @@ class Todo(
     val id: Long = 0L,
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_id", nullable = false)
-    val group: Group,
+    @JoinColumn(name = "group_room_id", nullable = false)
+    val groupRoom: GroupRoom,
 
     @Column(nullable = false, length = 100)
     val text: String,

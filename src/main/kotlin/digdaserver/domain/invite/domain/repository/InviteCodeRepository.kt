@@ -10,7 +10,7 @@ interface InviteCodeRepository : JpaRepository<InviteCode, Long> {
 
     fun findByCode(code: String): Optional<InviteCode>
 
-    fun findFirstByGroupIdOrderByCreatedAtDesc(groupId: Long): Optional<InviteCode>
+    fun findFirstByGroupRoomIdOrderByCreatedAtDesc(groupRoomId: Long): Optional<InviteCode>
 
-    fun deleteAllByGroupId(groupId: Long)
+    fun deleteAllByGroupRoomId(groupRoomId: Long)
 }

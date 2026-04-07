@@ -9,6 +9,6 @@ import java.time.LocalDate
 @Repository
 interface ScheduleRepository : JpaRepository<Schedule, Long> {
 
-    @Query("SELECT s FROM Schedule s WHERE s.group.id = :groupId AND s.startDate <= :endDate AND s.endDate >= :startDate ORDER BY s.startDate ASC")
-    fun findAllByGroupIdAndDateRange(groupId: Long, startDate: LocalDate, endDate: LocalDate): List<Schedule>
+    @Query("SELECT s FROM Schedule s WHERE s.groupRoom.id = :groupRoomId AND s.startDate <= :endDate AND s.endDate >= :startDate ORDER BY s.startDate ASC")
+    fun findAllByGroupRoomIdAndDateRange(groupRoomId: Long, startDate: LocalDate, endDate: LocalDate): List<Schedule>
 }

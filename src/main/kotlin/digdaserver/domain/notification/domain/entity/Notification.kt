@@ -44,11 +44,11 @@ class Notification(
     @Column(nullable = false)
     val message: String,
 
-    @Column(name = "group_id")
-    val groupId: Long? = null,
+    @Column(name = "group_room_id")
+    val groupRoomId: Long? = null,
 
-    @Column(name = "group_name")
-    val groupName: String? = null,
+    @Column(name = "group_room_name")
+    val groupRoomName: String? = null,
 
     @Column(name = "related_id")
     val relatedId: Long? = null,

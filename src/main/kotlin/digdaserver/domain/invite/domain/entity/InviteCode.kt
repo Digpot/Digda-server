@@ -1,6 +1,6 @@
 package digdaserver.domain.invite.domain.entity
 
-import digdaserver.domain.group.domain.entity.Group
+import digdaserver.domain.group.domain.entity.GroupRoom
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
@@ -22,8 +22,8 @@ class InviteCode(
     val id: Long = 0L,
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_id", nullable = false)
-    val group: Group,
+    @JoinColumn(name = "group_room_id", nullable = false)
+    val groupRoom: GroupRoom,
 
     @Column(nullable = false, unique = true, length = 6)
     val code: String,

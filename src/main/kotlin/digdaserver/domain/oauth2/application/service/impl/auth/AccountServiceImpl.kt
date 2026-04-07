@@ -1,7 +1,7 @@
 package digdaserver.domain.oauth2.application.service.impl.auth
 
-import digdaserver.domain.group.domain.entity.GroupRole
-import digdaserver.domain.group.domain.repository.GroupRepository
+import digdaserver.domain.group.domain.entity.GroupRoomRole
+import digdaserver.domain.group.domain.repository.GroupRoomRepository
 import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.domain.oauth2.application.service.AccountService
 import digdaserver.domain.user.domain.repository.UserRepository
@@ -18,7 +18,7 @@ import java.util.UUID
 @Transactional
 class AccountServiceImpl(
     private val userRepository: UserRepository,
-    private val groupRepository: GroupRepository,
+    private val groupRoomRepository: GroupRoomRepository,
     private val membershipRepository: MembershipRepository,
     private val jsonWebTokenRepository: JsonWebTokenRepository,
     private val socialTokenRepository: SocialTokenRepository
@@ -30,11 +30,11 @@ class AccountServiceImpl(
         val user = userRepository.findById(userId)
             .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
 
-        val memberships = membershipRepository.findAllByUserIdWithGroup(userId)
-        val ownsActiveGroup = memberships.any { it.role == GroupRole.OWNER }
+        val memberships = membershipRepository.findAllByUserIdWithGroupRoom(userId)
+        val ownsActiveGroup = memberships.any { it.role == GroupRoomRole.OWNER }
 
         if (ownsActiveGroup) {
-            throw DigdaException(ErrorCode.OWNS_ACTIVE_GROUP)
+            throw DigdaException(ErrorCode.OWNS_ACTIVE_GROUP_ROOM)
         }
 
         // 토큰 무효화
@@ -42,17 +42,17 @@ class AccountServiceImpl(
         socialTokenRepository.deleteByUserId(userId.toString())
 
         // 멤버십 삭제 및 빈 그룹 정리
-        val groupIds = memberships.map { it.group.id!! }
+        val groupRoomIds = memberships.map { it.groupRoom.id!! }
         memberships.forEach { membership ->
             membershipRepository.delete(membership)
         }
         membershipRepository.flush()
 
         // 남은 멤버가 0명인 그룹 삭제 (cascade로 일기, 일정, 할일 등 모두 삭제)
-        groupIds.forEach { groupId ->
-            if (membershipRepository.countByGroupId(groupId) == 0) {
-                groupRepository.deleteById(groupId)
-                log.info("빈 그룹 삭제: groupId={}", groupId)
+        groupRoomIds.forEach { groupRoomId ->
+            if (membershipRepository.countByGroupRoomId(groupRoomId) == 0) {
+                groupRoomRepository.deleteById(groupRoomId)
+                log.info("빈 그룹방 삭제: groupRoomId={}", groupRoomId)
             }
         }
 

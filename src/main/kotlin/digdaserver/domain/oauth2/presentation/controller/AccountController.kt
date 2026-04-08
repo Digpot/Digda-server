@@ -23,6 +23,6 @@ class AccountController(
         @AuthenticationPrincipal userId: String
     ): ResponseEntity<Void> {
         accountService.deleteAccount(UUID.fromString(userId))
-        return ResponseEntity.noContent().build()
+        return ResponseEntity.ok().build()
     }
 }

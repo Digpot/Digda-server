@@ -22,6 +22,6 @@ class LogoutController(
         @AuthenticationPrincipal userId: String
     ): ResponseEntity<Void> {
         logoutService.logout(userId)
-        return ResponseEntity.noContent().build()
+        return ResponseEntity.ok().build()
     }
 }

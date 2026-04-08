@@ -12,7 +12,7 @@ data class JsonWebToken(
 
     val providerId: String,
 
-    val email: String,
+    val email: String?,
 
     val role: Role
 ) {
@@ -20,7 +20,7 @@ data class JsonWebToken(
         fun of(
             refreshToken: String,
             providerId: String,
-            email: String,
+            email: String?,
             role: Role
         ): JsonWebToken = JsonWebToken(
             refreshToken = refreshToken,

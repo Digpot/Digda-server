@@ -41,26 +41,26 @@ enum class ErrorCode(
     STATUS_MESSAGE_TOO_LONG("STATUS_MESSAGE_TOO_LONG", "상태 메시지는 100자 이하여야 합니다.", 400),
     INVALID_ROLE("INVALID_ROLE", "유효하지 않은 역할입니다.", 400),
 
-    // ── Group ──
-    GROUP_NOT_FOUND("GROUP_NOT_FOUND", "존재하지 않는 그룹입니다.", 404),
-    GROUP_NAME_TOO_SHORT("GROUP_NAME_TOO_SHORT", "그룹명은 2자 이상이어야 합니다.", 400),
-    GROUP_NAME_TOO_LONG("GROUP_NAME_TOO_LONG", "그룹명은 20자 이하여야 합니다.", 400),
+    // ── GroupRoom ──
+    GROUP_ROOM_NOT_FOUND("GROUP_ROOM_NOT_FOUND", "존재하지 않는 그룹방입니다.", 404),
+    GROUP_ROOM_NAME_TOO_SHORT("GROUP_ROOM_NAME_TOO_SHORT", "그룹방명은 2자 이상이어야 합니다.", 400),
+    GROUP_ROOM_NAME_TOO_LONG("GROUP_ROOM_NAME_TOO_LONG", "그룹방명은 20자 이하여야 합니다.", 400),
     MAX_MEMBERS_BELOW_CURRENT("MAX_MEMBERS_BELOW_CURRENT", "현재 구성원 수보다 적은 값으로 설정할 수 없습니다.", 400),
-    GROUP_NOT_SCHEDULED_FOR_DELETION("GROUP_NOT_SCHEDULED_FOR_DELETION", "삭제 예약되지 않은 그룹입니다.", 400),
-    GROUP_ALREADY_DELETED("GROUP_ALREADY_DELETED", "이미 삭제된 그룹입니다.", 410),
-    OWNS_ACTIVE_GROUP("OWNS_ACTIVE_GROUP", "소유 중인 그룹이 있어 탈퇴할 수 없습니다. 방장을 양도해주세요.", 409),
+    GROUP_ROOM_NOT_SCHEDULED_FOR_DELETION("GROUP_ROOM_NOT_SCHEDULED_FOR_DELETION", "삭제 예약되지 않은 그룹방입니다.", 400),
+    GROUP_ROOM_ALREADY_DELETED("GROUP_ROOM_ALREADY_DELETED", "이미 삭제된 그룹방입니다.", 410),
+    OWNS_ACTIVE_GROUP_ROOM("OWNS_ACTIVE_GROUP_ROOM", "소유 중인 그룹방이 있어 탈퇴할 수 없습니다. 방장을 양도해주세요.", 409),
 
     // ── Invite ──
     INVITE_CODE_INVALID("INVITE_CODE_INVALID", "존재하지 않는 초대 코드입니다.", 404),
     INVITE_CODE_EXPIRED("INVITE_CODE_EXPIRED", "만료된 초대 코드입니다.", 410),
-    GROUP_FULL("GROUP_FULL", "그룹 인원이 초과되었습니다.", 409),
-    ALREADY_JOINED("ALREADY_JOINED", "이미 참여 중인 그룹입니다.", 409),
+    GROUP_ROOM_FULL("GROUP_ROOM_FULL", "그룹방 인원이 초과되었습니다.", 409),
+    ALREADY_JOINED("ALREADY_JOINED", "이미 참여 중인 그룹방입니다.", 409),
 
     // ── Membership ──
-    NOT_GROUP_MEMBER("NOT_GROUP_MEMBER", "해당 그룹의 구성원이 아닙니다.", 403),
-    NOT_GROUP_OWNER("NOT_GROUP_OWNER", "방장 권한이 필요합니다.", 403),
+    NOT_GROUP_ROOM_MEMBER("NOT_GROUP_ROOM_MEMBER", "해당 그룹방의 구성원이 아닙니다.", 403),
+    NOT_GROUP_ROOM_OWNER("NOT_GROUP_ROOM_OWNER", "방장 권한이 필요합니다.", 403),
     CANNOT_REMOVE_OWNER("CANNOT_REMOVE_OWNER", "방장은 내보낼 수 없습니다.", 400),
-    USER_NOT_IN_GROUP("USER_NOT_IN_GROUP", "해당 그룹 구성원이 아닙니다.", 404),
+    USER_NOT_IN_GROUP_ROOM("USER_NOT_IN_GROUP_ROOM", "해당 그룹방 구성원이 아닙니다.", 404),
     OWNER_CANNOT_LEAVE("OWNER_CANNOT_LEAVE", "방장은 양도 후 탈퇴할 수 있습니다.", 400),
 
     // ── Schedule ──
@@ -74,8 +74,6 @@ enum class ErrorCode(
     FUTURE_DATE_NOT_ALLOWED("FUTURE_DATE_NOT_ALLOWED", "미래 날짜에는 일기를 작성할 수 없습니다.", 400),
     INVALID_WEATHER_VALUE("INVALID_WEATHER_VALUE", "날씨 값은 0~3 범위여야 합니다.", 400),
     INVALID_MOOD_VALUE("INVALID_MOOD_VALUE", "기분 값은 0~3 범위여야 합니다.", 400),
-    TOO_MANY_IMAGES("TOO_MANY_IMAGES", "이미지는 최대 5장까지 첨부할 수 있습니다.", 400),
-
     // ── Comment ──
     COMMENT_NOT_FOUND("COMMENT_NOT_FOUND", "존재하지 않는 댓글입니다.", 404),
     COMMENT_TOO_LONG("COMMENT_TOO_LONG", "댓글은 200자 이하여야 합니다.", 400),

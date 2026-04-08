@@ -1,8 +1,8 @@
 package digdaserver.global.jwt.util
 
 import digdaserver.domain.user.domain.entity.Role
-import digdaserver.global.infra.exception.error.ErrorCode
 import digdaserver.global.infra.exception.error.DigdaException
+import digdaserver.global.infra.exception.error.ErrorCode
 import io.jsonwebtoken.ExpiredJwtException
 import io.jsonwebtoken.JwtException
 import io.jsonwebtoken.Jwts
@@ -70,16 +70,16 @@ class JWTUtil(
         }
     }
 
-    fun createAccessToken(id: String, role: Role, email: String): String =
+    fun createAccessToken(id: String, role: Role, email: String?): String =
         createJWT(id, role, email, "access", accessExpiration)
 
-    fun createRefreshToken(id: String, role: Role, email: String): String =
+    fun createRefreshToken(id: String, role: Role, email: String?): String =
         createJWT(id, role, email, "refresh", refreshExpiration)
 
     private fun createJWT(
         id: String,
         role: Role,
-        email: String,
+        email: String?,
         category: String,
         expiredMS: Long
     ): String {

@@ -1,6 +1,6 @@
 package digdaserver.global.infra.feignclient.kakao
 
-import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoTokenResponse
+import digdaserver.domain.oauth2.presentation.dto.res.oauth.OAuthTokenResponse
 import org.springframework.cloud.openfeign.FeignClient
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.PostMapping
@@ -22,7 +22,7 @@ interface KakaoOAuth2URLFeignClient {
         @RequestParam("client_secret") clientSecret: String,
         @RequestParam("redirect_uri") redirectUri: String,
         @RequestParam("grant_type") grantType: String
-    ): KakaoTokenResponse
+    ): OAuthTokenResponse
 
     @PostMapping(
         value = ["/oauth/token"],
@@ -33,5 +33,5 @@ interface KakaoOAuth2URLFeignClient {
         @RequestParam("refresh_token") refreshToken: String,
         @RequestParam("client_id") clientId: String,
         @RequestParam("client_secret") clientSecret: String
-    ): KakaoTokenResponse
+    ): OAuthTokenResponse
 }

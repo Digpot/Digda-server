@@ -15,7 +15,7 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 
 @Entity
-@Table(name = "devices")
+@Table(name = "device")
 class Device(
 
     @Id

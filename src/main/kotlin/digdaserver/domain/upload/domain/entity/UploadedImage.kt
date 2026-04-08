@@ -15,7 +15,7 @@ import jakarta.persistence.Table
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "uploaded_images")
+@Table(name = "uploaded_image")
 class UploadedImage(
 
     @Id

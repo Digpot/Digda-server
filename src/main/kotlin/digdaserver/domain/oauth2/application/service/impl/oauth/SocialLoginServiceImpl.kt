@@ -1,25 +1,26 @@
 package digdaserver.domain.oauth2.application.service.impl.oauth
 
-import digdaserver.domain.user.domain.entity.Role
-import digdaserver.domain.user.domain.entity.User
-import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.domain.oauth2.application.service.CreateAccessTokenAndRefreshTokenService
 import digdaserver.domain.oauth2.application.service.OAuth2Service
 import digdaserver.domain.oauth2.application.service.SocialLoginService
 import digdaserver.domain.oauth2.domain.entity.SocialProvider
+import digdaserver.domain.oauth2.presentation.dto.req.LoginRequest
 import digdaserver.domain.oauth2.presentation.dto.req.SocialTokenRequest
+import digdaserver.domain.oauth2.presentation.dto.res.LoginResponse
 import digdaserver.domain.oauth2.presentation.dto.res.LoginToken
-import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoTokenResponse
-import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoUserResponse
-import digdaserver.global.infra.exception.error.ErrorCode
+import digdaserver.domain.oauth2.presentation.dto.res.UserResponse
+import digdaserver.domain.oauth2.presentation.dto.res.oauth.OAuthUserResponse
+import digdaserver.domain.user.domain.entity.Role
+import digdaserver.domain.user.domain.entity.User
+import digdaserver.domain.user.domain.entity.UserNotificationSetting
+import digdaserver.domain.user.domain.entity.UserPrivacySetting
+import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.global.infra.exception.error.DigdaException
-import digdaserver.global.jwt.domain.entity.SocialToken
-import digdaserver.global.jwt.domain.repository.SocialTokenRepository
+import digdaserver.global.infra.exception.error.ErrorCode
 import jakarta.transaction.Transactional
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import java.time.LocalDateTime
 
 @Service
 @Transactional
@@ -27,7 +28,6 @@ class SocialLoginServiceImpl(
     oauth2Services: List<OAuth2Service>,
     private val tokenService: CreateAccessTokenAndRefreshTokenService,
     private val userRepository: UserRepository,
-    private val socialTokenRepository: SocialTokenRepository,
 
     @Value("\${oauth2.apple.profile}")
     private val appleProfile: String
@@ -38,53 +38,74 @@ class SocialLoginServiceImpl(
     private val oauth2ServicesMap: Map<SocialProvider, OAuth2Service> =
         oauth2Services.associateBy { it.getProvider() }
 
-    override fun loginWithToken(provider: SocialProvider, tokenRequest: SocialTokenRequest): LoginToken {
+    override fun login(request: LoginRequest): LoginResponse {
+        val provider = SocialProvider.from(request.provider)
         val oauth2Service = getOAuth2Service(provider)
 
         log.info("소셜 로그인 시작: provider={}", provider)
 
         val isValidToken = if (provider == SocialProvider.APPLE) {
-            tokenRequest.idToken?.let { oauth2Service.validateToken(it) }
+            request.idToken?.let { oauth2Service.validateToken(it) }
+                ?: throw DigdaException(ErrorCode.INVALID_PARAMETER, "Apple 로그인 시 idToken은 필수입니다")
         } else {
-            oauth2Service.validateToken(tokenRequest.accessToken)
+            oauth2Service.validateToken(request.accessToken)
         }
 
-        if (!isValidToken!!) {
-            throw DigdaException(ErrorCode.INVALID_PARAMETER, "유효하지 않은 토큰입니다")
+        if (!isValidToken) {
+            throw DigdaException(ErrorCode.SOCIAL_AUTH_FAILED)
         }
 
-        val userResponse: KakaoUserResponse =
-            if (provider == SocialProvider.APPLE && tokenRequest.idToken != null) {
-                oauth2Service.getUserInfoFromIdToken(tokenRequest.idToken)
+        val userResponse: OAuthUserResponse =
+            if (provider == SocialProvider.APPLE && request.idToken != null) {
+                oauth2Service.getUserInfoFromIdToken(request.idToken)
             } else {
-                oauth2Service.getUserInfo(tokenRequest.accessToken)
+                oauth2Service.getUserInfo(request.accessToken)
             }
 
-        log.info("사용자 정보 획득 완료: userId={}, provider={}", userResponse.id, provider)
+        log.info("사용자 정보 획득 완료: provider={}", provider)
 
-        val tokenResponse = oauth2Service.convertToTokenResponse(tokenRequest)
+        val (user, isNewUser) = findOrCreateUser(provider, userResponse)
 
-        // TODO: Auth API 구현 시 소셜 로그인 → User 생성/조회 로직 재설계 필요
-        val user = findOrCreateUser(provider, userResponse)
-
-        return tokenService.createAccessTokenAndRefreshToken(
+        val loginToken = tokenService.createAccessTokenAndRefreshToken(
             user.id.toString(),
             user.role,
             user.email
         )
+
+        return LoginResponse(
+            accessToken = loginToken.accessToken,
+            refreshToken = loginToken.refreshToken,
+            user = UserResponse.from(user),
+            isNewUser = isNewUser
+        )
     }
 
-    override fun login(provider: SocialProvider, code: String): LoginToken {
+    override fun loginWithToken(provider: SocialProvider, tokenRequest: SocialTokenRequest): LoginToken {
+        val loginRequest = LoginRequest(
+            provider = provider.value,
+            accessToken = tokenRequest.accessToken,
+            idToken = tokenRequest.idToken
+        )
+        val response = login(loginRequest)
+        return LoginToken.of(response.accessToken, response.refreshToken, response.isNewUser)
+    }
+
+    override fun loginWithCode(provider: SocialProvider, code: String): LoginToken {
         val oauth2Service = getOAuth2Service(provider)
 
         val tokenResponse = oauth2Service.getTokens(code)
 
-        val accessToken = tokenResponse.accessToken
-            ?: throw DigdaException(ErrorCode.INVALID_PARAMETER, "access token 없음")
+        val userResponse = if (provider == SocialProvider.APPLE) {
+            val idToken = tokenResponse.idToken
+                ?: throw DigdaException(ErrorCode.INVALID_PARAMETER, "Apple ID Token 없음")
+            oauth2Service.getUserInfoFromIdToken(idToken)
+        } else {
+            val accessToken = tokenResponse.accessToken
+                ?: throw DigdaException(ErrorCode.INVALID_PARAMETER, "access token 없음")
+            oauth2Service.getUserInfo(accessToken)
+        }
 
-        val userResponse = oauth2Service.getUserInfo(accessToken)
-
-        val user = findOrCreateUser(provider, userResponse)
+        val (user, _) = findOrCreateUser(provider, userResponse)
 
         return tokenService.createAccessTokenAndRefreshToken(
             user.id.toString(),
@@ -102,36 +123,41 @@ class SocialLoginServiceImpl(
 
     private fun getOAuth2Service(provider: SocialProvider): OAuth2Service {
         val service = oauth2ServicesMap[provider]
-            ?: throw DigdaException(ErrorCode.INVALID_PARAMETER)
+            ?: throw DigdaException(ErrorCode.INVALID_PROVIDER)
 
         log.info("OAuth2Service 조회 성공: {}", service::class.simpleName)
         return service
     }
 
-    // TODO: Auth API 구현 시 전면 재설계 필요 (User 엔티티 구조 변경됨)
     private fun findOrCreateUser(
         provider: SocialProvider,
-        userResponse: KakaoUserResponse
-    ): User {
-        val email = userResponse.getEmail()
-            ?: throw DigdaException(ErrorCode.INVALID_PARAMETER, "이메일 정보가 없습니다")
+        userResponse: OAuthUserResponse
+    ): Pair<User, Boolean> {
+        val socialId = userResponse.id
+            ?: throw DigdaException(ErrorCode.INVALID_PARAMETER, "소셜 고유 ID가 없습니다")
 
-        val existingUser = userRepository.findByEmail(email).orElse(null)
+        val existingUser = userRepository.findBySocialIdAndSocialProvider(socialId, provider).orElse(null)
 
         if (existingUser != null) {
-            return existingUser
+            val isNewUser = existingUser.terms == null
+            return Pair(existingUser, isNewUser)
         }
 
         val profileImage = if (provider == SocialProvider.APPLE) appleProfile else userResponse.getProfile()
 
         val newUser = User(
-            email = email,
+            socialId = socialId,
+            email = userResponse.getEmail(),
             name = userResponse.getName() ?: "사용자",
             profileImage = profileImage,
             socialProvider = provider,
             role = Role.USER
         )
 
-        return userRepository.save(newUser)
+        newUser.initNotificationSetting(UserNotificationSetting(user = newUser))
+        newUser.initPrivacySetting(UserPrivacySetting(user = newUser))
+
+        val savedUser = userRepository.save(newUser)
+        return Pair(savedUser, true)
     }
 }

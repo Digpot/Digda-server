@@ -8,10 +8,10 @@ import org.springframework.stereotype.Repository
 @Repository
 interface TodoRepository : JpaRepository<Todo, Long> {
 
-    @Query("SELECT t FROM Todo t WHERE t.group.id = :groupId ORDER BY t.completed ASC, t.createdAt ASC")
-    fun findAllByGroupIdOrdered(groupId: Long): List<Todo>
+    @Query("SELECT t FROM Todo t WHERE t.groupRoom.id = :groupRoomId ORDER BY t.completed ASC, t.createdAt ASC")
+    fun findAllByGroupRoomIdOrdered(groupRoomId: Long): List<Todo>
 
-    fun countByGroupId(groupId: Long): Int
+    fun countByGroupRoomId(groupRoomId: Long): Int
 
-    fun countByGroupIdAndCompletedTrue(groupId: Long): Int
+    fun countByGroupRoomIdAndCompletedTrue(groupRoomId: Long): Int
 }

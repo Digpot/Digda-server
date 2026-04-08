@@ -1,4 +1,4 @@
-package digdaserver.domain.group.domain.entity
+package digdaserver.domain.group_room.domain.entity
 
 import digdaserver.domain.diary.domain.entity.Diary
 import digdaserver.domain.invite.domain.entity.InviteCode
@@ -21,12 +21,12 @@ import jakarta.persistence.Table
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "groups")
-class Group(
+@Table(name = "group_room")
+class GroupRoom(
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "group_id")
+    @Column(name = "group_room_id")
     val id: Long = 0L,
 
     @Column(nullable = false, length = 20)
@@ -53,19 +53,19 @@ class Group(
 
 ) : BaseTimeEntity() {
 
-    @OneToMany(mappedBy = "group", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OneToMany(mappedBy = "groupRoom", cascade = [CascadeType.ALL], orphanRemoval = true)
     val memberships: MutableList<Membership> = mutableListOf()
 
-    @OneToMany(mappedBy = "group", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OneToMany(mappedBy = "groupRoom", cascade = [CascadeType.ALL], orphanRemoval = true)
     val inviteCodes: MutableList<InviteCode> = mutableListOf()
 
-    @OneToMany(mappedBy = "group", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OneToMany(mappedBy = "groupRoom", cascade = [CascadeType.ALL], orphanRemoval = true)
     val schedules: MutableList<Schedule> = mutableListOf()
 
-    @OneToMany(mappedBy = "group", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OneToMany(mappedBy = "groupRoom", cascade = [CascadeType.ALL], orphanRemoval = true)
     val diaries: MutableList<Diary> = mutableListOf()
 
-    @OneToMany(mappedBy = "group", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OneToMany(mappedBy = "groupRoom", cascade = [CascadeType.ALL], orphanRemoval = true)
     val todos: MutableList<Todo> = mutableListOf()
 
     val isDeleteScheduled: Boolean

@@ -9,22 +9,30 @@ import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
+import org.hibernate.annotations.UuidGenerator
+import java.util.UUID
 
 @Entity
-@Table(name = "users")
+@Table(
+    name = "user",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["social_id", "social_provider"])]
+)
 class User(
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "user_id")
-    val id: Long = 0L,
+    @GeneratedValue
+    @UuidGenerator
+    @Column(name = "user_id", columnDefinition = "BINARY(16)")
+    val id: UUID = UUID.randomUUID(),
 
-    @Column(nullable = false, unique = true)
-    var email: String,
+    @Column(name = "social_id")
+    val socialId: String? = null,
+
+    var email: String?,
 
     @Column(nullable = false, length = 20)
     var name: String,

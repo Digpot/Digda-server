@@ -3,10 +3,10 @@ package digdaserver.domain.oauth2.application.service.impl.oauth
 import digdaserver.domain.oauth2.application.service.OAuth2Service
 import digdaserver.domain.oauth2.domain.entity.SocialProvider
 import digdaserver.domain.oauth2.presentation.dto.req.SocialTokenRequest
-import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoTokenResponse
-import digdaserver.domain.oauth2.presentation.dto.res.oatuh.KakaoUserResponse
-import digdaserver.global.infra.exception.error.ErrorCode
+import digdaserver.domain.oauth2.presentation.dto.res.oauth.OAuthTokenResponse
+import digdaserver.domain.oauth2.presentation.dto.res.oauth.OAuthUserResponse
 import digdaserver.global.infra.exception.error.DigdaException
+import digdaserver.global.infra.exception.error.ErrorCode
 import digdaserver.global.infra.feignclient.kakao.KakaoOAuth2URLFeignClient
 import digdaserver.global.infra.feignclient.kakao.KakaoOAuth2UserFeignClient
 import jakarta.transaction.Transactional
@@ -40,7 +40,7 @@ class KakaoOAuth2ServiceImpl(
         return "$baseUrl?client_id=$clientId&redirect_uri=$redirectUri&response_type=code&scope=profile_nickname,profile_image,account_email"
     }
 
-    override fun getTokens(code: String): KakaoTokenResponse {
+    override fun getTokens(code: String): OAuthTokenResponse {
         return kakaoOAuth2URLFeignClient.getAccessToken(
             code,
             clientId,
@@ -50,7 +50,7 @@ class KakaoOAuth2ServiceImpl(
         )
     }
 
-    override fun refreshTokens(refreshToken: String): KakaoTokenResponse {
+    override fun refreshTokens(refreshToken: String): OAuthTokenResponse {
         return kakaoOAuth2URLFeignClient.refreshToken(
             "refresh_token",
             refreshToken,
@@ -59,7 +59,7 @@ class KakaoOAuth2ServiceImpl(
         )
     }
 
-    override fun getUserInfo(accessToken: String): KakaoUserResponse {
+    override fun getUserInfo(accessToken: String): OAuthUserResponse {
         return try {
             kakaoOAuth2UserFeignClient.getUserInfo("Bearer $accessToken")
         } catch (e: Exception) {
@@ -68,7 +68,7 @@ class KakaoOAuth2ServiceImpl(
         }
     }
 
-    override fun getUserInfoFromIdToken(idToken: String): KakaoUserResponse {
+    override fun getUserInfoFromIdToken(idToken: String): OAuthUserResponse {
         throw UnsupportedOperationException("카카오는 ID Token을 지원하지 않습니다.")
     }
 
@@ -82,11 +82,11 @@ class KakaoOAuth2ServiceImpl(
         }
     }
 
-    override fun convertToTokenResponse(tokenRequest: SocialTokenRequest): KakaoTokenResponse {
-        return KakaoTokenResponse(
+    override fun convertToTokenResponse(tokenRequest: SocialTokenRequest): OAuthTokenResponse {
+        return OAuthTokenResponse(
             tokenRequest.accessToken,
             tokenRequest.refreshToken,
-            "idnull",
+            null,
             tokenRequest.expiresIn
         )
     }

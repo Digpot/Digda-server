@@ -29,6 +29,8 @@ class SecurityConfig(
         "/swagger-ui/**",
         "/swagger-ui.html",
         "/favicon.ico",
+        "/auth/login",
+        "/auth/refresh",
         "/api/app/reissue",
         "/api/oauth2/login/**",
         "/api/oauth2/callback/**",
@@ -36,7 +38,8 @@ class SecurityConfig(
         "/api/admin/**",
         "/api/test/**",
         "/actuator/**",
-        "/api/callback/**"
+        "/api/callback/**",
+        "/api/test/oauth2/login/**"
     )
 
     @Bean
@@ -74,6 +77,7 @@ class SecurityConfig(
         http.authorizeHttpRequests { auth ->
             auth
                 .requestMatchers("/api/healthcheck").permitAll()
+                .requestMatchers("/auth/login", "/auth/refresh").permitAll()
                 .requestMatchers("/api/oauth2/login/**").permitAll()
                 .requestMatchers("/api/oauth2/callback/**", "/api/test/**", "/api/callback/**").permitAll()
                 .requestMatchers("/api/admin/**").permitAll()
@@ -81,7 +85,7 @@ class SecurityConfig(
                 .requestMatchers("/favicon.ico", "/api/region").permitAll()
                 .requestMatchers("/api/app/reissue", "/api/web/reissue").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
-                .requestMatchers("/api/app/public/**", "/api/web/public/**").permitAll()
+                .requestMatchers("/api/app/public/**", "/api/web/public/**", "/api/test/oauth2/login/**").permitAll()
                 .anyRequest().authenticated()
         }
 

@@ -11,11 +11,11 @@ import java.time.LocalDate
 @Repository
 interface DiaryRepository : JpaRepository<Diary, Long> {
 
-    fun findAllByGroupId(groupId: Long, pageable: Pageable): Page<Diary>
+    fun findAllByGroupRoomId(groupRoomId: Long, pageable: Pageable): Page<Diary>
 
-    @Query("SELECT d FROM Diary d WHERE d.group.id = :groupId AND d.date BETWEEN :startDate AND :endDate ORDER BY d.createdAt DESC")
-    fun findAllByGroupIdAndDateBetween(groupId: Long, startDate: LocalDate, endDate: LocalDate, pageable: Pageable): Page<Diary>
+    @Query("SELECT d FROM Diary d WHERE d.groupRoom.id = :groupRoomId AND d.date BETWEEN :startDate AND :endDate ORDER BY d.createdAt DESC")
+    fun findAllByGroupRoomIdAndDateBetween(groupRoomId: Long, startDate: LocalDate, endDate: LocalDate, pageable: Pageable): Page<Diary>
 
-    @Query("SELECT DISTINCT d.date FROM Diary d WHERE d.group.id = :groupId AND d.date BETWEEN :startDate AND :endDate")
-    fun findDistinctDatesByGroupIdAndMonth(groupId: Long, startDate: LocalDate, endDate: LocalDate): List<LocalDate>
+    @Query("SELECT DISTINCT d.date FROM Diary d WHERE d.groupRoom.id = :groupRoomId AND d.date BETWEEN :startDate AND :endDate")
+    fun findDistinctDatesByGroupRoomIdAndMonth(groupRoomId: Long, startDate: LocalDate, endDate: LocalDate): List<LocalDate>
 }

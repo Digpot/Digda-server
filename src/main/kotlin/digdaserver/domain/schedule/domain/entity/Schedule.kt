@@ -1,6 +1,6 @@
 package digdaserver.domain.schedule.domain.entity
 
-import digdaserver.domain.group.domain.entity.Group
+import digdaserver.domain.group_room.domain.entity.GroupRoom
 import digdaserver.domain.user.domain.entity.User
 import digdaserver.global.common.entity.BaseTimeEntity
 import jakarta.persistence.CascadeType
@@ -18,7 +18,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 
 @Entity
-@Table(name = "schedules")
+@Table(name = "schedule")
 class Schedule(
 
     @Id
@@ -27,8 +27,8 @@ class Schedule(
     val id: Long = 0L,
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_id", nullable = false)
-    val group: Group,
+    @JoinColumn(name = "group_room_id", nullable = false)
+    val groupRoom: GroupRoom,
 
     @Column(nullable = false, length = 50)
     var title: String,

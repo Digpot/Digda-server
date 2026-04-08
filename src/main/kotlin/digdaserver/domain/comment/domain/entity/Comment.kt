@@ -17,7 +17,7 @@ import java.time.LocalDateTime
 
 @Entity
 @Table(
-    name = "comments",
+    name = "comment",
     indexes = [Index(name = "idx_comment_target", columnList = "target_type, target_id")]
 )
 class Comment(

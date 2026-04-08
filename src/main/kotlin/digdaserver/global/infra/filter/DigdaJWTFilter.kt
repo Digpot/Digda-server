@@ -1,11 +1,7 @@
 package digdaserver.global.infra.filter
 
-import digdaserver.global.infra.exception.error.ErrorCode
-<<<<<<<< HEAD:src/main/kotlin/digdaserver/global/infra/filter/DigdaJWTFilter.kt
 import digdaserver.global.infra.exception.error.DigdaException
-========
-import digdaserver.global.infra.exception.error.DigdaServerException
->>>>>>>> origin/dev:src/main/kotlin/digdaserver/global/infra/filter/DigdaServerJWTFilter.kt
+import digdaserver.global.infra.exception.error.ErrorCode
 import digdaserver.global.jwt.util.JWTUtil
 import jakarta.servlet.FilterChain
 import jakarta.servlet.ServletException
@@ -20,20 +16,12 @@ import org.springframework.util.AntPathMatcher
 import org.springframework.web.filter.OncePerRequestFilter
 import java.io.IOException
 
-<<<<<<<< HEAD:src/main/kotlin/digdaserver/global/infra/filter/DigdaJWTFilter.kt
 class DigdaJWTFilter(
-========
-class DigdaServerJWTFilter(
->>>>>>>> origin/dev:src/main/kotlin/digdaserver/global/infra/filter/DigdaServerJWTFilter.kt
     private val jwtUtil: JWTUtil,
     private val excludedPaths: List<String>
 ) : OncePerRequestFilter() {
 
-<<<<<<<< HEAD:src/main/kotlin/digdaserver/global/infra/filter/DigdaJWTFilter.kt
     private val log = LoggerFactory.getLogger(DigdaJWTFilter::class.java)
-========
-    private val log = LoggerFactory.getLogger(DigdaServerJWTFilter::class.java)
->>>>>>>> origin/dev:src/main/kotlin/digdaserver/global/infra/filter/DigdaServerJWTFilter.kt
 
     @Throws(ServletException::class, IOException::class)
     override fun doFilterInternal(
@@ -45,17 +33,14 @@ class DigdaServerJWTFilter(
         val method = request.method
 
         // 🔒 소셜 로그인 요청에 대한 중복 로그인 체크
-        if ((requestURI.contains("/api/oauth2/login") && method == "POST") ||
+        if ((requestURI == "/auth/login" && method == "POST") ||
+            (requestURI.contains("/api/oauth2/login") && method == "POST") ||
             (requestURI.contains("/api/oauth2/callback"))
         ) {
             val accessToken = jwtUtil.getAccessTokenFromHeaders(request)
 
             if (accessToken != null && jwtUtil.jwtVerify(accessToken, "access")) {
-<<<<<<<< HEAD:src/main/kotlin/digdaserver/global/infra/filter/DigdaJWTFilter.kt
                 throw DigdaException(ErrorCode.DUPLICATE_LOGIN)
-========
-                throw DigdaServerException(ErrorCode.DUPLICATE_LOGIN_NOT_EXIST)
->>>>>>>> origin/dev:src/main/kotlin/digdaserver/global/infra/filter/DigdaServerJWTFilter.kt
             }
 
             filterChain.doFilter(request, response)
@@ -78,11 +63,7 @@ class DigdaServerJWTFilter(
 
         // 🔐 토큰 검증 실패
         if (!jwtUtil.jwtVerify(accessToken, "access")) {
-<<<<<<<< HEAD:src/main/kotlin/digdaserver/global/infra/filter/DigdaJWTFilter.kt
             throw DigdaException(ErrorCode.ACCESS_TOKEN_INVALID)
-========
-            throw DigdaServerException(ErrorCode.INVALID_ACCESS_TOKEN)
->>>>>>>> origin/dev:src/main/kotlin/digdaserver/global/infra/filter/DigdaServerJWTFilter.kt
         }
 
         // 토큰 유효 → ID / Role 추출

@@ -3,6 +3,7 @@ package digdaserver.domain.group_room.presentation.controller
 import digdaserver.domain.group_room.application.service.GroupRoomService
 import digdaserver.domain.group_room.presentation.dto.req.CreateGroupRoomRequest
 import digdaserver.domain.group_room.presentation.dto.res.CreateGroupRoomResponse
+import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDeleteResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDetailResponse
 import digdaserver.domain.group_room.presentation.dto.req.UpdateGroupRoomRequest
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomListResponse
@@ -12,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -65,6 +67,16 @@ class GroupRoomController(
         @RequestBody request: UpdateGroupRoomRequest
     ): ResponseEntity<GroupRoomResponse> {
         val response = groupRoomService.updateGroupRoom(UUID.fromString(userId), groupRoomId, request)
+        return ResponseEntity.ok(response)
+    }
+
+    @Operation(summary = "그룹방 삭제", description = "그룹방을 삭제 예약합니다. 7일 후 영구 삭제됩니다. 방장만 가능합니다.")
+    @DeleteMapping("/{groupRoomId}")
+    fun deleteGroupRoom(
+        @AuthenticationPrincipal userId: String,
+        @PathVariable groupRoomId: Long
+    ): ResponseEntity<GroupRoomDeleteResponse> {
+        val response = groupRoomService.deleteGroupRoom(UUID.fromString(userId), groupRoomId)
         return ResponseEntity.ok(response)
     }
 }

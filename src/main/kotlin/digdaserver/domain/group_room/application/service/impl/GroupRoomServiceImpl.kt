@@ -7,6 +7,7 @@ import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.group_room.presentation.dto.req.CreateGroupRoomRequest
 import digdaserver.domain.group_room.presentation.dto.req.UpdateGroupRoomRequest
 import digdaserver.domain.group_room.presentation.dto.res.CreateGroupRoomResponse
+import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDeleteResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDetailResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomListItem
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomListResponse
@@ -148,6 +149,25 @@ class GroupRoomServiceImpl(
 
         val memberCount = membershipRepository.countByGroupRoomId(groupRoomId)
         return GroupRoomResponse.from(groupRoom, memberCount)
+    }
+
+    @Transactional
+    override fun deleteGroupRoom(userId: UUID, groupRoomId: Long): GroupRoomDeleteResponse {
+        val groupRoom = groupRoomRepository.findById(groupRoomId)
+            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
+
+        if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
+
+        val membership = membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+            .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
+
+        if (!membership.isOwner) throw DigdaException(ErrorCode.NOT_GROUP_ROOM_OWNER)
+
+        groupRoom.scheduleDelete()
+
+        return GroupRoomDeleteResponse(
+            deleteScheduledAt = groupRoom.deleteScheduledAt!!
+        )
     }
 
     private fun validateGroupRoomName(name: String) {

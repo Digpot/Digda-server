@@ -79,4 +79,14 @@ class GroupRoomController(
         val response = groupRoomService.deleteGroupRoom(UUID.fromString(userId), groupRoomId)
         return ResponseEntity.ok(response)
     }
+
+    @Operation(summary = "그룹방 복구", description = "삭제 예약된 그룹방을 복구합니다. 삭제 예약 기간(7일) 내에만 가능하며 방장만 가능합니다.")
+    @PostMapping("/{groupRoomId}/recover")
+    fun recoverGroupRoom(
+        @AuthenticationPrincipal userId: String,
+        @PathVariable groupRoomId: Long
+    ): ResponseEntity<GroupRoomResponse> {
+        val response = groupRoomService.recoverGroupRoom(UUID.fromString(userId), groupRoomId)
+        return ResponseEntity.ok(response)
+    }
 }

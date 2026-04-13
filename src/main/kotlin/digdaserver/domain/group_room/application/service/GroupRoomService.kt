@@ -20,4 +20,6 @@ interface GroupRoomService {
     fun updateGroupRoom(userId: UUID, groupRoomId: Long, request: UpdateGroupRoomRequest): GroupRoomResponse
 
     fun deleteGroupRoom(userId: UUID, groupRoomId: Long): GroupRoomDeleteResponse
+
+    fun recoverGroupRoom(userId: UUID, groupRoomId: Long): GroupRoomResponse
 }

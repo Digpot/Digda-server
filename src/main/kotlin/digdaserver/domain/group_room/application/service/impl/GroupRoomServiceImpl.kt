@@ -170,6 +170,26 @@ class GroupRoomServiceImpl(
         )
     }
 
+    @Transactional
+    override fun recoverGroupRoom(userId: UUID, groupRoomId: Long): GroupRoomResponse {
+        val groupRoom = groupRoomRepository.findById(groupRoomId)
+            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
+
+        if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
+
+        if (!groupRoom.isDeleteScheduled) throw DigdaException(ErrorCode.GROUP_ROOM_NOT_SCHEDULED_FOR_DELETION)
+
+        val membership = membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+            .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
+
+        if (!membership.isOwner) throw DigdaException(ErrorCode.NOT_GROUP_ROOM_OWNER)
+
+        groupRoom.recover()
+
+        val memberCount = membershipRepository.countByGroupRoomId(groupRoomId)
+        return GroupRoomResponse.from(groupRoom, memberCount)
+    }
+
     private fun validateGroupRoomName(name: String) {
         if (name.length < 2) throw DigdaException(ErrorCode.GROUP_ROOM_NAME_TOO_SHORT)
         if (name.length > 20) throw DigdaException(ErrorCode.GROUP_ROOM_NAME_TOO_LONG)

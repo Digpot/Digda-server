@@ -4,7 +4,9 @@ import digdaserver.domain.group_room.application.service.GroupRoomService
 import digdaserver.domain.group_room.presentation.dto.req.CreateGroupRoomRequest
 import digdaserver.domain.group_room.presentation.dto.res.CreateGroupRoomResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDetailResponse
+import digdaserver.domain.group_room.presentation.dto.req.UpdateGroupRoomRequest
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomListResponse
+import digdaserver.domain.group_room.presentation.dto.res.GroupRoomResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
@@ -13,6 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
@@ -51,6 +54,17 @@ class GroupRoomController(
         @PathVariable groupRoomId: Long
     ): ResponseEntity<GroupRoomDetailResponse> {
         val response = groupRoomService.getGroupRoomDetail(UUID.fromString(userId), groupRoomId)
+        return ResponseEntity.ok(response)
+    }
+
+    @Operation(summary = "그룹방 수정", description = "그룹방 정보를 수정합니다. 방장만 가능합니다.")
+    @PutMapping("/{groupRoomId}")
+    fun updateGroupRoom(
+        @AuthenticationPrincipal userId: String,
+        @PathVariable groupRoomId: Long,
+        @RequestBody request: UpdateGroupRoomRequest
+    ): ResponseEntity<GroupRoomResponse> {
+        val response = groupRoomService.updateGroupRoom(UUID.fromString(userId), groupRoomId, request)
         return ResponseEntity.ok(response)
     }
 }

@@ -5,6 +5,7 @@ import digdaserver.domain.group_room.domain.entity.GroupRoom
 import digdaserver.domain.group_room.domain.entity.GroupRoomRole
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.group_room.presentation.dto.req.CreateGroupRoomRequest
+import digdaserver.domain.group_room.presentation.dto.req.UpdateGroupRoomRequest
 import digdaserver.domain.group_room.presentation.dto.res.CreateGroupRoomResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDetailResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomListItem
@@ -110,6 +111,43 @@ class GroupRoomServiceImpl(
             myRole = membership.role.name.lowercase(),
             inviteCode = inviteCode
         )
+    }
+
+    @Transactional
+    override fun updateGroupRoom(userId: UUID, groupRoomId: Long, request: UpdateGroupRoomRequest): GroupRoomResponse {
+        val groupRoom = groupRoomRepository.findById(groupRoomId)
+            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
+
+        if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
+
+        val membership = membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+            .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
+
+        if (!membership.isOwner) throw DigdaException(ErrorCode.NOT_GROUP_ROOM_OWNER)
+
+        request.name?.let { validateGroupRoomName(it) }
+
+        request.maxMembers?.let { newMax ->
+            val currentCount = membershipRepository.countByGroupRoomId(groupRoomId)
+            if (newMax < currentCount) throw DigdaException(ErrorCode.MAX_MEMBERS_BELOW_CURRENT)
+        }
+
+        groupRoom.update(
+            name = request.name,
+            maxMembers = request.maxMembers,
+            thumbnailImage = null
+        )
+
+        request.thumbnailImageId?.let { optional ->
+            if (optional.isPresent) {
+                groupRoom.thumbnailImage = optional.get()
+            } else {
+                groupRoom.removeThumbnail()
+            }
+        }
+
+        val memberCount = membershipRepository.countByGroupRoomId(groupRoomId)
+        return GroupRoomResponse.from(groupRoom, memberCount)
     }
 
     private fun validateGroupRoomName(name: String) {

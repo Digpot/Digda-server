@@ -84,6 +84,7 @@ enum class ErrorCode(
 
     // ── Notification ──
     NOTIFICATION_NOT_FOUND("NOTIFICATION_NOT_FOUND", "존재하지 않는 알림입니다.", 404),
+    NOTIFICATION_SETTING_NOT_FOUND("NOTIFICATION_SETTING_NOT_FOUND", "알림 설정을 찾을 수 없습니다.", 404),
 
     // ── Device ──
     DEVICE_NOT_FOUND("DEVICE_NOT_FOUND", "존재하지 않는 디바이스입니다.", 404),

@@ -6,6 +6,8 @@ import digdaserver.domain.group_room.domain.entity.GroupRoomRole
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.group_room.presentation.dto.req.CreateGroupRoomRequest
 import digdaserver.domain.group_room.presentation.dto.res.CreateGroupRoomResponse
+import digdaserver.domain.group_room.presentation.dto.res.GroupRoomListItem
+import digdaserver.domain.group_room.presentation.dto.res.GroupRoomListResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomResponse
 import digdaserver.domain.invite.domain.entity.InviteCode
 import digdaserver.domain.invite.domain.repository.InviteCodeRepository
@@ -66,6 +68,17 @@ class GroupRoomServiceImpl(
             inviteCode = inviteCode.code,
             inviteCodeExpiresAt = inviteCode.expiresAt
         )
+    }
+
+    override fun getMyGroupRooms(userId: UUID): GroupRoomListResponse {
+        val memberships = membershipRepository.findAllByUserIdWithGroupRoom(userId)
+
+        val groupRoomItems = memberships.map { membership ->
+            val memberCount = membershipRepository.countByGroupRoomId(membership.groupRoom.id)
+            GroupRoomListItem.from(membership.groupRoom, memberCount, membership.role)
+        }
+
+        return GroupRoomListResponse(groupRooms = groupRoomItems)
     }
 
     private fun validateGroupRoomName(name: String) {

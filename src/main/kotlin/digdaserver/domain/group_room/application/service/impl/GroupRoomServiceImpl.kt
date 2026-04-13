@@ -6,9 +6,11 @@ import digdaserver.domain.group_room.domain.entity.GroupRoomRole
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.group_room.presentation.dto.req.CreateGroupRoomRequest
 import digdaserver.domain.group_room.presentation.dto.res.CreateGroupRoomResponse
+import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDetailResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomListItem
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomListResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomResponse
+import digdaserver.domain.group_room.presentation.dto.res.MembershipSummary
 import digdaserver.domain.invite.domain.entity.InviteCode
 import digdaserver.domain.invite.domain.repository.InviteCodeRepository
 import digdaserver.domain.membership.domain.entity.Membership
@@ -79,6 +81,35 @@ class GroupRoomServiceImpl(
         }
 
         return GroupRoomListResponse(groupRooms = groupRoomItems)
+    }
+
+    override fun getGroupRoomDetail(userId: UUID, groupRoomId: Long): GroupRoomDetailResponse {
+        val groupRoom = groupRoomRepository.findById(groupRoomId)
+            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
+
+        if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
+
+        val membership = membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+            .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
+
+        val memberships = membershipRepository.findAllByGroupRoomId(groupRoomId)
+        val memberCount = memberships.size
+
+        val inviteCode = if (membership.isOwner) {
+            inviteCodeRepository.findFirstByGroupRoomIdOrderByCreatedAtDesc(groupRoomId)
+                .filter { !it.isExpired }
+                .map { it.code }
+                .orElse(null)
+        } else {
+            null
+        }
+
+        return GroupRoomDetailResponse(
+            groupRoom = GroupRoomResponse.from(groupRoom, memberCount),
+            memberships = memberships.map { MembershipSummary.from(it) },
+            myRole = membership.role.name.lowercase(),
+            inviteCode = inviteCode
+        )
     }
 
     private fun validateGroupRoomName(name: String) {

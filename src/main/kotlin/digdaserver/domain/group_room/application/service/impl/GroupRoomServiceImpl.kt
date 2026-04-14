@@ -79,7 +79,15 @@ class GroupRoomServiceImpl(
 
         val groupRoomItems = memberships.map { membership ->
             val memberCount = membershipRepository.countByGroupRoomId(membership.groupRoom.id)
-            GroupRoomListItem.from(membership.groupRoom, memberCount, membership.role)
+            val inviteCode = if (membership.isOwner) {
+                inviteCodeRepository.findFirstByGroupRoomIdOrderByCreatedAtDesc(membership.groupRoom.id)
+                    .filter { !it.isExpired }
+                    .map { it.code }
+                    .orElse(null)
+            } else {
+                null
+            }
+            GroupRoomListItem.from(membership.groupRoom, memberCount, membership.role, inviteCode)
         }
 
         return GroupRoomListResponse(groupRooms = groupRoomItems)
@@ -97,20 +105,10 @@ class GroupRoomServiceImpl(
         val memberships = membershipRepository.findAllByGroupRoomId(groupRoomId)
         val memberCount = memberships.size
 
-        val inviteCode = if (membership.isOwner) {
-            inviteCodeRepository.findFirstByGroupRoomIdOrderByCreatedAtDesc(groupRoomId)
-                .filter { !it.isExpired }
-                .map { it.code }
-                .orElse(null)
-        } else {
-            null
-        }
-
         return GroupRoomDetailResponse(
             groupRoom = GroupRoomResponse.from(groupRoom, memberCount),
             memberships = memberships.map { MembershipSummary.from(it) },
-            myRole = membership.role.name.lowercase(),
-            inviteCode = inviteCode
+            myRole = membership.role.name.lowercase()
         )
     }
 
@@ -139,6 +137,7 @@ class GroupRoomServiceImpl(
             thumbnailImage = null
         )
 
+        // thumbnailImageId: null(미전송)=변경없음, Optional.empty=삭제, Optional(값)=변경
         request.thumbnailImageId?.let { optional ->
             if (optional.isPresent) {
                 groupRoom.thumbnailImage = optional.get()

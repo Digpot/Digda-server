@@ -12,10 +12,11 @@ data class GroupRoomListItem(
     val maxMembers: Int,
     val myRole: String,
     val lastActivityAt: LocalDateTime,
-    val isDeleteScheduled: Boolean
+    val isDeleteScheduled: Boolean,
+    val inviteCode: String? = null
 ) {
     companion object {
-        fun from(groupRoom: GroupRoom, memberCount: Int, myRole: GroupRoomRole): GroupRoomListItem = GroupRoomListItem(
+        fun from(groupRoom: GroupRoom, memberCount: Int, myRole: GroupRoomRole, inviteCode: String? = null): GroupRoomListItem = GroupRoomListItem(
             id = groupRoom.id,
             name = groupRoom.name,
             thumbnailImage = groupRoom.thumbnailImage,
@@ -23,7 +24,8 @@ data class GroupRoomListItem(
             maxMembers = groupRoom.maxMembers,
             myRole = myRole.name.lowercase(),
             lastActivityAt = groupRoom.lastActivityAt,
-            isDeleteScheduled = groupRoom.isDeleteScheduled
+            isDeleteScheduled = groupRoom.isDeleteScheduled,
+            inviteCode = inviteCode
         )
     }
 }

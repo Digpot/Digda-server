@@ -15,6 +15,7 @@ import digdaserver.domain.diary.presentation.dto.res.DiaryResponse
 import digdaserver.domain.diary.presentation.dto.res.DiarySummaryResponse
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.membership.domain.repository.MembershipRepository
+import digdaserver.domain.notification.application.service.NotificationService
 import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
@@ -33,7 +34,8 @@ class DiaryServiceImpl(
     private val groupRoomRepository: GroupRoomRepository,
     private val membershipRepository: MembershipRepository,
     private val commentRepository: CommentRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val notificationService: NotificationService
 ) : DiaryService {
 
     override fun getDiaries(userId: UUID, groupRoomId: Long, month: YearMonth?, limit: Int, offset: Int): DiaryListResponse {
@@ -131,6 +133,8 @@ class DiaryServiceImpl(
         )
 
         groupRoom.updateLastActivity()
+
+        notificationService.notifyDiaryWritten(groupRoomId, diary.id, userId, diary.title)
 
         return DiaryResponse.from(diary)
     }

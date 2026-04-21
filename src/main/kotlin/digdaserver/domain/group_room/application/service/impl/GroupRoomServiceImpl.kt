@@ -17,6 +17,7 @@ import digdaserver.domain.invite.domain.entity.InviteCode
 import digdaserver.domain.invite.domain.repository.InviteCodeRepository
 import digdaserver.domain.membership.domain.entity.Membership
 import digdaserver.domain.membership.domain.repository.MembershipRepository
+import digdaserver.domain.notification.application.service.NotificationService
 import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
@@ -31,7 +32,8 @@ class GroupRoomServiceImpl(
     private val groupRoomRepository: GroupRoomRepository,
     private val userRepository: UserRepository,
     private val membershipRepository: MembershipRepository,
-    private val inviteCodeRepository: InviteCodeRepository
+    private val inviteCodeRepository: InviteCodeRepository,
+    private val notificationService: NotificationService
 ) : GroupRoomService {
 
     @Transactional
@@ -163,6 +165,8 @@ class GroupRoomServiceImpl(
         if (!membership.isOwner) throw DigdaException(ErrorCode.NOT_GROUP_ROOM_OWNER)
 
         groupRoom.scheduleDelete()
+
+        notificationService.notifyGroupRoomDeleteScheduled(groupRoomId, userId)
 
         return GroupRoomDeleteResponse(
             deleteScheduledAt = groupRoom.deleteScheduledAt!!

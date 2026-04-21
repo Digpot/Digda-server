@@ -6,6 +6,7 @@ import digdaserver.domain.membership.application.service.MembershipService
 import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.domain.membership.presentation.dto.res.MembershipListResponse
 import digdaserver.domain.membership.presentation.dto.res.MembershipResponse
+import digdaserver.domain.notification.application.service.NotificationService
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
 import org.springframework.stereotype.Service
@@ -16,7 +17,8 @@ import java.util.UUID
 @Transactional(readOnly = true)
 class MembershipServiceImpl(
     private val membershipRepository: MembershipRepository,
-    private val groupRoomRepository: GroupRoomRepository
+    private val groupRoomRepository: GroupRoomRepository,
+    private val notificationService: NotificationService
 ) : MembershipService {
 
     override fun getMemberships(userId: UUID, groupRoomId: Long): MembershipListResponse {
@@ -81,6 +83,8 @@ class MembershipServiceImpl(
         membership.changeRole(GroupRoomRole.MEMBER)
         targetMembership.changeRole(GroupRoomRole.OWNER)
 
+        notificationService.notifyOwnershipTransferred(groupRoomId, userId, targetUserId)
+
         val memberships = membershipRepository.findAllByGroupRoomId(groupRoomId)
 
         return MembershipListResponse(
@@ -101,5 +105,7 @@ class MembershipServiceImpl(
         if (membership.isOwner) throw DigdaException(ErrorCode.OWNER_CANNOT_LEAVE)
 
         membershipRepository.delete(membership)
+
+        notificationService.notifyMemberLeft(groupRoomId, userId)
     }
 }

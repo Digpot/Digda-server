@@ -4,6 +4,7 @@ import digdaserver.domain.comment.domain.entity.CommentTargetType
 import digdaserver.domain.comment.domain.repository.CommentRepository
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.membership.domain.repository.MembershipRepository
+import digdaserver.domain.notification.application.service.NotificationService
 import digdaserver.domain.schedule.application.service.ScheduleService
 import digdaserver.domain.schedule.domain.entity.Schedule
 import digdaserver.domain.schedule.domain.entity.ScheduleParticipant
@@ -29,7 +30,8 @@ class ScheduleServiceImpl(
     private val groupRoomRepository: GroupRoomRepository,
     private val membershipRepository: MembershipRepository,
     private val commentRepository: CommentRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val notificationService: NotificationService
 ) : ScheduleService {
 
     override fun getSchedules(userId: UUID, groupRoomId: Long, startDate: LocalDate, endDate: LocalDate): ScheduleListResponse {
@@ -107,6 +109,17 @@ class ScheduleServiceImpl(
 
         groupRoom.updateLastActivity()
 
+        val participantIds = request.participantIds ?: emptyList()
+        if (participantIds.isNotEmpty()) {
+            notificationService.notifyScheduleCreated(
+                groupRoomId = groupRoomId,
+                scheduleId = schedule.id,
+                creatorUserId = userId,
+                scheduleTitle = schedule.title,
+                participantUserIds = participantIds
+            )
+        }
+
         return ScheduleResponse.from(schedule, 0)
     }
 
@@ -145,12 +158,24 @@ class ScheduleServiceImpl(
             allDay = request.allDay
         )
 
-        request.participantIds?.let { ids ->
+        val addedParticipantIds = request.participantIds?.let { newIds ->
+            val oldIds = schedule.participants.map { it.user.id }.toSet()
             schedule.clearParticipants()
-            addParticipants(schedule, groupRoomId, ids)
-        }
+            addParticipants(schedule, groupRoomId, newIds)
+            newIds.filter { it !in oldIds }
+        } ?: emptyList()
 
         groupRoom.updateLastActivity()
+
+        if (addedParticipantIds.isNotEmpty()) {
+            notificationService.notifyScheduleParticipantsAdded(
+                groupRoomId = groupRoomId,
+                scheduleId = schedule.id,
+                actorUserId = userId,
+                scheduleTitle = schedule.title,
+                addedParticipantUserIds = addedParticipantIds
+            )
+        }
 
         val commentCount = commentRepository.countByTargetTypeAndTargetId(CommentTargetType.SCHEDULE, scheduleId)
         return ScheduleResponse.from(schedule, commentCount)

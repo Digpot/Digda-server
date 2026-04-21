@@ -1,5 +1,6 @@
 package digdaserver.domain.notification.application.service.impl
 
+import digdaserver.domain.device.domain.repository.DeviceRepository
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.domain.notification.application.service.NotificationService
@@ -9,9 +10,12 @@ import digdaserver.domain.notification.domain.repository.NotificationRepository
 import digdaserver.domain.notification.presentation.dto.res.NotificationListResponse
 import digdaserver.domain.notification.presentation.dto.res.NotificationResponse
 import digdaserver.domain.user.domain.entity.User
+import digdaserver.domain.user.domain.entity.UserNotificationSetting
 import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
+import digdaserver.global.infra.fcm.presentation.application.FcmService
+import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -23,8 +27,12 @@ class NotificationServiceImpl(
     private val notificationRepository: NotificationRepository,
     private val membershipRepository: MembershipRepository,
     private val groupRoomRepository: GroupRoomRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val deviceRepository: DeviceRepository,
+    private val fcmService: FcmService
 ) : NotificationService {
+
+    private val log = LoggerFactory.getLogger(javaClass)
 
     override fun getNotifications(userId: UUID, limit: Int, offset: Int): NotificationListResponse {
         val safeLimit = limit.coerceIn(1, 100)
@@ -302,5 +310,60 @@ class NotificationServiceImpl(
             )
         }
         notificationRepository.saveAll(notifications)
+
+        sendPushNotifications(recipients, type, title, message, groupRoomId, relatedId, relatedType)
+    }
+
+    private fun sendPushNotifications(
+        recipients: List<User>,
+        type: NotificationType,
+        title: String,
+        message: String,
+        groupRoomId: Long?,
+        relatedId: Long?,
+        relatedType: String?
+    ) {
+        try {
+            val eligibleUserIds = recipients
+                .filter { shouldSendPush(it.notificationSetting, type) }
+                .map { it.id }
+
+            if (eligibleUserIds.isEmpty()) return
+
+            val devices = deviceRepository.findAllByUserIdIn(eligibleUserIds)
+            if (devices.isEmpty()) return
+
+            val tokens = devices.map { it.token }
+            val data = buildMap {
+                put("type", type.name)
+                groupRoomId?.let { put("groupRoomId", it.toString()) }
+                relatedId?.let { put("relatedId", it.toString()) }
+                relatedType?.let { put("relatedType", it) }
+            }
+
+            val result = fcmService.sendToTokens(tokens, title, message, data)
+
+            if (result.invalidTokens.isNotEmpty()) {
+                deviceRepository.deleteAllByTokenIn(result.invalidTokens)
+            }
+        } catch (e: Exception) {
+            log.error("FCM push send failed for type={}: {}", type, e.message, e)
+        }
+    }
+
+    private fun shouldSendPush(setting: UserNotificationSetting?, type: NotificationType): Boolean {
+        if (setting == null || !setting.pushEnabled) return false
+        return when (type) {
+            NotificationType.SCHEDULE_CREATED,
+            NotificationType.SCHEDULE_UPDATED -> setting.scheduleNotification
+            NotificationType.DIARY_WRITTEN -> setting.diaryNotification
+            NotificationType.COMMENT_ON_SCHEDULE,
+            NotificationType.COMMENT_ON_DIARY -> setting.commentNotification
+            NotificationType.MEMBER_JOINED,
+            NotificationType.MEMBER_LEFT,
+            NotificationType.MEMBER_REMOVED,
+            NotificationType.OWNERSHIP_TRANSFERRED,
+            NotificationType.GROUP_DELETE_SCHEDULED -> true
+        }
     }
 }

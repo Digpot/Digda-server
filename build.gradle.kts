@@ -79,6 +79,9 @@ dependencies {
     implementation("software.amazon.awssdk:s3:2.20.56")
     implementation("org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE")
 
+    // Firebase Cloud Messaging
+    implementation("com.google.firebase:firebase-admin:9.3.0")
+
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")

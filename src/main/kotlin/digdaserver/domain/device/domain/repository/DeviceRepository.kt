@@ -13,5 +13,9 @@ interface DeviceRepository : JpaRepository<Device, Long> {
 
     fun findAllByUserId(userId: UUID): List<Device>
 
+    fun findAllByUserIdIn(userIds: Collection<UUID>): List<Device>
+
     fun deleteAllByUserId(userId: UUID)
+
+    fun deleteAllByTokenIn(tokens: Collection<String>)
 }

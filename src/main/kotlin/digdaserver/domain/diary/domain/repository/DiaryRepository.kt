@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 import java.time.LocalDate
 
@@ -18,4 +19,17 @@ interface DiaryRepository : JpaRepository<Diary, Long> {
 
     @Query("SELECT DISTINCT d.date FROM Diary d WHERE d.groupRoom.id = :groupRoomId AND d.date BETWEEN :startDate AND :endDate")
     fun findDistinctDatesByGroupRoomIdAndMonth(groupRoomId: Long, startDate: LocalDate, endDate: LocalDate): List<LocalDate>
+
+    @Query(
+        """
+        SELECT d FROM Diary d
+        WHERE (:keyword IS NULL OR :keyword = ''
+            OR LOWER(d.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(d.content) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        """
+    )
+    fun searchForAdmin(
+        @Param("keyword") keyword: String?,
+        pageable: Pageable
+    ): Page<Diary>
 }

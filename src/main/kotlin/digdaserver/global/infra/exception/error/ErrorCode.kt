@@ -95,5 +95,13 @@ enum class ErrorCode(
     IMAGE_NOT_FOUND("IMAGE_NOT_FOUND", "존재하지 않는 이미지입니다.", 404),
 
     // ── Rate Limit ──
-    RATE_LIMIT_EXCEEDED("RATE_LIMIT_EXCEEDED", "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.", 429);
+    RATE_LIMIT_EXCEEDED("RATE_LIMIT_EXCEEDED", "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.", 429),
+
+    // ── Admin ──
+    ADMIN_NOT_FOUND("ADMIN_NOT_FOUND", "존재하지 않는 관리자 계정입니다.", 404),
+    ADMIN_PASSWORD_MISMATCH("ADMIN_PASSWORD_MISMATCH", "비밀번호가 일치하지 않습니다.", 401),
+    NOT_ADMIN_USER("NOT_ADMIN_USER", "관리자 권한이 없는 사용자입니다.", 403),
+    ADMIN_TABLE_NOT_ALLOWED("ADMIN_TABLE_NOT_ALLOWED", "조회할 수 없는 테이블명입니다.", 400),
+    ADMIN_TABLE_NOT_FOUND("ADMIN_TABLE_NOT_FOUND", "존재하지 않는 테이블입니다.", 404),
+    ADMIN_COLUMN_NOT_ALLOWED("ADMIN_COLUMN_NOT_ALLOWED", "유효하지 않은 컬럼명입니다.", 400);
 }

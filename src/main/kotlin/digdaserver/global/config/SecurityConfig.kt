@@ -35,7 +35,7 @@ class SecurityConfig(
         "/api/oauth2/login/**",
         "/api/oauth2/callback/**",
         "/api/healthcheck",
-        "/api/admin/**",
+        "/api/admin/auth/login",
         "/api/test/**",
         "/actuator/**",
         "/api/callback/**",
@@ -84,7 +84,8 @@ class SecurityConfig(
                 .requestMatchers("/auth/login", "/auth/refresh").permitAll()
                 .requestMatchers("/api/oauth2/login/**").permitAll()
                 .requestMatchers("/api/oauth2/callback/**", "/api/test/**", "/api/callback/**").permitAll()
-                .requestMatchers("/api/admin/**").permitAll()
+                .requestMatchers("/api/admin/auth/login").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/favicon.ico", "/api/region").permitAll()
                 .requestMatchers("/api/app/reissue", "/api/web/reissue").permitAll()

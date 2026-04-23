@@ -2,6 +2,8 @@ package digdaserver.domain.membership.application.service.impl
 
 import digdaserver.domain.group_room.domain.entity.GroupRoomRole
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
+import digdaserver.domain.log.application.service.UserActionLogService
+import digdaserver.domain.log.domain.entity.UserAction
 import digdaserver.domain.membership.application.service.MembershipService
 import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.domain.membership.presentation.dto.res.MembershipListResponse
@@ -18,7 +20,8 @@ import java.util.UUID
 class MembershipServiceImpl(
     private val membershipRepository: MembershipRepository,
     private val groupRoomRepository: GroupRoomRepository,
-    private val notificationService: NotificationService
+    private val notificationService: NotificationService,
+    private val userActionLogService: UserActionLogService
 ) : MembershipService {
 
     override fun getMemberships(userId: UUID, groupRoomId: Long): MembershipListResponse {
@@ -85,6 +88,14 @@ class MembershipServiceImpl(
 
         notificationService.notifyOwnershipTransferred(groupRoomId, userId, targetUserId)
 
+        userActionLogService.record(
+            actorId = userId,
+            action = UserAction.TRANSFER_OWNER,
+            targetType = "GROUP_ROOM",
+            targetId = groupRoomId.toString(),
+            detail = "targetUserId=$targetUserId"
+        )
+
         val memberships = membershipRepository.findAllByGroupRoomId(groupRoomId)
 
         return MembershipListResponse(
@@ -107,5 +118,13 @@ class MembershipServiceImpl(
         membershipRepository.delete(membership)
 
         notificationService.notifyMemberLeft(groupRoomId, userId)
+
+        userActionLogService.record(
+            actorId = userId,
+            action = UserAction.LEAVE_GROUP_ROOM,
+            targetType = "GROUP_ROOM",
+            targetId = groupRoomId.toString(),
+            detail = "name=${groupRoom.name}"
+        )
     }
 }

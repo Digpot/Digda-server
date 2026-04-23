@@ -7,6 +7,8 @@ import digdaserver.domain.comment.domain.repository.CommentRepository
 import digdaserver.domain.comment.presentation.dto.res.CreateCommentResponse
 import digdaserver.domain.diary.domain.repository.DiaryRepository
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
+import digdaserver.domain.log.application.service.UserActionLogService
+import digdaserver.domain.log.domain.entity.UserAction
 import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.domain.schedule.domain.repository.ScheduleRepository
 import digdaserver.domain.user.domain.repository.UserRepository
@@ -24,7 +26,8 @@ class CommentServiceImpl(
     private val membershipRepository: MembershipRepository,
     private val scheduleRepository: ScheduleRepository,
     private val diaryRepository: DiaryRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val userActionLogService: UserActionLogService
 ) : CommentService {
 
     @Transactional
@@ -45,6 +48,14 @@ class CommentServiceImpl(
                 text = text,
                 createdBy = user
             )
+        )
+
+        userActionLogService.record(
+            actorId = userId,
+            action = UserAction.CREATE_COMMENT,
+            targetType = "SCHEDULE",
+            targetId = scheduleId.toString(),
+            detail = "groupRoomId=$groupRoomId, commentId=${comment.id}"
         )
 
         return CreateCommentResponse.from(comment)
@@ -68,6 +79,14 @@ class CommentServiceImpl(
                 text = text,
                 createdBy = user
             )
+        )
+
+        userActionLogService.record(
+            actorId = userId,
+            action = UserAction.CREATE_COMMENT,
+            targetType = "DIARY",
+            targetId = diaryId.toString(),
+            detail = "groupRoomId=$groupRoomId, commentId=${comment.id}"
         )
 
         return CreateCommentResponse.from(comment)

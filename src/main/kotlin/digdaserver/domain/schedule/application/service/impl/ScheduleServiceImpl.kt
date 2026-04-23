@@ -3,6 +3,8 @@ package digdaserver.domain.schedule.application.service.impl
 import digdaserver.domain.comment.domain.entity.CommentTargetType
 import digdaserver.domain.comment.domain.repository.CommentRepository
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
+import digdaserver.domain.log.application.service.UserActionLogService
+import digdaserver.domain.log.domain.entity.UserAction
 import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.domain.notification.application.service.NotificationService
 import digdaserver.domain.schedule.application.service.ScheduleService
@@ -31,7 +33,8 @@ class ScheduleServiceImpl(
     private val membershipRepository: MembershipRepository,
     private val commentRepository: CommentRepository,
     private val userRepository: UserRepository,
-    private val notificationService: NotificationService
+    private val notificationService: NotificationService,
+    private val userActionLogService: UserActionLogService
 ) : ScheduleService {
 
     override fun getSchedules(userId: UUID, groupRoomId: Long, startDate: LocalDate, endDate: LocalDate): ScheduleListResponse {
@@ -120,6 +123,14 @@ class ScheduleServiceImpl(
             )
         }
 
+        userActionLogService.record(
+            actorId = userId,
+            action = UserAction.CREATE_SCHEDULE,
+            targetType = "SCHEDULE",
+            targetId = schedule.id.toString(),
+            detail = "groupRoomId=$groupRoomId, title=${schedule.title}"
+        )
+
         return ScheduleResponse.from(schedule, 0)
     }
 
@@ -198,7 +209,16 @@ class ScheduleServiceImpl(
             throw DigdaException(ErrorCode.FORBIDDEN)
         }
 
+        val title = schedule.title
         scheduleRepository.delete(schedule)
+
+        userActionLogService.record(
+            actorId = userId,
+            action = UserAction.DELETE_SCHEDULE,
+            targetType = "SCHEDULE",
+            targetId = scheduleId.toString(),
+            detail = "groupRoomId=$groupRoomId, title=$title"
+        )
     }
 
     private fun validateDateRange(

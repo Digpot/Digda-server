@@ -1,11 +1,10 @@
-package digdaserver.admin.log.application.service.impl
+package digdaserver.domain.log.application.service.impl
 
-import digdaserver.admin.common.dto.res.AdminPageResponse
-import digdaserver.admin.log.application.service.AdminActionLogService
-import digdaserver.admin.log.domain.entity.AdminAction
-import digdaserver.admin.log.domain.entity.AdminActionLog
-import digdaserver.admin.log.domain.repository.AdminActionLogRepository
-import digdaserver.admin.log.presentation.dto.res.AdminActionLogResponse
+import digdaserver.domain.log.application.service.UserActionLogService
+import digdaserver.domain.log.domain.entity.UserAction
+import digdaserver.domain.log.domain.entity.UserActionLog
+import digdaserver.domain.log.domain.repository.UserActionLogRepository
+import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
@@ -16,20 +15,20 @@ import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)
-class AdminActionLogServiceImpl(
-    private val adminActionLogRepository: AdminActionLogRepository
-) : AdminActionLogService {
+class UserActionLogServiceImpl(
+    private val userActionLogRepository: UserActionLogRepository
+) : UserActionLogService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     override fun record(
         actorId: UUID?,
-        action: AdminAction,
+        action: UserAction,
         targetType: String?,
         targetId: String?,
         detail: String?
     ) {
-        adminActionLogRepository.save(
-            AdminActionLog(
+        userActionLogRepository.save(
+            UserActionLog(
                 actorId = actorId,
                 action = action,
                 targetType = targetType,
@@ -41,15 +40,14 @@ class AdminActionLogServiceImpl(
 
     override fun search(
         actorId: UUID?,
-        action: AdminAction?,
+        action: UserAction?,
         from: LocalDateTime?,
         to: LocalDateTime?,
         keyword: String?,
         page: Int,
         size: Int
-    ): AdminPageResponse<AdminActionLogResponse> {
+    ): Page<UserActionLog> {
         val pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
-        val result = adminActionLogRepository.searchLogs(actorId, action, from, to, keyword, pageable)
-        return AdminPageResponse.of(result, AdminActionLogResponse::from)
+        return userActionLogRepository.searchLogs(actorId, action, from, to, keyword, pageable)
     }
 }

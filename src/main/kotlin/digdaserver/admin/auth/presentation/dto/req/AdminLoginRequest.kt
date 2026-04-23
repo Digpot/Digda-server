@@ -13,6 +13,6 @@ data class AdminLoginRequest(
     val email: String,
 
     @field:NotBlank
-    @Schema(description = "관리자 비밀번호", example = "qkek@@0312")
+    @Schema(description = "관리자 비밀번호", example = "P@ssw0rd!")
     val password: String
 )

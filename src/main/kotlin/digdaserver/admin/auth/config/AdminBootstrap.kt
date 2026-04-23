@@ -7,6 +7,7 @@ import digdaserver.domain.user.domain.entity.Role
 import digdaserver.domain.user.domain.entity.User
 import digdaserver.domain.user.domain.repository.UserRepository
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.ApplicationListener
 import org.springframework.context.annotation.Profile
@@ -19,17 +20,16 @@ import org.springframework.transaction.annotation.Transactional
 class AdminBootstrap(
     private val userRepository: UserRepository,
     private val adminCredentialRepository: AdminCredentialRepository,
-    private val passwordEncoder: PasswordEncoder
+    private val passwordEncoder: PasswordEncoder,
+    @Value("\${admin.bootstrap.email}") private val email: String,
+    @Value("\${admin.bootstrap.password}") private val rawPassword: String,
+    @Value("\${admin.bootstrap.name}") private val name: String
 ) : ApplicationListener<ApplicationReadyEvent> {
 
     private val log = LoggerFactory.getLogger(AdminBootstrap::class.java)
 
     @Transactional
     override fun onApplicationEvent(event: ApplicationReadyEvent) {
-        val email = System.getenv("DEFAULT_ADMIN_EMAIL") ?: "admin@digda.com"
-        val rawPassword = System.getenv("DEFAULT_ADMIN_PASSWORD") ?: "qkek@@0312"
-        val name = System.getenv("DEFAULT_ADMIN_NAME") ?: "admin"
-
         if (adminCredentialRepository.findByEmail(email).isPresent) {
             log.info("[AdminBootstrap] 기존 관리자 존재 — 생성 스킵 (email={})", email)
             return

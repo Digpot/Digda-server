@@ -9,6 +9,7 @@ import digdaserver.admin.log.presentation.dto.res.AdminActionLogResponse
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 import java.util.UUID
@@ -19,7 +20,7 @@ class AdminActionLogServiceImpl(
     private val adminActionLogRepository: AdminActionLogRepository
 ) : AdminActionLogService {
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     override fun record(
         actorId: UUID?,
         action: AdminAction,

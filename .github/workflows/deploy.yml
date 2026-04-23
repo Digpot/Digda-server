@@ -3,7 +3,7 @@ name: digda CI/CD
 on:
   push:
     branches:
-      - dev
+      - devff
 
 jobs:
   build-and-deploy:

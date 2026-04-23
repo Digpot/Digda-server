@@ -54,7 +54,11 @@ class SecurityConfig(
         http.cors { cors ->
             cors.configurationSource {
                 CorsConfiguration().apply {
-                    allowedOriginPatterns = listOf("https://history.netlify.app")
+                    allowedOriginPatterns = listOf(
+                        "https://history.netlify.app",
+                        "http://localhost:5173",
+                        "http://localhost:3000"
+                    )
                     allowedMethods = listOf("*")
                     allowedHeaders = listOf("*")
                     exposedHeaders = listOf(HttpHeaders.AUTHORIZATION)

@@ -1,7 +1,7 @@
-package digdaserver.admin.log.domain.repository
+package digdaserver.domain.log.domain.repository
 
-import digdaserver.admin.log.domain.entity.AdminAction
-import digdaserver.admin.log.domain.entity.AdminActionLog
+import digdaserver.domain.log.domain.entity.UserAction
+import digdaserver.domain.log.domain.entity.UserActionLog
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
@@ -12,11 +12,11 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 @Repository
-interface AdminActionLogRepository : JpaRepository<AdminActionLog, Long> {
+interface UserActionLogRepository : JpaRepository<UserActionLog, Long> {
 
     @Query(
         """
-        SELECT l FROM AdminActionLog l
+        SELECT l FROM UserActionLog l
         WHERE (:actorId IS NULL OR l.actorId = :actorId)
           AND (:action IS NULL OR l.action = :action)
           AND (:from IS NULL OR l.createdAt >= :from)
@@ -28,10 +28,10 @@ interface AdminActionLogRepository : JpaRepository<AdminActionLog, Long> {
     )
     fun searchLogs(
         @Param("actorId") actorId: UUID?,
-        @Param("action") action: AdminAction?,
+        @Param("action") action: UserAction?,
         @Param("from") from: LocalDateTime?,
         @Param("to") to: LocalDateTime?,
         @Param("keyword") keyword: String?,
         pageable: Pageable
-    ): Page<AdminActionLog>
+    ): Page<UserActionLog>
 }

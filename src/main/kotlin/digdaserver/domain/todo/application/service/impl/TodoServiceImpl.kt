@@ -1,6 +1,8 @@
 package digdaserver.domain.todo.application.service.impl
 
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
+import digdaserver.domain.log.application.service.UserActionLogService
+import digdaserver.domain.log.domain.entity.UserAction
 import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.domain.todo.application.service.TodoService
 import digdaserver.domain.todo.domain.entity.Todo
@@ -21,7 +23,8 @@ class TodoServiceImpl(
     private val todoRepository: TodoRepository,
     private val groupRoomRepository: GroupRoomRepository,
     private val membershipRepository: MembershipRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val userActionLogService: UserActionLogService
 ) : TodoService {
 
     override fun getTodos(userId: UUID, groupRoomId: Long): TodoListResponse {
@@ -59,6 +62,14 @@ class TodoServiceImpl(
                 text = text,
                 createdBy = user
             )
+        )
+
+        userActionLogService.record(
+            actorId = userId,
+            action = UserAction.CREATE_TODO,
+            targetType = "TODO",
+            targetId = todo.id.toString(),
+            detail = "groupRoomId=$groupRoomId"
         )
 
         return TodoResponse.from(todo)

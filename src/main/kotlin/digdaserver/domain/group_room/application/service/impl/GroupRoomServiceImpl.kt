@@ -15,6 +15,8 @@ import digdaserver.domain.group_room.presentation.dto.res.GroupRoomResponse
 import digdaserver.domain.group_room.presentation.dto.res.MembershipSummary
 import digdaserver.domain.invite.domain.entity.InviteCode
 import digdaserver.domain.invite.domain.repository.InviteCodeRepository
+import digdaserver.domain.log.application.service.UserActionLogService
+import digdaserver.domain.log.domain.entity.UserAction
 import digdaserver.domain.membership.domain.entity.Membership
 import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.domain.notification.application.service.NotificationService
@@ -33,7 +35,8 @@ class GroupRoomServiceImpl(
     private val userRepository: UserRepository,
     private val membershipRepository: MembershipRepository,
     private val inviteCodeRepository: InviteCodeRepository,
-    private val notificationService: NotificationService
+    private val notificationService: NotificationService,
+    private val userActionLogService: UserActionLogService
 ) : GroupRoomService {
 
     @Transactional
@@ -67,6 +70,14 @@ class GroupRoomServiceImpl(
                 code = generateInviteCode(),
                 expiresAt = LocalDateTime.now().plusHours(24)
             )
+        )
+
+        userActionLogService.record(
+            actorId = userId,
+            action = UserAction.CREATE_GROUP_ROOM,
+            targetType = "GROUP_ROOM",
+            targetId = groupRoom.id.toString(),
+            detail = "name=${groupRoom.name}"
         )
 
         return CreateGroupRoomResponse(

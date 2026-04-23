@@ -3,6 +3,8 @@ package digdaserver.domain.oauth2.application.service.impl.oauth
 import digdaserver.domain.oauth2.application.service.CreateAccessTokenAndRefreshTokenService
 import digdaserver.domain.oauth2.application.service.OAuth2Service
 import digdaserver.domain.oauth2.application.service.SocialLoginService
+import digdaserver.domain.log.application.service.UserActionLogService
+import digdaserver.domain.log.domain.entity.UserAction
 import digdaserver.domain.oauth2.domain.entity.SocialProvider
 import digdaserver.domain.oauth2.presentation.dto.req.LoginRequest
 import digdaserver.domain.oauth2.presentation.dto.req.SocialTokenRequest
@@ -28,6 +30,7 @@ class SocialLoginServiceImpl(
     oauth2Services: List<OAuth2Service>,
     private val tokenService: CreateAccessTokenAndRefreshTokenService,
     private val userRepository: UserRepository,
+    private val userActionLogService: UserActionLogService,
 
     @Value("\${oauth2.apple.profile}")
     private val appleProfile: String
@@ -72,6 +75,14 @@ class SocialLoginServiceImpl(
             user.email
         )
 
+        userActionLogService.record(
+            actorId = user.id,
+            action = if (isNewUser) UserAction.SIGNUP else UserAction.LOGIN,
+            targetType = "USER",
+            targetId = user.id.toString(),
+            detail = "provider=$provider, email=${user.email}"
+        )
+
         return LoginResponse(
             accessToken = loginToken.accessToken,
             refreshToken = loginToken.refreshToken,
@@ -105,7 +116,15 @@ class SocialLoginServiceImpl(
             oauth2Service.getUserInfo(accessToken)
         }
 
-        val (user, _) = findOrCreateUser(provider, userResponse)
+        val (user, isNewUser) = findOrCreateUser(provider, userResponse)
+
+        userActionLogService.record(
+            actorId = user.id,
+            action = if (isNewUser) UserAction.SIGNUP else UserAction.LOGIN,
+            targetType = "USER",
+            targetId = user.id.toString(),
+            detail = "provider=$provider, email=${user.email}"
+        )
 
         return tokenService.createAccessTokenAndRefreshToken(
             user.id.toString(),

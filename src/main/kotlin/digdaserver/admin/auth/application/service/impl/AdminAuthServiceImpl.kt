@@ -4,8 +4,6 @@ import digdaserver.admin.auth.application.service.AdminAuthService
 import digdaserver.admin.auth.domain.repository.AdminCredentialRepository
 import digdaserver.admin.auth.presentation.dto.req.AdminLoginRequest
 import digdaserver.admin.auth.presentation.dto.res.AdminLoginResponse
-import digdaserver.admin.log.application.service.AdminActionLogService
-import digdaserver.admin.log.domain.entity.AdminAction
 import digdaserver.domain.oauth2.application.service.CreateAccessTokenAndRefreshTokenService
 import digdaserver.domain.user.domain.entity.Role
 import digdaserver.global.infra.exception.error.DigdaException
@@ -19,8 +17,7 @@ import org.springframework.transaction.annotation.Transactional
 class AdminAuthServiceImpl(
     private val adminCredentialRepository: AdminCredentialRepository,
     private val passwordEncoder: PasswordEncoder,
-    private val createAccessTokenAndRefreshTokenService: CreateAccessTokenAndRefreshTokenService,
-    private val adminActionLogService: AdminActionLogService
+    private val createAccessTokenAndRefreshTokenService: CreateAccessTokenAndRefreshTokenService
 ) : AdminAuthService {
 
     @Transactional
@@ -39,14 +36,6 @@ class AdminAuthServiceImpl(
 
         val token = createAccessTokenAndRefreshTokenService
             .createAccessTokenAndRefreshToken(user.id.toString(), Role.ADMIN, user.email)
-
-        adminActionLogService.record(
-            actorId = user.id,
-            action = AdminAction.LOGIN,
-            targetType = "ADMIN",
-            targetId = user.id.toString(),
-            detail = "관리자 로그인: ${credential.email}"
-        )
 
         return AdminLoginResponse.of(
             adminId = user.id.toString(),

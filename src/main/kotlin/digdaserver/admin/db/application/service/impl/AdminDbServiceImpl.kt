@@ -4,21 +4,16 @@ import digdaserver.admin.db.application.service.AdminDbService
 import digdaserver.admin.db.presentation.dto.res.AdminColumnInfoResponse
 import digdaserver.admin.db.presentation.dto.res.AdminTableInfoResponse
 import digdaserver.admin.db.presentation.dto.res.AdminTableRowsResponse
-import digdaserver.admin.log.application.service.AdminActionLogService
-import digdaserver.admin.log.domain.entity.AdminAction
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
 import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)
 class AdminDbServiceImpl(
-    private val jdbcTemplate: JdbcTemplate,
-    private val adminActionLogService: AdminActionLogService
+    private val jdbcTemplate: JdbcTemplate
 ) : AdminDbService {
 
     companion object {
@@ -110,14 +105,6 @@ class AdminDbServiceImpl(
 
         val totalPages = if (totalElements == 0L) 0 else ((totalElements + safeSize - 1) / safeSize).toInt()
 
-        adminActionLogService.record(
-            actorId = currentActorId(),
-            action = AdminAction.VIEW_DB_TABLE,
-            targetType = "TABLE",
-            targetId = safeTable,
-            detail = "page=$safePage, size=$safeSize, orderBy=${orderBy ?: "-"}, direction=${direction ?: "-"}"
-        )
-
         return AdminTableRowsResponse(
             tableName = safeTable,
             columns = columns,
@@ -148,11 +135,6 @@ class AdminDbServiceImpl(
         if (exists == null || exists == 0) {
             throw DigdaException(ErrorCode.ADMIN_TABLE_NOT_FOUND)
         }
-    }
-
-    private fun currentActorId(): UUID? {
-        val principal = SecurityContextHolder.getContext().authentication?.principal as? String ?: return null
-        return runCatching { UUID.fromString(principal) }.getOrNull()
     }
 
     private fun buildOrderClause(columns: List<String>, orderBy: String?, direction: String?): String {

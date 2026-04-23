@@ -10,6 +10,8 @@ import digdaserver.domain.invite.domain.repository.InviteCodeRepository
 import digdaserver.domain.invite.presentation.dto.res.InviteCodeResponse
 import digdaserver.domain.invite.presentation.dto.res.InviteJoinResponse
 import digdaserver.domain.invite.presentation.dto.res.InviteValidateResponse
+import digdaserver.domain.log.application.service.UserActionLogService
+import digdaserver.domain.log.domain.entity.UserAction
 import digdaserver.domain.membership.domain.entity.Membership
 import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.domain.notification.application.service.NotificationService
@@ -28,7 +30,8 @@ class InviteServiceImpl(
     private val groupRoomRepository: GroupRoomRepository,
     private val membershipRepository: MembershipRepository,
     private val userRepository: UserRepository,
-    private val notificationService: NotificationService
+    private val notificationService: NotificationService,
+    private val userActionLogService: UserActionLogService
 ) : InviteService {
 
     @Transactional
@@ -121,6 +124,14 @@ class InviteServiceImpl(
         groupRoom.updateLastActivity()
 
         notificationService.notifyMemberJoined(groupRoom.id, userId)
+
+        userActionLogService.record(
+            actorId = userId,
+            action = UserAction.JOIN_GROUP_ROOM,
+            targetType = "GROUP_ROOM",
+            targetId = groupRoom.id.toString(),
+            detail = "name=${groupRoom.name}, viaInviteCode=${inviteCode.code}"
+        )
 
         val memberships = membershipRepository.findAllByGroupRoomId(groupRoom.id)
 

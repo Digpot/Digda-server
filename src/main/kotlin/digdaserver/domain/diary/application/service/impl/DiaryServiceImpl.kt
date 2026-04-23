@@ -14,6 +14,8 @@ import digdaserver.domain.diary.presentation.dto.res.DiaryListResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryResponse
 import digdaserver.domain.diary.presentation.dto.res.DiarySummaryResponse
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
+import digdaserver.domain.log.application.service.UserActionLogService
+import digdaserver.domain.log.domain.entity.UserAction
 import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.domain.notification.application.service.NotificationService
 import digdaserver.domain.user.domain.repository.UserRepository
@@ -35,7 +37,8 @@ class DiaryServiceImpl(
     private val membershipRepository: MembershipRepository,
     private val commentRepository: CommentRepository,
     private val userRepository: UserRepository,
-    private val notificationService: NotificationService
+    private val notificationService: NotificationService,
+    private val userActionLogService: UserActionLogService
 ) : DiaryService {
 
     override fun getDiaries(userId: UUID, groupRoomId: Long, month: YearMonth?, limit: Int, offset: Int): DiaryListResponse {
@@ -136,6 +139,14 @@ class DiaryServiceImpl(
 
         notificationService.notifyDiaryWritten(groupRoomId, diary.id, userId, diary.title)
 
+        userActionLogService.record(
+            actorId = userId,
+            action = UserAction.CREATE_DIARY,
+            targetType = "DIARY",
+            targetId = diary.id.toString(),
+            detail = "groupRoomId=$groupRoomId, title=${diary.title}"
+        )
+
         return DiaryResponse.from(diary)
     }
 
@@ -193,7 +204,16 @@ class DiaryServiceImpl(
             throw DigdaException(ErrorCode.FORBIDDEN)
         }
 
+        val title = diary.title
         diaryRepository.delete(diary)
+
+        userActionLogService.record(
+            actorId = userId,
+            action = UserAction.DELETE_DIARY,
+            targetType = "DIARY",
+            targetId = diaryId.toString(),
+            detail = "groupRoomId=$groupRoomId, title=$title"
+        )
     }
 
     private fun validateWeather(weather: Int) {

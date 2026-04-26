@@ -38,4 +38,10 @@ interface NotificationService {
         scheduleTitle: String,
         addedParticipantUserIds: List<UUID>
     )
+
+    fun sendAnnouncement(
+        targetUserIds: List<UUID>?,
+        title: String,
+        body: String
+    ): Int
 }

@@ -103,5 +103,10 @@ enum class ErrorCode(
     NOT_ADMIN_USER("NOT_ADMIN_USER", "관리자 권한이 없는 사용자입니다.", 403),
     ADMIN_TABLE_NOT_ALLOWED("ADMIN_TABLE_NOT_ALLOWED", "조회할 수 없는 테이블명입니다.", 400),
     ADMIN_TABLE_NOT_FOUND("ADMIN_TABLE_NOT_FOUND", "존재하지 않는 테이블입니다.", 404),
-    ADMIN_COLUMN_NOT_ALLOWED("ADMIN_COLUMN_NOT_ALLOWED", "유효하지 않은 컬럼명입니다.", 400);
+    ADMIN_COLUMN_NOT_ALLOWED("ADMIN_COLUMN_NOT_ALLOWED", "유효하지 않은 컬럼명입니다.", 400),
+    ADMIN_PK_NOT_FOUND("ADMIN_PK_NOT_FOUND", "테이블에 PK가 없어 단일 행 수정/삭제가 불가합니다.", 400),
+    ADMIN_PK_VALUE_MISSING("ADMIN_PK_VALUE_MISSING", "PK 값이 누락되었습니다.", 400),
+    ADMIN_ROW_NOT_FOUND("ADMIN_ROW_NOT_FOUND", "해당 PK의 행을 찾을 수 없습니다.", 404),
+    ADMIN_ROW_AFFECTED_INVALID("ADMIN_ROW_AFFECTED_INVALID", "행 수정/삭제에서 1행이 아닌 결과가 발생했습니다.", 500),
+    ADMIN_NO_FIELDS_TO_UPDATE("ADMIN_NO_FIELDS_TO_UPDATE", "수정할 컬럼이 없습니다.", 400);
 }

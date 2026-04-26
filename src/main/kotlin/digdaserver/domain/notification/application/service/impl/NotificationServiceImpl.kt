@@ -218,6 +218,33 @@ class NotificationServiceImpl(
         )
     }
 
+    @Transactional
+    override fun sendAnnouncement(
+        targetUserIds: List<UUID>?,
+        title: String,
+        body: String
+    ): Int {
+        val recipients: List<User> =
+            if (targetUserIds.isNullOrEmpty()) {
+                userRepository.findAll()
+            } else {
+                userRepository.findAllById(targetUserIds).toList()
+            }
+
+        if (recipients.isEmpty()) return 0
+
+        notify(
+            recipients,
+            NotificationPayload(
+                type = NotificationType.ANNOUNCEMENT,
+                title = title,
+                message = body
+            )
+        )
+
+        return recipients.size
+    }
+
     private fun notify(recipients: List<User>, payload: NotificationPayload) {
         if (recipients.isEmpty()) return
 

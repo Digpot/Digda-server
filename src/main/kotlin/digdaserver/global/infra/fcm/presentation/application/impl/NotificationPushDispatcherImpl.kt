@@ -58,7 +58,8 @@ class NotificationPushDispatcherImpl(
             NotificationType.MEMBER_LEFT,
             NotificationType.MEMBER_REMOVED,
             NotificationType.OWNERSHIP_TRANSFERRED,
-            NotificationType.GROUP_DELETE_SCHEDULED -> true
+            NotificationType.GROUP_DELETE_SCHEDULED,
+            NotificationType.ANNOUNCEMENT -> true
         }
     }
 

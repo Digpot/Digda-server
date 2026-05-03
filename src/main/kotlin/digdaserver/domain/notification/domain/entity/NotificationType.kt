@@ -1,5 +1,7 @@
 package digdaserver.domain.notification.domain.entity
 
+import com.fasterxml.jackson.annotation.JsonValue
+
 enum class NotificationType {
 
     SCHEDULE_CREATED,
@@ -13,4 +15,7 @@ enum class NotificationType {
     OWNERSHIP_TRANSFERRED,
     GROUP_DELETE_SCHEDULED,
     ANNOUNCEMENT;
+
+    @JsonValue
+    fun toValue(): String = name.lowercase()
 }

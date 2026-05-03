@@ -5,6 +5,7 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 data class MyProfileResponse(
+    val id: String,
     val name: String,
     val email: String?,
     val profileImage: String?,
@@ -14,6 +15,7 @@ data class MyProfileResponse(
 ) {
     companion object {
         fun from(user: User): MyProfileResponse = MyProfileResponse(
+            id = user.id.toString(),
             name = user.name,
             email = user.email,
             profileImage = user.profileImage,

@@ -12,10 +12,11 @@ import digdaserver.domain.notification.presentation.dto.res.NotificationListResp
 import digdaserver.domain.notification.presentation.dto.res.NotificationResponse
 import digdaserver.domain.user.domain.entity.User
 import digdaserver.domain.user.domain.repository.UserRepository
+import digdaserver.global.common.page.OffsetBasedPageRequest
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
 import digdaserver.global.infra.fcm.presentation.application.NotificationPushDispatcher
-import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -33,7 +34,11 @@ class NotificationServiceImpl(
     override fun getNotifications(userId: UUID, limit: Int, offset: Int): NotificationListResponse {
         val safeLimit = limit.coerceIn(1, 100)
         val safeOffset = offset.coerceAtLeast(0)
-        val pageable = PageRequest.of(safeOffset / safeLimit, safeLimit)
+        val pageable = OffsetBasedPageRequest.of(
+            safeOffset,
+            safeLimit,
+            Sort.by(Sort.Direction.DESC, "createdAt")
+        )
 
         val page = notificationRepository.findAllByUserIdOrderByCreatedAtDesc(userId, pageable)
         val unreadCount = notificationRepository.countByUserIdAndIsReadFalse(userId)
@@ -224,25 +229,32 @@ class NotificationServiceImpl(
         title: String,
         body: String
     ): Int {
-        val recipients: List<User> =
-            if (targetUserIds.isNullOrEmpty()) {
-                userRepository.findAll()
-            } else {
-                userRepository.findAllById(targetUserIds).toList()
-            }
-
-        if (recipients.isEmpty()) return 0
-
-        notify(
-            recipients,
-            NotificationPayload(
-                type = NotificationType.ANNOUNCEMENT,
-                title = title,
-                message = body
-            )
+        val payload = NotificationPayload(
+            type = NotificationType.ANNOUNCEMENT,
+            title = title,
+            message = body
         )
 
-        return recipients.size
+        if (!targetUserIds.isNullOrEmpty()) {
+            val recipients = userRepository.findAllById(targetUserIds).toList()
+            if (recipients.isEmpty()) return 0
+            notify(recipients, payload)
+            return recipients.size
+        }
+
+        // Broadcast to all users — process in batches to avoid loading the entire user table
+        val allIds = userRepository.findAllIds()
+        if (allIds.isEmpty()) return 0
+
+        var notifiedCount = 0
+        allIds.chunked(ANNOUNCEMENT_BATCH_SIZE) { batchIds ->
+            val batch = userRepository.findAllById(batchIds).toList()
+            if (batch.isNotEmpty()) {
+                notify(batch, payload)
+                notifiedCount += batch.size
+            }
+        }
+        return notifiedCount
     }
 
     private fun notify(recipients: List<User>, payload: NotificationPayload) {
@@ -285,4 +297,8 @@ class NotificationServiceImpl(
         membershipRepository.findAllByGroupRoomId(groupRoomId)
             .map { it.user }
             .filter { it.id != excludedUserId }
+
+    companion object {
+        private const val ANNOUNCEMENT_BATCH_SIZE = 500
+    }
 }

@@ -39,6 +39,11 @@ class NotificationPushDispatcherImpl(
             )
 
             if (result.invalidTokens.isNotEmpty()) {
+                log.warn(
+                    "Removing {} invalid FCM token(s) after push dispatch (type={})",
+                    result.invalidTokens.size,
+                    payload.type
+                )
                 deviceRepository.deleteAllByTokenIn(result.invalidTokens)
             }
         } catch (e: Exception) {

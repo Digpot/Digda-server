@@ -19,6 +19,12 @@ interface UserRepository : JpaRepository<User, UUID> {
 
     fun countByRole(role: Role): Long
 
+    @Query("SELECT u.id FROM User u")
+    fun findAllIds(): List<UUID>
+
+    @Query("SELECT u.id FROM User u")
+    fun findAllIdsPageable(pageable: Pageable): Page<UUID>
+
     @Query(
         """
         SELECT u FROM User u

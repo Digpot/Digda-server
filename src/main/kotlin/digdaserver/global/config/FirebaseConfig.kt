@@ -36,7 +36,7 @@ class FirebaseConfig {
               "type": "service_account",
               "project_id": "$projectId",
               "private_key_id": "$privateKeyId",
-              "private_key": "${privateKey.replace("\\n", "\n")}",
+              "private_key": "${privateKey.replace("\\r\\n", "\n").replace("\\n", "\n")}",
               "client_email": "$clientEmail",
               "client_id": "$clientId",
               "auth_uri": "https://accounts.google.com/o/oauth2/auth",

@@ -1,5 +1,6 @@
 package digdaserver.domain.oauth2.application.service.impl.auth
 
+import digdaserver.domain.device.domain.repository.DeviceRepository
 import digdaserver.domain.log.application.service.UserActionLogService
 import digdaserver.domain.log.domain.entity.UserAction
 import digdaserver.domain.oauth2.application.service.LogoutService
@@ -15,6 +16,7 @@ import java.util.UUID
 class LogoutServiceImpl(
     private val jsonWebTokenRepository: JsonWebTokenRepository,
     private val socialTokenRepository: SocialTokenRepository,
+    private val deviceRepository: DeviceRepository,
     private val userActionLogService: UserActionLogService
 ) : LogoutService {
 
@@ -24,9 +26,13 @@ class LogoutServiceImpl(
         jsonWebTokenRepository.deleteByProviderId(userId)
         socialTokenRepository.deleteByUserId(userId)
 
-        val actorId = runCatching { UUID.fromString(userId) }.getOrNull()
+        val userUuid = runCatching { UUID.fromString(userId) }.getOrNull()
+        if (userUuid != null) {
+            deviceRepository.deleteAllByUserId(userUuid)
+        }
+
         userActionLogService.record(
-            actorId = actorId,
+            actorId = userUuid,
             action = UserAction.LOGOUT,
             targetType = "USER",
             targetId = userId,

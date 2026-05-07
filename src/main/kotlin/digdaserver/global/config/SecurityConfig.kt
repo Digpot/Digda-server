@@ -36,6 +36,8 @@ class SecurityConfig(
         "/api/oauth2/callback/**",
         "/api/healthcheck",
         "/api/admin/auth/login",
+        // WARNING: /api/test/** is permitted without authentication.
+        // This path must NOT be exposed in production. Restrict or remove before prod deploy.
         "/api/test/**",
         "/actuator/**",
         "/api/callback/**",
@@ -83,6 +85,7 @@ class SecurityConfig(
                 .requestMatchers("/api/healthcheck").permitAll()
                 .requestMatchers("/auth/login", "/auth/refresh").permitAll()
                 .requestMatchers("/api/oauth2/login/**").permitAll()
+                // WARNING: /api/test/** is open without authentication — dev-only endpoint, must not reach production
                 .requestMatchers("/api/oauth2/callback/**", "/api/test/**", "/api/callback/**").permitAll()
                 .requestMatchers("/api/admin/auth/login").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")

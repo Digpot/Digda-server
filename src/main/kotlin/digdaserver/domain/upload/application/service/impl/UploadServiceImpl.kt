@@ -9,6 +9,7 @@ import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
 import digdaserver.global.infra.s3.presentation.application.S3Service
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
@@ -22,6 +23,8 @@ class UploadServiceImpl(
     private val userRepository: UserRepository,
     private val s3Service: S3Service
 ) : UploadService {
+
+    private val log = LoggerFactory.getLogger(javaClass)
 
     companion object {
         private const val MAX_SIZE_BYTES = 5L * 1024 * 1024
@@ -80,7 +83,8 @@ class UploadServiceImpl(
                 val image = ImageIO.read(stream) ?: return 0 to 0
                 image.width to image.height
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            log.warn("Failed to read image dimensions for file '{}': {}", file.originalFilename, e.message)
             0 to 0
         }
     }

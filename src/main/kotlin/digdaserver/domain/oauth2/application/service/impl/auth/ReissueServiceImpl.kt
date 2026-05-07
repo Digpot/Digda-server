@@ -52,8 +52,12 @@ class ReissueServiceImpl(
         return LoginToken.of(newAccessToken, newRefreshToken, onBoarding(userId))
     }
 
-    // TODO: Auth API 구현 시 온보딩 로직 재설계 필요 (약관 동의 여부 기반)
     fun onBoarding(userId: String): Boolean {
-        return false
+        val uuid = runCatching { java.util.UUID.fromString(userId) }.getOrNull()
+            ?: return false
+        val user = userRepository.findById(uuid).orElse(null) ?: return false
+        return user.terms != null &&
+            user.terms!!.termsOfService &&
+            user.terms!!.privacyPolicy
     }
 }

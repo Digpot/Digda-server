@@ -48,9 +48,17 @@ class ScheduleServiceImpl(
 
         val schedules = scheduleRepository.findAllByGroupRoomIdAndDateRange(groupRoomId, startDate, endDate)
 
+        val scheduleIds = schedules.map { it.id }
+        val commentCountMap: Map<Long, Int> = if (scheduleIds.isNotEmpty()) {
+            commentRepository.countByTargetTypeAndTargetIdIn(CommentTargetType.SCHEDULE, scheduleIds)
+                .associate { row -> (row[0] as Long) to (row[1] as Long).toInt() }
+        } else {
+            emptyMap()
+        }
+
         return ScheduleListResponse(
             schedules = schedules.map { schedule ->
-                val commentCount = commentRepository.countByTargetTypeAndTargetId(CommentTargetType.SCHEDULE, schedule.id)
+                val commentCount = commentCountMap[schedule.id] ?: 0
                 ScheduleResponse.from(schedule, commentCount)
             }
         )

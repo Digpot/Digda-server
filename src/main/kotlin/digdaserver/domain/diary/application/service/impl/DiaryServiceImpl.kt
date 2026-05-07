@@ -60,9 +60,17 @@ class DiaryServiceImpl(
             diaryRepository.findAllByGroupRoomId(groupRoomId, pageable)
         }
 
+        val diaryIds = page.content.map { it.id }
+        val commentCountMap: Map<Long, Int> = if (diaryIds.isNotEmpty()) {
+            commentRepository.countByTargetTypeAndTargetIdIn(CommentTargetType.DIARY, diaryIds)
+                .associate { row -> (row[0] as Long) to (row[1] as Long).toInt() }
+        } else {
+            emptyMap()
+        }
+
         return DiaryListResponse(
             diaries = page.content.map { diary ->
-                val commentCount = commentRepository.countByTargetTypeAndTargetId(CommentTargetType.DIARY, diary.id)
+                val commentCount = commentCountMap[diary.id] ?: 0
                 DiarySummaryResponse.from(diary, commentCount)
             },
             total = page.totalElements

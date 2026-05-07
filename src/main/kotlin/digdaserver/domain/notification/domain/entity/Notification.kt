@@ -20,7 +20,8 @@ import java.time.LocalDateTime
     name = "notification",
     indexes = [
         Index(name = "idx_notification_user", columnList = "user_id"),
-        Index(name = "idx_notification_user_read", columnList = "user_id, is_read")
+        Index(name = "idx_notification_user_read", columnList = "user_id, is_read"),
+        Index(name = "idx_notification_created_at", columnList = "created_at")
     ]
 )
 class Notification(

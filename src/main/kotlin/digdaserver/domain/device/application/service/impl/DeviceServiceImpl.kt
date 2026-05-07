@@ -27,10 +27,12 @@ class DeviceServiceImpl(
         val existing = deviceRepository.findByToken(token)
         if (existing.isPresent) {
             val device = existing.get()
-            if (device.user.id != userId) {
-                throw DigdaException(ErrorCode.FORBIDDEN)
+            if (device.user.id == userId) {
+                // Same user re-registering the same token — idempotent
+                return RegisterDeviceResponse(deviceId = device.id)
             }
-            return RegisterDeviceResponse(deviceId = device.id)
+            // Token belongs to a different user (device hand-off) — release and re-register
+            deviceRepository.delete(device)
         }
 
         val user = userRepository.findById(userId)

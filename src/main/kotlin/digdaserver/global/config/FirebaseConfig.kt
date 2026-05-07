@@ -8,25 +8,45 @@ import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.core.io.ResourceLoader
-import java.io.InputStream
 
 @Configuration
-class FirebaseConfig(
-    private val resourceLoader: ResourceLoader
-) {
+class FirebaseConfig {
 
-    @Value("\${fcm.credentials-path}")
-    private lateinit var credentialsPath: String
+    @Value("\${fcm.project-id}")
+    private lateinit var projectId: String
+
+    @Value("\${fcm.private-key-id}")
+    private lateinit var privateKeyId: String
+
+    @Value("\${fcm.private-key}")
+    private lateinit var privateKey: String
+
+    @Value("\${fcm.client-email}")
+    private lateinit var clientEmail: String
+
+    @Value("\${fcm.client-id}")
+    private lateinit var clientId: String
 
     @PostConstruct
     fun initialize() {
         if (FirebaseApp.getApps().isNotEmpty()) return
 
-        val stream: InputStream = resourceLoader.getResource(credentialsPath).inputStream
+        val json = """
+            {
+              "type": "service_account",
+              "project_id": "$projectId",
+              "private_key_id": "$privateKeyId",
+              "private_key": "${privateKey.replace("\\n", "\n")}",
+              "client_email": "$clientEmail",
+              "client_id": "$clientId",
+              "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+              "token_uri": "https://oauth2.googleapis.com/token",
+              "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs"
+            }
+        """.trimIndent()
 
         val options = FirebaseOptions.builder()
-            .setCredentials(GoogleCredentials.fromStream(stream))
+            .setCredentials(GoogleCredentials.fromStream(json.byteInputStream()))
             .build()
 
         FirebaseApp.initializeApp(options)

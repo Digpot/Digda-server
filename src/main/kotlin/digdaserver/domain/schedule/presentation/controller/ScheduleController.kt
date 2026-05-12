@@ -34,8 +34,12 @@ class ScheduleController(
     fun getSchedules(
         @AuthenticationPrincipal userId: String,
         @PathVariable groupRoomId: Long,
-        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) startDate: LocalDate,
-        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate
+        @RequestParam
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        startDate: LocalDate,
+        @RequestParam
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        endDate: LocalDate
     ): ResponseEntity<ScheduleListResponse> {
         val response = scheduleService.getSchedules(UUID.fromString(userId), groupRoomId, startDate, endDate)
         return ResponseEntity.ok(response)

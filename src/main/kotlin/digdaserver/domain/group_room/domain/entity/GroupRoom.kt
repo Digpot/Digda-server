@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:package-name")
+
 package digdaserver.domain.group_room.domain.entity
 
 import digdaserver.domain.diary.domain.entity.Diary

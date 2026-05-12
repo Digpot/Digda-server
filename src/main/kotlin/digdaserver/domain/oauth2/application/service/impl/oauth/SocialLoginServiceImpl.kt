@@ -1,10 +1,10 @@
 package digdaserver.domain.oauth2.application.service.impl.oauth
 
+import digdaserver.domain.log.application.service.UserActionLogService
+import digdaserver.domain.log.domain.entity.UserAction
 import digdaserver.domain.oauth2.application.service.CreateAccessTokenAndRefreshTokenService
 import digdaserver.domain.oauth2.application.service.OAuth2Service
 import digdaserver.domain.oauth2.application.service.SocialLoginService
-import digdaserver.domain.log.application.service.UserActionLogService
-import digdaserver.domain.log.domain.entity.UserAction
 import digdaserver.domain.oauth2.domain.entity.SocialProvider
 import digdaserver.domain.oauth2.presentation.dto.req.LoginRequest
 import digdaserver.domain.oauth2.presentation.dto.req.SocialTokenRequest

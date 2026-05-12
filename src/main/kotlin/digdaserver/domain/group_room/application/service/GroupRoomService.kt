@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:package-name")
+
 package digdaserver.domain.group_room.application.service
 
 import digdaserver.domain.group_room.presentation.dto.req.CreateGroupRoomRequest

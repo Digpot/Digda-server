@@ -2,7 +2,6 @@ package digdaserver.domain.user.presentation.dto.res
 
 import digdaserver.domain.user.domain.entity.User
 import java.time.LocalDateTime
-import java.util.UUID
 
 data class MyProfileResponse(
     val id: String,

@@ -118,7 +118,7 @@ class NotificationServiceImpl(
             NotificationPayload(
                 type = NotificationType.DIARY_WRITTEN,
                 title = "새 일기",
-                message = "${author.name}님이 '${diaryTitle}' 일기를 작성했습니다.",
+                message = "${author.name}님이 '$diaryTitle' 일기를 작성했습니다.",
                 groupRoomId = groupRoomId,
                 groupRoomName = groupRoom.name,
                 relatedId = diaryId,
@@ -147,7 +147,7 @@ class NotificationServiceImpl(
             NotificationPayload(
                 type = NotificationType.SCHEDULE_CREATED,
                 title = "새 일정",
-                message = "${creator.name}님이 '${scheduleTitle}' 일정에 회원님을 참가자로 추가했습니다.",
+                message = "${creator.name}님이 '$scheduleTitle' 일정에 회원님을 참가자로 추가했습니다.",
                 groupRoomId = groupRoomId,
                 groupRoomName = groupRoom.name,
                 relatedId = scheduleId,
@@ -214,7 +214,7 @@ class NotificationServiceImpl(
             NotificationPayload(
                 type = NotificationType.SCHEDULE_UPDATED,
                 title = "일정 참가자 추가",
-                message = "${actor.name}님이 '${scheduleTitle}' 일정에 회원님을 참가자로 추가했습니다.",
+                message = "${actor.name}님이 '$scheduleTitle' 일정에 회원님을 참가자로 추가했습니다.",
                 groupRoomId = groupRoomId,
                 groupRoomName = groupRoom.name,
                 relatedId = scheduleId,

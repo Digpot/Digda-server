@@ -29,8 +29,8 @@ class OffsetBasedPageRequest(
     override fun next(): Pageable = OffsetBasedPageRequest(offset + limit, limit, sort)
 
     override fun previousOrFirst(): Pageable =
-        if (hasPrevious()) OffsetBasedPageRequest((offset - limit).coerceAtLeast(0), limit, sort)
-        else first()
+        if (hasPrevious()) { OffsetBasedPageRequest((offset - limit).coerceAtLeast(0), limit, sort) }
+        else { first() }
 
     override fun first(): Pageable = OffsetBasedPageRequest(0, limit, sort)
 

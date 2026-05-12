@@ -58,6 +58,7 @@ class SecurityConfig(
                 CorsConfiguration().apply {
                     allowedOriginPatterns = listOf(
                         "https://history.netlify.app",
+                        "https://digda-admin.vercel.app",
                         "http://localhost:5173",
                         "http://localhost:3000"
                     )

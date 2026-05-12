@@ -1,2 +1,2 @@
 [*.kt]
-disabled_rules=package-name
+ktlint_disabled_rules=package-name

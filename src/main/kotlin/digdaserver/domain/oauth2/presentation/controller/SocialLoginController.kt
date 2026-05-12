@@ -28,7 +28,8 @@ class SocialLoginController(
     @Operation(summary = "소셜 로그인", description = "소셜 프로바이더 토큰으로 로그인. 최초 로그인 시 계정 자동 생성.")
     @PostMapping("/auth/login")
     fun login(
-        @Valid @RequestBody
+        @Valid
+        @RequestBody
         request: LoginRequest
     ): ResponseEntity<LoginResponse> {
         log.info("소셜 로그인 요청: provider={}", request.provider)

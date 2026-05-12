@@ -22,7 +22,9 @@ class AdminAuthController(
     @Operation(summary = "관리자 로그인", description = "이메일/비밀번호 기반 관리자 로그인. ADMIN 역할만 허용하며 JWT Access/Refresh 토큰을 발급합니다.")
     @PostMapping("/login")
     fun login(
-        @Valid @RequestBody request: AdminLoginRequest
+        @Valid
+        @RequestBody
+        request: AdminLoginRequest
     ): ResponseEntity<AdminLoginResponse> {
         return ResponseEntity.ok(adminAuthService.login(request))
     }

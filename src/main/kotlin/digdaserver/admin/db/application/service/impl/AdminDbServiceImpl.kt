@@ -283,7 +283,7 @@ class AdminDbServiceImpl(
                 if (trimmed.length == 32 || trimmed.length == 36) {
                     runCatching { uuidToBytes(UUID.fromString(normalizeUuid(trimmed))) }
                         .getOrElse { trimmed }
-                } else trimmed
+                } else { trimmed }
             else -> trimmed
         }
     }
@@ -291,7 +291,7 @@ class AdminDbServiceImpl(
     private fun normalizeUuid(raw: String): String =
         if (raw.length == 32 && '-' !in raw) {
             "${raw.substring(0, 8)}-${raw.substring(8, 12)}-${raw.substring(12, 16)}-${raw.substring(16, 20)}-${raw.substring(20)}"
-        } else raw
+        } else { raw }
 
     private fun uuidToBytes(uuid: UUID): ByteArray {
         val msb = uuid.mostSignificantBits

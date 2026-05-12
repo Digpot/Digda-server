@@ -1,5 +1,3 @@
-@file:Suppress("ktlint:standard:package-name")
-
 package digdaserver.domain.group_room.application.service.impl
 
 import digdaserver.domain.group_room.application.service.GroupRoomService

@@ -46,7 +46,9 @@ class AdminUserController(
     @PatchMapping("/{userId}/role")
     fun updateRole(
         @PathVariable userId: UUID,
-        @Valid @RequestBody request: AdminUpdateUserRoleRequest
+        @Valid
+        @RequestBody
+        request: AdminUpdateUserRoleRequest
     ): ResponseEntity<AdminUserResponse> {
         return ResponseEntity.ok(adminUserService.updateRole(userId, request.role))
     }

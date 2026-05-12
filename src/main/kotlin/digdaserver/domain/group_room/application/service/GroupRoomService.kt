@@ -1,12 +1,10 @@
-@file:Suppress("ktlint:standard:package-name")
-
 package digdaserver.domain.group_room.application.service
 
 import digdaserver.domain.group_room.presentation.dto.req.CreateGroupRoomRequest
 import digdaserver.domain.group_room.presentation.dto.req.UpdateGroupRoomRequest
 import digdaserver.domain.group_room.presentation.dto.res.CreateGroupRoomResponse
-import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDetailResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDeleteResponse
+import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDetailResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomListResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomResponse
 import java.util.UUID

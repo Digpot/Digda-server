@@ -44,7 +44,9 @@ class AdminGroupRoomController(
     @PatchMapping("/{groupRoomId}/status")
     fun changeStatus(
         @PathVariable groupRoomId: Long,
-        @Valid @RequestBody request: AdminGroupRoomStatusRequest
+        @Valid
+        @RequestBody
+        request: AdminGroupRoomStatusRequest
     ): ResponseEntity<AdminGroupRoomResponse> {
         return ResponseEntity.ok(adminGroupRoomService.changeStatus(groupRoomId, request.action))
     }

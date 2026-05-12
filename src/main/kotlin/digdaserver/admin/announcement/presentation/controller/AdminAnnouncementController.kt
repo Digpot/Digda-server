@@ -31,7 +31,11 @@ class AdminAnnouncementController(
         description = "ALL = 전체 사용자에게 발송, USER_IDS = 지정 유저들에게 발송. 알림 레코드 생성 + FCM 푸시 동시 발송."
     )
     @PostMapping
-    fun send(@Valid @RequestBody request: SendAnnouncementRequest): ResponseEntity<SendAnnouncementResponse> {
+    fun send(
+        @Valid
+        @RequestBody
+        request: SendAnnouncementRequest,
+    ): ResponseEntity<SendAnnouncementResponse> {
         val target = parseTarget(request.target)
         val targetUserIds = when (target) {
             AnnouncementTarget.ALL -> null

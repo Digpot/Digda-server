@@ -2,8 +2,8 @@ version: '3.8'
 
 services:
   app:
-    image: chltmdgh522/history:latest
-    container_name: history-app
+    image: chltmdgh522/digda:latest
+    container_name: digda
     ports:
       - "8080:8080"
     environment:
@@ -13,22 +13,6 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
       - redis
-
-  db:
-    image: mysql:8.0
-    container_name: mysql
-    env_file:
-      - ./.env/env/prod.env
-    environment:
-      MYSQL_ROOT_PASSWORD: "05222"
-      MYSQL_DATABASE: history
-      MYSQL_USER: "ubuntu"
-      MYSQL_PASSWORD: "0522"
-    ports:
-      - "3306:3306"
-    volumes:
-      - ./mysql-data:/var/lib/mysql
-
 
   redis:
     image: redis

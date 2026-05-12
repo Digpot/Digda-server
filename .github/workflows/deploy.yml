@@ -3,7 +3,7 @@ name: digda CI/CD
 on:
   push:
     branches:
-      - devff
+      - main
 
 jobs:
   build-and-deploy:
@@ -58,7 +58,7 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            mkdir -p /home/ubuntu/history
+            mkdir -p /home/ubuntu/digda
 
       # (10) docker-compose.yml 업로드
       - name: Copy docker-compose.yml to NCP Instance
@@ -68,7 +68,7 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: "docker-compose.yml"
-          target: "/home/ubuntu/history"
+          target: "/home/ubuntu/digda"
 
       # (11) .env 파일 복사
       - name: Copy .env file to NCP Instance
@@ -78,7 +78,7 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: "env/prod.env"
-          target: "/home/ubuntu/history/.env"
+          target: "/home/ubuntu/digda/.env"
 
       # (12) 컨테이너 실행
       - name: Deploy on NCP Instance
@@ -88,7 +88,7 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /home/ubuntu/history
+            cd /home/ubuntu/digda
             docker-compose down || true
             docker image prune -a -f
             docker pull ${{ secrets.DOCKERFILE_USERNAME }}/${{ secrets.DOCKERFILE_REPO_NAME }}:latest

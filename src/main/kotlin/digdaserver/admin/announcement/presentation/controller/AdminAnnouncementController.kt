@@ -34,7 +34,7 @@ class AdminAnnouncementController(
     fun send(
         @Valid
         @RequestBody
-        request: SendAnnouncementRequest,
+        request: SendAnnouncementRequest
     ): ResponseEntity<SendAnnouncementResponse> {
         val target = parseTarget(request.target)
         val targetUserIds = when (target) {

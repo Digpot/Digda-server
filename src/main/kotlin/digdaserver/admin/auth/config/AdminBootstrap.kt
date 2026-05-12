@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 
 @Component
-@Profile("dev")
+@Profile("dev", "prod")
 class AdminBootstrap(
     private val userRepository: UserRepository,
     private val adminCredentialRepository: AdminCredentialRepository,

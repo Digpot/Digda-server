@@ -100,6 +100,13 @@ fcm:
   client-id: ${FCM_CLIENT_ID}
 
 
+admin:
+  bootstrap:
+    email: ${ADMIN_BOOTSTRAP_EMAIL}
+    password: ${ADMIN_BOOTSTRAP_PASSWORD}
+    name: ${ADMIN_BOOTSTRAP_NAME}
+
+
 logging:
   level:
     root: INFO

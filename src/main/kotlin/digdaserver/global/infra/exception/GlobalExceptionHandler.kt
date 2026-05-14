@@ -9,6 +9,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.servlet.resource.NoResourceFoundException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -22,6 +23,14 @@ class GlobalExceptionHandler {
         return ResponseEntity
             .status(e.httpStatusCode)
             .body(ErrorResponse.of(e))
+    }
+
+    @ExceptionHandler(NoResourceFoundException::class)
+    fun handleNoResourceFound(e: NoResourceFoundException): ResponseEntity<ErrorResponse> {
+        log.warn("404 Not Found: {}", e.message)
+        return ResponseEntity
+            .status(404)
+            .body(ErrorResponse.of(ErrorCode.SERVER_ERROR))
     }
 
     @ExceptionHandler(Exception::class)

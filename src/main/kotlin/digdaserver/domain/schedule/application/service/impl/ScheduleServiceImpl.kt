@@ -178,10 +178,20 @@ class ScheduleServiceImpl(
         )
 
         val addedParticipantIds = request.participantIds?.let { newIds ->
-            val oldIds = schedule.participants.map { it.user.id }.toSet()
-            schedule.clearParticipants()
-            addParticipants(schedule, groupRoomId, newIds)
-            newIds.filter { it !in oldIds }
+            val oldIdSet = schedule.participants.map { it.user.id }.toSet()
+            val newIdSet = newIds.toSet()
+
+            // 제거: 새 목록에 없는 기존 참여자만 삭제 (orphanRemoval 트리거)
+            val iterator = schedule.participants.iterator()
+            while (iterator.hasNext()) {
+                if (iterator.next().user.id !in newIdSet) iterator.remove()
+            }
+
+            // 추가: 기존에 없는 참여자만 INSERT — clear/re-insert 패턴 제거로 duplicate key 방지
+            val toAdd = newIds.filter { it !in oldIdSet }
+            addParticipants(schedule, groupRoomId, toAdd)
+
+            toAdd
         } ?: emptyList()
 
         groupRoom.updateLastActivity()

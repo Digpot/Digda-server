@@ -1,5 +1,7 @@
 package digdaserver.global.infra.fcm.presentation.application.impl
 
+import com.google.firebase.messaging.AndroidConfig
+import com.google.firebase.messaging.AndroidNotification
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingException
 import com.google.firebase.messaging.MessagingErrorCode
@@ -61,6 +63,17 @@ class FcmServiceImpl(
             Notification.builder()
                 .setTitle(title)
                 .setBody(body)
+                .build()
+        )
+        .setAndroidConfig(
+            AndroidConfig.builder()
+                .setPriority(AndroidConfig.Priority.HIGH)
+                .setNotification(
+                    AndroidNotification.builder()
+                        .setChannelId("digda_default")
+                        .setPriority(AndroidNotification.Priority.HIGH)
+                        .build()
+                )
                 .build()
         )
         .putAllData(data)

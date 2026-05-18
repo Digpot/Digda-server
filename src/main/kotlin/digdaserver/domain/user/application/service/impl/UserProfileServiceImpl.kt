@@ -46,8 +46,13 @@ class UserProfileServiceImpl(
 
     @Transactional
     override fun updateProfile(userId: UUID, request: UpdateProfileRequest): MyProfileResponse {
-        log.info("userId={}, action=프로필 수정 요청, fields=[name={}, statusMessage={}, profileImageId={}]",
-            userId, request.name, request.statusMessage, request.profileImageId)
+        log.info(
+            "userId={}, action=프로필 수정 요청, fields=[name={}, statusMessage={}, profileImageId={}]",
+            userId,
+            request.name,
+            request.statusMessage,
+            request.profileImageId
+        )
 
         val user = userRepository.findById(userId)
             .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
@@ -75,8 +80,11 @@ class UserProfileServiceImpl(
                 if (resolvedUrl != null) {
                     user.profileImage = resolvedUrl
                 } else {
-                    log.warn("userId={}, action=프로필 이미지 변경 무시(업로드 lookup 실패), imageId={}",
-                        userId, optional.get())
+                    log.warn(
+                        "userId={}, action=프로필 이미지 변경 무시(업로드 lookup 실패), imageId={}",
+                        userId,
+                        optional.get()
+                    )
                 }
             } else {
                 user.resetProfileImage()

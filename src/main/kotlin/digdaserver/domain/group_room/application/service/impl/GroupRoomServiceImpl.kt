@@ -106,8 +106,12 @@ class GroupRoomServiceImpl(
             detail = "name=${groupRoom.name}"
         )
 
-        log.info("userId={}, action=그룹 생성 완료, groupRoomId={}, thumbnail={}",
-            userId, groupRoom.id, groupRoom.thumbnailImage)
+        log.info(
+            "userId={}, action=그룹 생성 완료, groupRoomId={}, thumbnail={}",
+            userId,
+            groupRoom.id,
+            groupRoom.thumbnailImage
+        )
 
         return CreateGroupRoomResponse(
             groupRoom = GroupRoomResponse.from(groupRoom, 1),
@@ -158,8 +162,14 @@ class GroupRoomServiceImpl(
 
     @Transactional
     override fun updateGroupRoom(userId: UUID, groupRoomId: Long, request: UpdateGroupRoomRequest): GroupRoomResponse {
-        log.info("userId={}, action=그룹 수정 요청, groupRoomId={}, fields=[name={}, maxMembers={}, thumbnailImageId={}]",
-            userId, groupRoomId, request.name, request.maxMembers, request.thumbnailImageId)
+        log.info(
+            "userId={}, action=그룹 수정 요청, groupRoomId={}, fields=[name={}, maxMembers={}, thumbnailImageId={}]",
+            userId,
+            groupRoomId,
+            request.name,
+            request.maxMembers,
+            request.thumbnailImageId
+        )
 
         val groupRoom = groupRoomRepository.findById(groupRoomId)
             .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
@@ -193,16 +203,24 @@ class GroupRoomServiceImpl(
                 if (resolvedUrl != null) {
                     groupRoom.thumbnailImage = resolvedUrl
                 } else {
-                    log.warn("userId={}, action=그룹 썸네일 변경 무시(업로드 lookup 실패), groupRoomId={}, imageId={}",
-                        userId, groupRoomId, optional.get())
+                    log.warn(
+                        "userId={}, action=그룹 썸네일 변경 무시(업로드 lookup 실패), groupRoomId={}, imageId={}",
+                        userId,
+                        groupRoomId,
+                        optional.get()
+                    )
                 }
             } else {
                 groupRoom.removeThumbnail()
             }
         }
 
-        log.info("userId={}, action=그룹 수정 완료, groupRoomId={}, thumbnail={}",
-            userId, groupRoomId, groupRoom.thumbnailImage)
+        log.info(
+            "userId={}, action=그룹 수정 완료, groupRoomId={}, thumbnail={}",
+            userId,
+            groupRoomId,
+            groupRoom.thumbnailImage
+        )
 
         val memberCount = membershipRepository.countByGroupRoomId(groupRoomId)
         return GroupRoomResponse.from(groupRoom, memberCount)
@@ -226,8 +244,12 @@ class GroupRoomServiceImpl(
 
         notificationService.notifyGroupRoomDeleteScheduled(groupRoomId, userId)
 
-        log.info("userId={}, action=그룹 삭제 예약 완료, groupRoomId={}, deleteScheduledAt={}",
-            userId, groupRoomId, groupRoom.deleteScheduledAt)
+        log.info(
+            "userId={}, action=그룹 삭제 예약 완료, groupRoomId={}, deleteScheduledAt={}",
+            userId,
+            groupRoomId,
+            groupRoom.deleteScheduledAt
+        )
 
         return GroupRoomDeleteResponse(
             deleteScheduledAt = groupRoom.deleteScheduledAt!!

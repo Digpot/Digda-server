@@ -16,6 +16,7 @@ import digdaserver.global.common.page.OffsetBasedPageRequest
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
 import digdaserver.global.infra.fcm.presentation.application.NotificationPushDispatcher
+import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -31,7 +32,10 @@ class NotificationServiceImpl(
     private val pushDispatcher: NotificationPushDispatcher
 ) : NotificationService {
 
+    private val log = LoggerFactory.getLogger(javaClass)
+
     override fun getNotifications(userId: UUID, limit: Int, offset: Int): NotificationListResponse {
+        log.info("userId={}, action=알림 목록 조회, limit={}, offset={}", userId, limit, offset)
         val safeLimit = limit.coerceIn(1, 100)
         val safeOffset = offset.coerceAtLeast(0)
         val pageable = OffsetBasedPageRequest.of(
@@ -55,17 +59,21 @@ class NotificationServiceImpl(
 
     @Transactional
     override fun markAsRead(userId: UUID, notificationId: Long, isRead: Boolean) {
+        log.info("userId={}, action=알림 읽음 처리, notificationId={}, isRead={}",
+            userId, notificationId, isRead)
         val notification = requireOwnedNotification(userId, notificationId)
         if (isRead) notification.markAsRead()
     }
 
     @Transactional
     override fun markAllAsRead(userId: UUID) {
+        log.info("userId={}, action=전체 알림 읽음 처리", userId)
         notificationRepository.markAllAsReadByUserId(userId)
     }
 
     @Transactional
     override fun deleteNotification(userId: UUID, notificationId: Long) {
+        log.info("userId={}, action=알림 삭제, notificationId={}", userId, notificationId)
         val notification = requireOwnedNotification(userId, notificationId)
         notificationRepository.delete(notification)
     }

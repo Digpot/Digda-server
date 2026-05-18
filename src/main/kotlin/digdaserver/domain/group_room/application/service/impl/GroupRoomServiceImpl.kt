@@ -20,9 +20,11 @@ import digdaserver.domain.log.domain.entity.UserAction
 import digdaserver.domain.membership.domain.entity.Membership
 import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.domain.notification.application.service.NotificationService
+import digdaserver.domain.upload.domain.repository.UploadedImageRepository
 import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -36,22 +38,46 @@ class GroupRoomServiceImpl(
     private val membershipRepository: MembershipRepository,
     private val inviteCodeRepository: InviteCodeRepository,
     private val notificationService: NotificationService,
-    private val userActionLogService: UserActionLogService
+    private val userActionLogService: UserActionLogService,
+    private val uploadedImageRepository: UploadedImageRepository
 ) : GroupRoomService {
+
+    private val log = LoggerFactory.getLogger(javaClass)
+
+    /**
+     * 클라이언트가 보내는 thumbnailImageId(=UploadedImage 의 PK 문자열) 를 실제 S3 URL 로 변환.
+     * 입력이 null/blank/숫자가 아니면 null 을 반환해 호출 측에서 변경 없음으로 처리한다.
+     */
+    private fun resolveImageUrl(imageId: String?): String? {
+        if (imageId.isNullOrBlank()) return null
+        val id = imageId.toLongOrNull() ?: run {
+            log.warn("imageId 가 Long 이 아님: imageId={}", imageId)
+            return null
+        }
+        val image = uploadedImageRepository.findById(id).orElse(null)
+        if (image == null) {
+            log.warn("imageId 에 해당하는 업로드 레코드 없음: imageId={}", id)
+            return null
+        }
+        return image.url
+    }
 
     @Transactional
     override fun createGroupRoom(userId: UUID, request: CreateGroupRoomRequest): CreateGroupRoomResponse {
+        log.info("userId={}, action=그룹 생성 요청, name={}", userId, request.name)
         validateGroupRoomName(request.name)
 
         val user = userRepository.findById(userId)
             .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
+
+        val thumbnailUrl = resolveImageUrl(request.thumbnailImageId)
 
         val groupRoom = groupRoomRepository.save(
             GroupRoom(
                 name = request.name,
                 maxMembers = request.maxMembers,
                 owner = user,
-                thumbnailImage = request.thumbnailImageId
+                thumbnailImage = thumbnailUrl
             )
         )
 
@@ -80,6 +106,9 @@ class GroupRoomServiceImpl(
             detail = "name=${groupRoom.name}"
         )
 
+        log.info("userId={}, action=그룹 생성 완료, groupRoomId={}, thumbnail={}",
+            userId, groupRoom.id, groupRoom.thumbnailImage)
+
         return CreateGroupRoomResponse(
             groupRoom = GroupRoomResponse.from(groupRoom, 1),
             inviteCode = inviteCode.code,
@@ -88,6 +117,7 @@ class GroupRoomServiceImpl(
     }
 
     override fun getMyGroupRooms(userId: UUID): GroupRoomListResponse {
+        log.info("userId={}, action=내 그룹방 목록 조회", userId)
         val memberships = membershipRepository.findAllByUserIdWithGroupRoom(userId)
 
         val groupRoomItems = memberships.map { membership ->
@@ -107,6 +137,7 @@ class GroupRoomServiceImpl(
     }
 
     override fun getGroupRoomDetail(userId: UUID, groupRoomId: Long): GroupRoomDetailResponse {
+        log.info("userId={}, action=그룹 상세 조회, groupRoomId={}", userId, groupRoomId)
         val groupRoom = groupRoomRepository.findById(groupRoomId)
             .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
 
@@ -127,6 +158,9 @@ class GroupRoomServiceImpl(
 
     @Transactional
     override fun updateGroupRoom(userId: UUID, groupRoomId: Long, request: UpdateGroupRoomRequest): GroupRoomResponse {
+        log.info("userId={}, action=그룹 수정 요청, groupRoomId={}, fields=[name={}, maxMembers={}, thumbnailImageId={}]",
+            userId, groupRoomId, request.name, request.maxMembers, request.thumbnailImageId)
+
         val groupRoom = groupRoomRepository.findById(groupRoomId)
             .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
 
@@ -150,14 +184,25 @@ class GroupRoomServiceImpl(
             thumbnailImage = null
         )
 
-        // thumbnailImageId: null(미전송)=변경없음, Optional.empty=삭제, Optional(값)=변경
+        // thumbnailImageId: null(미전송)=변경없음, Optional.empty=삭제, Optional(값)=변경.
+        // 값이 전달되면 UploadedImage 의 PK 문자열이므로 실제 S3 URL 로 변환해 저장한다.
+        // (기존엔 PK 문자열을 그대로 저장하여 클라이언트 리스트 썸네일이 깨졌음)
         request.thumbnailImageId?.let { optional ->
             if (optional.isPresent) {
-                groupRoom.thumbnailImage = optional.get()
+                val resolvedUrl = resolveImageUrl(optional.get())
+                if (resolvedUrl != null) {
+                    groupRoom.thumbnailImage = resolvedUrl
+                } else {
+                    log.warn("userId={}, action=그룹 썸네일 변경 무시(업로드 lookup 실패), groupRoomId={}, imageId={}",
+                        userId, groupRoomId, optional.get())
+                }
             } else {
                 groupRoom.removeThumbnail()
             }
         }
+
+        log.info("userId={}, action=그룹 수정 완료, groupRoomId={}, thumbnail={}",
+            userId, groupRoomId, groupRoom.thumbnailImage)
 
         val memberCount = membershipRepository.countByGroupRoomId(groupRoomId)
         return GroupRoomResponse.from(groupRoom, memberCount)
@@ -165,6 +210,8 @@ class GroupRoomServiceImpl(
 
     @Transactional
     override fun deleteGroupRoom(userId: UUID, groupRoomId: Long): GroupRoomDeleteResponse {
+        log.info("userId={}, action=그룹 삭제 요청, groupRoomId={}", userId, groupRoomId)
+
         val groupRoom = groupRoomRepository.findById(groupRoomId)
             .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
 
@@ -179,6 +226,9 @@ class GroupRoomServiceImpl(
 
         notificationService.notifyGroupRoomDeleteScheduled(groupRoomId, userId)
 
+        log.info("userId={}, action=그룹 삭제 예약 완료, groupRoomId={}, deleteScheduledAt={}",
+            userId, groupRoomId, groupRoom.deleteScheduledAt)
+
         return GroupRoomDeleteResponse(
             deleteScheduledAt = groupRoom.deleteScheduledAt!!
         )
@@ -186,6 +236,8 @@ class GroupRoomServiceImpl(
 
     @Transactional
     override fun recoverGroupRoom(userId: UUID, groupRoomId: Long): GroupRoomResponse {
+        log.info("userId={}, action=그룹 복구 요청, groupRoomId={}", userId, groupRoomId)
+
         val groupRoom = groupRoomRepository.findById(groupRoomId)
             .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
 
@@ -199,6 +251,8 @@ class GroupRoomServiceImpl(
         if (!membership.isOwner) throw DigdaException(ErrorCode.NOT_GROUP_ROOM_OWNER)
 
         groupRoom.recover()
+
+        log.info("userId={}, action=그룹 복구 완료, groupRoomId={}", userId, groupRoomId)
 
         val memberCount = membershipRepository.countByGroupRoomId(groupRoomId)
         return GroupRoomResponse.from(groupRoom, memberCount)

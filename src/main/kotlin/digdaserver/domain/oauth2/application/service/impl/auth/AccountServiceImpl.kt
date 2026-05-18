@@ -27,6 +27,8 @@ class AccountServiceImpl(
     private val log = LoggerFactory.getLogger(AccountServiceImpl::class.java)
 
     override fun deleteAccount(userId: UUID) {
+        log.info("userId={}, action=회원 탈퇴 요청", userId)
+
         val user = userRepository.findById(userId)
             .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
 

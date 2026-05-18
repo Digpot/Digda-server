@@ -83,10 +83,12 @@ class SocialLoginServiceImpl(
             detail = "provider=$provider, email=${user.email}"
         )
 
-        log.info("userId={}, action={}, provider={}",
+        log.info(
+            "userId={}, action={}, provider={}",
             user.id,
             if (isNewUser) "회원 가입" else "로그인",
-            provider)
+            provider
+        )
 
         return LoginResponse(
             accessToken = loginToken.accessToken,

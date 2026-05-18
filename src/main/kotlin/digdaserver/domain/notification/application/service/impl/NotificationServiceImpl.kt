@@ -59,8 +59,12 @@ class NotificationServiceImpl(
 
     @Transactional
     override fun markAsRead(userId: UUID, notificationId: Long, isRead: Boolean) {
-        log.info("userId={}, action=알림 읽음 처리, notificationId={}, isRead={}",
-            userId, notificationId, isRead)
+        log.info(
+            "userId={}, action=알림 읽음 처리, notificationId={}, isRead={}",
+            userId,
+            notificationId,
+            isRead
+        )
         val notification = requireOwnedNotification(userId, notificationId)
         if (isRead) notification.markAsRead()
     }

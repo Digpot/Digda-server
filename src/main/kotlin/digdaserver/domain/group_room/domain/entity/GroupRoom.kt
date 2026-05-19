@@ -82,7 +82,7 @@ class GroupRoom(
     }
 
     fun scheduleDelete() {
-        this.deleteScheduledAt = LocalDateTime.now().plusDays(7)
+        this.deleteScheduledAt = LocalDateTime.now().plusHours(24)
     }
 
     fun recover() {

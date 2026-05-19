@@ -13,6 +13,7 @@ data class GroupRoomListItem(
     val myRole: String,
     val lastActivityAt: LocalDateTime,
     val isDeleteScheduled: Boolean,
+    val deleteScheduledAt: LocalDateTime?,
     val inviteCode: String? = null
 ) {
     companion object {
@@ -25,6 +26,7 @@ data class GroupRoomListItem(
             myRole = myRole.name.lowercase(),
             lastActivityAt = groupRoom.lastActivityAt,
             isDeleteScheduled = groupRoom.isDeleteScheduled,
+            deleteScheduledAt = groupRoom.deleteScheduledAt,
             inviteCode = inviteCode
         )
     }

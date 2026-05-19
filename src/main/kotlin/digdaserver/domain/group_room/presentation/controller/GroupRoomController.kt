@@ -70,7 +70,7 @@ class GroupRoomController(
         return ResponseEntity.ok(response)
     }
 
-    @Operation(summary = "그룹방 삭제", description = "그룹방을 삭제 예약합니다. 7일 후 영구 삭제됩니다. 방장만 가능합니다.")
+    @Operation(summary = "그룹방 삭제", description = "그룹방을 삭제 예약합니다. 24시간 후 영구 삭제됩니다. 방장만 가능합니다.")
     @DeleteMapping("/{groupRoomId}")
     fun deleteGroupRoom(
         @AuthenticationPrincipal userId: String,
@@ -80,7 +80,7 @@ class GroupRoomController(
         return ResponseEntity.ok(response)
     }
 
-    @Operation(summary = "그룹방 복구", description = "삭제 예약된 그룹방을 복구합니다. 삭제 예약 기간(7일) 내에만 가능하며 방장만 가능합니다.")
+    @Operation(summary = "그룹방 복구", description = "삭제 예약된 그룹방을 복구합니다. 삭제 예약 기간(24시간) 내에만 가능하며 방장만 가능합니다.")
     @PostMapping("/{groupRoomId}/recover")
     fun recoverGroupRoom(
         @AuthenticationPrincipal userId: String,

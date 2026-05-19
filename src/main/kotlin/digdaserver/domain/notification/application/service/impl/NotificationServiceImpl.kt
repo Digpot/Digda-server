@@ -236,6 +236,92 @@ class NotificationServiceImpl(
     }
 
     @Transactional
+    override fun notifyCommentOnSchedule(
+        groupRoomId: Long,
+        scheduleId: Long,
+        commenterUserId: UUID,
+        scheduleTitle: String
+    ) {
+        val groupRoom = findGroupRoom(groupRoomId)
+        val commenter = findUser(commenterUserId)
+        // 일정 댓글은 그룹 멤버 전원에게 노출(작성자 본인 제외). 어떤 댓글이 달렸는지
+        // 모든 멤버가 알 수 있게 하는 디그팟 그룹 다이어리 특성에 맞춤.
+        val recipients = memberRecipientsExcept(groupRoomId, commenterUserId)
+
+        notify(
+            recipients,
+            NotificationPayload(
+                type = NotificationType.COMMENT_ON_SCHEDULE,
+                title = "새 댓글",
+                message = "${commenter.name}님이 '$scheduleTitle' 일정에 댓글을 남겼습니다.",
+                groupRoomId = groupRoomId,
+                groupRoomName = groupRoom.name,
+                relatedId = scheduleId,
+                relatedType = "SCHEDULE"
+            )
+        )
+    }
+
+    @Transactional
+    override fun notifyCommentOnDiary(
+        groupRoomId: Long,
+        diaryId: Long,
+        commenterUserId: UUID,
+        diaryTitle: String
+    ) {
+        val groupRoom = findGroupRoom(groupRoomId)
+        val commenter = findUser(commenterUserId)
+        val recipients = memberRecipientsExcept(groupRoomId, commenterUserId)
+
+        notify(
+            recipients,
+            NotificationPayload(
+                type = NotificationType.COMMENT_ON_DIARY,
+                title = "새 댓글",
+                message = "${commenter.name}님이 '$diaryTitle' 일기에 댓글을 남겼습니다.",
+                groupRoomId = groupRoomId,
+                groupRoomName = groupRoom.name,
+                relatedId = diaryId,
+                relatedType = "DIARY"
+            )
+        )
+    }
+
+    @Transactional
+    override fun notifyMemberRemoved(groupRoomId: Long, actorUserId: UUID, removedUserId: UUID) {
+        val groupRoom = findGroupRoom(groupRoomId)
+        val removedUser = findUser(removedUserId)
+
+        // 강퇴 당사자에게는 본인이 내보내졌다는 알림을 별도 메시지로 발송.
+        notify(
+            listOf(removedUser),
+            NotificationPayload(
+                type = NotificationType.MEMBER_REMOVED,
+                title = "그룹방에서 내보내짐",
+                message = "'${groupRoom.name}' 그룹방에서 내보내졌습니다.",
+                groupRoomId = groupRoomId,
+                groupRoomName = groupRoom.name
+            )
+        )
+
+        // 나머지 멤버에게는 "OOO 님이 내보내졌다" 안내. 강퇴 액터(방장) + 당사자 제외.
+        val others = membershipRepository.findAllByGroupRoomId(groupRoomId)
+            .map { it.user }
+            .filter { it.id != actorUserId && it.id != removedUserId }
+
+        notify(
+            others,
+            NotificationPayload(
+                type = NotificationType.MEMBER_REMOVED,
+                title = "구성원 내보냄",
+                message = "${removedUser.name}님이 '${groupRoom.name}' 그룹방에서 내보내졌습니다.",
+                groupRoomId = groupRoomId,
+                groupRoomName = groupRoom.name
+            )
+        )
+    }
+
+    @Transactional
     override fun sendAnnouncement(
         targetUserIds: List<UUID>?,
         title: String,

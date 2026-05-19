@@ -12,6 +12,7 @@ enum class UserAction {
     CREATE_GROUP_ROOM,
     JOIN_GROUP_ROOM,
     LEAVE_GROUP_ROOM,
+    REMOVE_MEMBER,
     TRANSFER_OWNER,
     CREATE_TODO,
     OTHER

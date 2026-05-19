@@ -39,6 +39,22 @@ interface NotificationService {
         addedParticipantUserIds: List<UUID>
     )
 
+    fun notifyCommentOnSchedule(
+        groupRoomId: Long,
+        scheduleId: Long,
+        commenterUserId: UUID,
+        scheduleTitle: String
+    )
+
+    fun notifyCommentOnDiary(
+        groupRoomId: Long,
+        diaryId: Long,
+        commenterUserId: UUID,
+        diaryTitle: String
+    )
+
+    fun notifyMemberRemoved(groupRoomId: Long, actorUserId: UUID, removedUserId: UUID)
+
     fun sendAnnouncement(
         targetUserIds: List<UUID>?,
         title: String,

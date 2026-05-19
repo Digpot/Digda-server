@@ -58,6 +58,16 @@ class MembershipServiceImpl(
         if (targetMembership.isOwner) throw DigdaException(ErrorCode.CANNOT_REMOVE_OWNER)
 
         membershipRepository.delete(targetMembership)
+
+        notificationService.notifyMemberRemoved(groupRoomId, userId, targetUserId)
+
+        userActionLogService.record(
+            actorId = userId,
+            action = UserAction.REMOVE_MEMBER,
+            targetType = "GROUP_ROOM",
+            targetId = groupRoomId.toString(),
+            detail = "removedUserId=$targetUserId"
+        )
     }
 
     @Transactional

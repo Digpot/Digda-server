@@ -10,6 +10,7 @@ import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.log.application.service.UserActionLogService
 import digdaserver.domain.log.domain.entity.UserAction
 import digdaserver.domain.membership.domain.repository.MembershipRepository
+import digdaserver.domain.notification.application.service.NotificationService
 import digdaserver.domain.schedule.domain.repository.ScheduleRepository
 import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.global.infra.exception.error.DigdaException
@@ -27,7 +28,8 @@ class CommentServiceImpl(
     private val scheduleRepository: ScheduleRepository,
     private val diaryRepository: DiaryRepository,
     private val userRepository: UserRepository,
-    private val userActionLogService: UserActionLogService
+    private val userActionLogService: UserActionLogService,
+    private val notificationService: NotificationService
 ) : CommentService {
 
     @Transactional
@@ -35,7 +37,7 @@ class CommentServiceImpl(
         validateGroupRoomMember(groupRoomId, userId)
         validateCommentText(text)
 
-        scheduleRepository.findById(scheduleId)
+        val schedule = scheduleRepository.findById(scheduleId)
             .orElseThrow { DigdaException(ErrorCode.SCHEDULE_NOT_FOUND) }
 
         val user = userRepository.findById(userId)
@@ -58,6 +60,13 @@ class CommentServiceImpl(
             detail = "groupRoomId=$groupRoomId, commentId=${comment.id}"
         )
 
+        notificationService.notifyCommentOnSchedule(
+            groupRoomId = groupRoomId,
+            scheduleId = scheduleId,
+            commenterUserId = userId,
+            scheduleTitle = schedule.title
+        )
+
         return CreateCommentResponse.from(comment)
     }
 
@@ -66,7 +75,7 @@ class CommentServiceImpl(
         validateGroupRoomMember(groupRoomId, userId)
         validateCommentText(text)
 
-        diaryRepository.findById(diaryId)
+        val diary = diaryRepository.findById(diaryId)
             .orElseThrow { DigdaException(ErrorCode.DIARY_NOT_FOUND) }
 
         val user = userRepository.findById(userId)
@@ -87,6 +96,13 @@ class CommentServiceImpl(
             targetType = "DIARY",
             targetId = diaryId.toString(),
             detail = "groupRoomId=$groupRoomId, commentId=${comment.id}"
+        )
+
+        notificationService.notifyCommentOnDiary(
+            groupRoomId = groupRoomId,
+            diaryId = diaryId,
+            commenterUserId = userId,
+            diaryTitle = diary.title
         )
 
         return CreateCommentResponse.from(comment)

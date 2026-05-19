@@ -142,7 +142,7 @@ class InviteServiceImpl(
     }
 
     private fun generateInviteCode(): String {
-        val chars = ('A'..'Z') + ('0'..'9')
+        val chars = ('0'..'9').toList()
         return (1..6).map { chars.random() }.joinToString("")
     }
 

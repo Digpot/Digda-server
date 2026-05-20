@@ -55,7 +55,9 @@ class NotificationPushDispatcherImpl(
         if (setting == null || !setting.pushEnabled) return false
         return when (type) {
             NotificationType.SCHEDULE_CREATED,
-            NotificationType.SCHEDULE_UPDATED -> setting.scheduleNotification
+            NotificationType.SCHEDULE_UPDATED,
+            NotificationType.SCHEDULE_DAY_BEFORE,
+            NotificationType.SCHEDULE_TODAY -> setting.scheduleNotification
             NotificationType.DIARY_WRITTEN -> setting.diaryNotification
             NotificationType.COMMENT_ON_SCHEDULE,
             NotificationType.COMMENT_ON_DIARY -> setting.commentNotification

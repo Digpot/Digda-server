@@ -236,6 +236,72 @@ class NotificationServiceImpl(
     }
 
     @Transactional
+    override fun notifyScheduleReminderDayBefore(
+        groupRoomId: Long,
+        scheduleId: Long,
+        scheduleTitle: String,
+        recipientUserIds: List<UUID>
+    ) {
+        notifyScheduleReminder(
+            groupRoomId = groupRoomId,
+            scheduleId = scheduleId,
+            recipientUserIds = recipientUserIds,
+            type = NotificationType.SCHEDULE_DAY_BEFORE,
+            title = "내일 일정",
+            message = "내일 '$scheduleTitle' 일정이 예정되어 있습니다."
+        )
+    }
+
+    @Transactional
+    override fun notifyScheduleReminderToday(
+        groupRoomId: Long,
+        scheduleId: Long,
+        scheduleTitle: String,
+        recipientUserIds: List<UUID>
+    ) {
+        notifyScheduleReminder(
+            groupRoomId = groupRoomId,
+            scheduleId = scheduleId,
+            recipientUserIds = recipientUserIds,
+            type = NotificationType.SCHEDULE_TODAY,
+            title = "오늘 일정",
+            message = "오늘 '$scheduleTitle' 일정이 예정되어 있습니다."
+        )
+    }
+
+    private fun notifyScheduleReminder(
+        groupRoomId: Long,
+        scheduleId: Long,
+        recipientUserIds: List<UUID>,
+        type: NotificationType,
+        title: String,
+        message: String
+    ) {
+        val uniqueRecipientIds = recipientUserIds.distinct()
+        if (uniqueRecipientIds.isEmpty()) return
+
+        // 동일 일정에 같은 종류의 리마인더가 이미 발송된 경우 중복 발송하지 않는다.
+        if (notificationRepository.existsByTypeAndRelatedId(type, scheduleId)) return
+
+        val groupRoom = findGroupRoom(groupRoomId)
+        val recipients = userRepository.findAllById(uniqueRecipientIds).toList()
+        if (recipients.isEmpty()) return
+
+        notify(
+            recipients,
+            NotificationPayload(
+                type = type,
+                title = title,
+                message = message,
+                groupRoomId = groupRoomId,
+                groupRoomName = groupRoom.name,
+                relatedId = scheduleId,
+                relatedType = "SCHEDULE"
+            )
+        )
+    }
+
+    @Transactional
     override fun notifyCommentOnSchedule(
         groupRoomId: Long,
         scheduleId: Long,

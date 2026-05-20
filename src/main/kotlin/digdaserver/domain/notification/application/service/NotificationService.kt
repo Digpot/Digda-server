@@ -39,6 +39,22 @@ interface NotificationService {
         addedParticipantUserIds: List<UUID>
     )
 
+    /** 일정 시작 하루 전 리마인더 — 참가자 및 생성자에게 발송. */
+    fun notifyScheduleReminderDayBefore(
+        groupRoomId: Long,
+        scheduleId: Long,
+        scheduleTitle: String,
+        recipientUserIds: List<UUID>
+    )
+
+    /** 일정 당일 리마인더 — 참가자 및 생성자에게 발송. */
+    fun notifyScheduleReminderToday(
+        groupRoomId: Long,
+        scheduleId: Long,
+        scheduleTitle: String,
+        recipientUserIds: List<UUID>
+    )
+
     fun notifyCommentOnSchedule(
         groupRoomId: Long,
         scheduleId: Long,

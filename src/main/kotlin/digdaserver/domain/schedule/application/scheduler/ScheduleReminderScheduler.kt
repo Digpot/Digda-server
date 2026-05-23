@@ -13,12 +13,14 @@ import java.util.UUID
 /**
  * 일정 시작일을 기준으로 리마인더 알림을 발송하는 잡.
  *
- * - 매일 오전 9시(KST)에 1회 실행.
+ * - 매시 정각(KST 09:00 ~ 23:00) 실행. 첫 발송은 09:00이지만,
+ *   배포·재시작·9시 이후 새로 생긴 일정 등으로 9시 슬롯이 비더라도
+ *   같은 날 안에 자동으로 따라잡는다. 중복 방지는 [NotificationService] 가 담당.
  * - 시작일이 "내일"인 일정 → 하루 전 리마인더(SCHEDULE_DAY_BEFORE).
  * - 시작일이 "오늘"인 일정 → 당일 리마인더(SCHEDULE_TODAY).
  * - 발송 대상: 일정 참가자 전원 + 일정을 생성한 사람(중복은 제거).
  * - 중복 발송 방지는 [NotificationService] 내부에서 처리한다. 동일 일정·동일 종류의
- *   리마인더가 이미 존재하면 건너뛰므로, 잡이 재실행되어도 같은 알림이 두 번 가지 않는다.
+ *   리마인더가 이미 존재하면 건너뛰므로, 잡이 시간당 다시 돌아도 같은 알림이 두 번 가지 않는다.
  * - row 단위 격리: 한 일정의 처리가 실패해도 나머지 일정은 계속 처리한다.
  */
 @Component
@@ -29,7 +31,7 @@ class ScheduleReminderScheduler(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    @Scheduled(cron = CRON_DAILY_9AM, zone = KST)
+    @Scheduled(cron = CRON_HOURLY_9_TO_23, zone = KST)
     fun sendScheduleReminders() {
         val today = LocalDate.now(ZoneId.of(KST))
 
@@ -98,8 +100,8 @@ class ScheduleReminderScheduler(
         (schedule.participants.map { it.user.id } + schedule.createdBy.id).distinct()
 
     companion object {
-        // 초 분 시 일 월 요일 — 매일 09:00 (KST)
-        private const val CRON_DAILY_9AM = "0 0 9 * * *"
+        // 초 분 시 일 월 요일 — KST 09:00 ~ 23:00 매시 정각 (재실행은 멱등).
+        private const val CRON_HOURLY_9_TO_23 = "0 0 9-23 * * *"
         private const val KST = "Asia/Seoul"
     }
 }

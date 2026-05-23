@@ -4,10 +4,12 @@ import digdaserver.domain.schedule.domain.entity.Schedule
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 import java.time.LocalDate
+import java.util.UUID
 
 @Repository
 interface ScheduleRepository : JpaRepository<Schedule, Long> {
@@ -39,4 +41,8 @@ interface ScheduleRepository : JpaRepository<Schedule, Long> {
         @Param("keyword") keyword: String?,
         pageable: Pageable
     ): Page<Schedule>
+
+    @Modifying
+    @Query("DELETE FROM Schedule s WHERE s.createdBy.id = :userId")
+    fun deleteAllByCreatedById(@Param("userId") userId: UUID)
 }

@@ -3,9 +3,11 @@ package digdaserver.domain.comment.domain.repository
 import digdaserver.domain.comment.domain.entity.Comment
 import digdaserver.domain.comment.domain.entity.CommentTargetType
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
+import java.util.UUID
 
 @Repository
 interface CommentRepository : JpaRepository<Comment, Long> {
@@ -29,4 +31,8 @@ interface CommentRepository : JpaRepository<Comment, Long> {
         @Param("targetType") targetType: CommentTargetType,
         @Param("targetIds") targetIds: Collection<Long>
     ): List<Array<Any>>
+
+    @Modifying
+    @Query("DELETE FROM Comment c WHERE c.createdBy.id = :userId")
+    fun deleteAllByCreatedById(@Param("userId") userId: UUID)
 }

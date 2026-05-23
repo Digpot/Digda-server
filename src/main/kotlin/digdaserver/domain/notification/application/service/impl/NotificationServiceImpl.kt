@@ -358,6 +358,14 @@ class NotificationServiceImpl(
         val groupRoom = findGroupRoom(groupRoomId)
         val removedUser = findUser(removedUserId)
 
+        // recipients 를 먼저 조회해 auto-flush 로 pending DELETE 를 선행 실행한 뒤
+        // notify() 의 saveAll 이 뒤따르도록 순서를 고정한다.
+        // (notify() 이후에 findAllByGroupRoomId 를 호출하면 auto-flush 시
+        //  notification INSERT 와 membership DELETE 가 혼재해 제약 위반이 발생할 수 있음)
+        val others = membershipRepository.findAllByGroupRoomId(groupRoomId)
+            .map { it.user }
+            .filter { it.id != actorUserId && it.id != removedUserId }
+
         // 강퇴 당사자에게는 본인이 내보내졌다는 알림을 별도 메시지로 발송.
         notify(
             listOf(removedUser),
@@ -371,10 +379,6 @@ class NotificationServiceImpl(
         )
 
         // 나머지 멤버에게는 "OOO 님이 내보내졌다" 안내. 강퇴 액터(방장) + 당사자 제외.
-        val others = membershipRepository.findAllByGroupRoomId(groupRoomId)
-            .map { it.user }
-            .filter { it.id != actorUserId && it.id != removedUserId }
-
         notify(
             others,
             NotificationPayload(

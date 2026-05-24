@@ -2,6 +2,7 @@ package digdaserver.global.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import digdaserver.global.infra.exception.auth.DigdaAuthExceptionFilter
+import digdaserver.global.infra.filter.ApiAccessLogFilter
 import digdaserver.global.infra.filter.DigdaJWTFilter
 import digdaserver.global.jwt.util.JWTUtil
 import org.springframework.context.annotation.Bean
@@ -106,6 +107,13 @@ class SecurityConfig(
         http.addFilterAfter(
             DigdaJWTFilter(jwtUtil, excludedUrls),
             UsernamePasswordAuthenticationFilter::class.java
+        )
+
+        // JWT 인증이 끝난 직후에 진입 로그를 남겨 SecurityContext 의 userId 가
+        // 포함되게 한다. 컨트롤러별로 일일이 박지 않고 한 곳에서 보장.
+        http.addFilterAfter(
+            ApiAccessLogFilter(),
+            DigdaJWTFilter::class.java
         )
 
         return http.build()

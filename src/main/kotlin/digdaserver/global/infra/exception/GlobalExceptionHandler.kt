@@ -3,9 +3,11 @@ package digdaserver.global.infra.exception
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
 import digdaserver.global.infra.exception.error.response.ErrorResponse
+import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -17,8 +19,29 @@ class GlobalExceptionHandler {
     private val log = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
 
     @ExceptionHandler(DigdaException::class)
-    fun handleDigdaException(e: DigdaException): ResponseEntity<ErrorResponse> {
-        log.error("DigdaException - code: {}, message: {}", e.errorCode.code, e.message)
+    fun handleDigdaException(
+        e: DigdaException,
+        request: HttpServletRequest
+    ): ResponseEntity<ErrorResponse> {
+        val ctx = requestContext(request)
+        // 4xx 비즈니스 에러는 warn, 5xx 만 error 로 분기해 운영 로그 노이즈 감소.
+        if (e.httpStatusCode >= 500) {
+            log.error(
+                "DigdaException(5xx) {}, code={}, message={}",
+                ctx,
+                e.errorCode.code,
+                e.message,
+                e
+            )
+        } else {
+            log.warn(
+                "DigdaException {}, status={}, code={}, message={}",
+                ctx,
+                e.httpStatusCode,
+                e.errorCode.code,
+                e.message
+            )
+        }
 
         return ResponseEntity
             .status(e.httpStatusCode)
@@ -26,16 +49,27 @@ class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(NoResourceFoundException::class)
-    fun handleNoResourceFound(e: NoResourceFoundException): ResponseEntity<ErrorResponse> {
-        log.warn("404 Not Found: {}", e.message)
+    fun handleNoResourceFound(
+        e: NoResourceFoundException,
+        request: HttpServletRequest
+    ): ResponseEntity<ErrorResponse> {
+        log.warn("404 Not Found {}, message={}", requestContext(request), e.message)
         return ResponseEntity
             .status(404)
             .body(ErrorResponse.of(ErrorCode.SERVER_ERROR))
     }
 
     @ExceptionHandler(Exception::class)
-    fun handleUnexpectedException(e: Exception): ResponseEntity<ErrorResponse> {
-        log.error("Unexpected exception", e)
+    fun handleUnexpectedException(
+        e: Exception,
+        request: HttpServletRequest
+    ): ResponseEntity<ErrorResponse> {
+        log.error(
+            "Unexpected exception {}, message={}",
+            requestContext(request),
+            e.message,
+            e
+        )
 
         return ResponseEntity
             .status(500)
@@ -43,16 +77,31 @@ class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
-    fun handleJsonParseError(e: HttpMessageNotReadableException): ResponseEntity<ErrorResponse> {
+    fun handleJsonParseError(
+        e: HttpMessageNotReadableException,
+        request: HttpServletRequest
+    ): ResponseEntity<ErrorResponse> {
         val root = e.rootCause
 
         return when (root) {
-            is DigdaException ->
+            is DigdaException -> {
+                log.warn(
+                    "JSON parse → DigdaException {}, code={}, message={}",
+                    requestContext(request),
+                    root.errorCode.code,
+                    root.message
+                )
                 ResponseEntity
                     .status(root.httpStatusCode)
                     .body(ErrorResponse.of(root))
+            }
 
-            else ->
+            else -> {
+                log.warn(
+                    "JSON parse 실패 {}, message={}",
+                    requestContext(request),
+                    root?.message ?: e.message
+                )
                 ResponseEntity
                     .status(400)
                     .body(
@@ -61,17 +110,39 @@ class GlobalExceptionHandler {
                             root?.message ?: "잘못된 요청입니다."
                         )
                     )
+            }
         }
     }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
-    fun handleValidationException(ex: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
+    fun handleValidationException(
+        ex: MethodArgumentNotValidException,
+        request: HttpServletRequest
+    ): ResponseEntity<ErrorResponse> {
         val details = ex.bindingResult.fieldErrors.associate {
             it.field to (it.defaultMessage ?: "잘못된 값입니다.")
         }
+        log.warn(
+            "요청 검증 실패 {}, details={}",
+            requestContext(request),
+            details
+        )
 
         return ResponseEntity
             .badRequest()
             .body(ErrorResponse.of(ErrorCode.PARAMETER_VALIDATION_ERROR, details))
+    }
+
+    /**
+     * 모든 예외 로그에 공통으로 붙는 요청 컨텍스트. ApiAccessLogFilter 와 키 포맷을
+     * 맞춰 같은 한 트랜잭션을 grep 으로 묶을 수 있게 한다.
+     */
+    private fun requestContext(request: HttpServletRequest): String {
+        val userId = SecurityContextHolder.getContext().authentication?.principal
+            ?.toString()
+            ?.takeIf { it.isNotBlank() && it != "anonymousUser" }
+            ?: "-"
+        val query = request.queryString?.let { "?$it" } ?: ""
+        return "method=${request.method}, path=${request.requestURI}$query, userId=$userId"
     }
 }

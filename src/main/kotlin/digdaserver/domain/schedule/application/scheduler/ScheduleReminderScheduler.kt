@@ -4,9 +4,12 @@ import digdaserver.domain.notification.application.service.NotificationService
 import digdaserver.domain.schedule.domain.entity.Schedule
 import digdaserver.domain.schedule.domain.repository.ScheduleRepository
 import org.slf4j.LoggerFactory
+import org.springframework.boot.context.event.ApplicationReadyEvent
+import org.springframework.context.event.EventListener
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
 
@@ -33,7 +36,33 @@ class ScheduleReminderScheduler(
 
     @Scheduled(cron = CRON_HOURLY_9_TO_23, zone = KST)
     fun sendScheduleReminders() {
+        runReminderJob(trigger = "cron")
+    }
+
+    /**
+     * 부팅 직후 catch-up. cron 슬롯은 [REMINDER_START_HOUR]~[REMINDER_END_HOUR] 매시 정각에만
+     * 발사되므로, 그 사이에 재배포/재시작이 끼면 그날치 리마인더가 통째로 유실될 수 있다.
+     * 멱등 가드(`existsByTypeAndRelatedId`)가 있어 cron 이 이미 보냈으면 중복 발송되지 않는다.
+     */
+    @EventListener(ApplicationReadyEvent::class)
+    fun catchUpOnStartup() {
+        val nowKst = LocalTime.now(ZoneId.of(KST))
+        val startBoundary = LocalTime.of(REMINDER_START_HOUR, 0)
+        val endBoundary = LocalTime.of(REMINDER_END_HOUR, 59)
+        if (nowKst.isBefore(startBoundary) || nowKst.isAfter(endBoundary)) {
+            log.info(
+                "action=일정 리마인더 startup catch-up 건너뜀(시간대 외), nowKst={}",
+                nowKst
+            )
+            return
+        }
+        log.info("action=일정 리마인더 startup catch-up 실행, nowKst={}", nowKst)
+        runReminderJob(trigger = "startup")
+    }
+
+    private fun runReminderJob(trigger: String) {
         val today = LocalDate.now(ZoneId.of(KST))
+        log.info("action=일정 리마인더 진입, trigger={}, today(KST)={}", trigger, today)
 
         dispatch(targetDate = today.plusDays(1), isToday = false)
         dispatch(targetDate = today, isToday = true)
@@ -42,7 +71,15 @@ class ScheduleReminderScheduler(
     private fun dispatch(targetDate: LocalDate, isToday: Boolean) {
         val label = if (isToday) "당일" else "하루 전"
         val schedules = scheduleRepository.findAllForReminder(targetDate)
-        if (schedules.isEmpty()) return
+        if (schedules.isEmpty()) {
+            // 0건도 항상 로그 — 스케줄러가 살아 있는지 / 쿼리 결과가 비는 건지 구분 가능하게.
+            log.info(
+                "action=일정 리마인더 대상 없음, type={}, targetDate={}",
+                label,
+                targetDate
+            )
+            return
+        }
 
         log.info(
             "action=일정 리마인더 발송 시작, type={}, targetDate={}, count={}",
@@ -100,6 +137,9 @@ class ScheduleReminderScheduler(
         (schedule.participants.map { it.user.id } + schedule.createdBy.id).distinct()
 
     companion object {
+        private const val REMINDER_START_HOUR = 9
+        private const val REMINDER_END_HOUR = 23
+
         // 초 분 시 일 월 요일 — KST 09:00 ~ 23:00 매시 정각 (재실행은 멱등).
         private const val CRON_HOURLY_9_TO_23 = "0 0 9-23 * * *"
         private const val KST = "Asia/Seoul"

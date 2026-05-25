@@ -18,9 +18,11 @@ import digdaserver.domain.log.application.service.UserActionLogService
 import digdaserver.domain.log.domain.entity.UserAction
 import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.domain.notification.application.service.NotificationService
+import digdaserver.domain.upload.domain.repository.UploadedImageRepository
 import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
+import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
@@ -38,8 +40,30 @@ class DiaryServiceImpl(
     private val commentRepository: CommentRepository,
     private val userRepository: UserRepository,
     private val notificationService: NotificationService,
-    private val userActionLogService: UserActionLogService
+    private val userActionLogService: UserActionLogService,
+    private val uploadedImageRepository: UploadedImageRepository
 ) : DiaryService {
+
+    private val log = LoggerFactory.getLogger(javaClass)
+
+    /**
+     * 클라이언트가 보내는 imageId(=UploadedImage 의 PK 문자열) 를 실제 S3 URL 로 변환.
+     * 입력이 null/blank/숫자가 아니거나 lookup 실패 시 null 을 반환한다.
+     * (기존엔 PK 문자열을 그대로 image_url 컬럼에 저장하여 클라이언트에서 이미지 로딩 실패)
+     */
+    private fun resolveImageUrl(imageId: String?): String? {
+        if (imageId.isNullOrBlank()) return null
+        val id = imageId.toLongOrNull() ?: run {
+            log.warn("imageId 가 Long 이 아님: imageId={}", imageId)
+            return null
+        }
+        val image = uploadedImageRepository.findById(id).orElse(null)
+        if (image == null) {
+            log.warn("imageId 에 해당하는 업로드 레코드 없음: imageId={}", id)
+            return null
+        }
+        return image.url
+    }
 
     override fun getDiaries(userId: UUID, groupRoomId: Long, month: YearMonth?, limit: Int, offset: Int): DiaryListResponse {
         val groupRoom = groupRoomRepository.findById(groupRoomId)
@@ -138,7 +162,7 @@ class DiaryServiceImpl(
                 date = request.date,
                 weather = request.weather,
                 mood = request.mood,
-                imageUrl = request.imageId,
+                imageUrl = resolveImageUrl(request.imageId),
                 createdBy = user
             )
         )
@@ -187,7 +211,7 @@ class DiaryServiceImpl(
             date = request.date,
             weather = request.weather,
             mood = request.mood,
-            imageUrl = request.imageId
+            imageUrl = resolveImageUrl(request.imageId)
         )
 
         groupRoom.updateLastActivity()

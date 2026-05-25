@@ -4,13 +4,22 @@ import digdaserver.domain.comment.domain.entity.CommentTargetType
 import digdaserver.domain.comment.domain.repository.CommentRepository
 import digdaserver.domain.diary.application.service.DiaryService
 import digdaserver.domain.diary.domain.entity.Diary
+import digdaserver.domain.diary.domain.entity.DiaryLike
+import digdaserver.domain.diary.domain.entity.DiaryReaction
+import digdaserver.domain.diary.domain.entity.DiaryReactionType
+import digdaserver.domain.diary.domain.repository.DiaryLikeRepository
+import digdaserver.domain.diary.domain.repository.DiaryReactionRepository
 import digdaserver.domain.diary.domain.repository.DiaryRepository
 import digdaserver.domain.diary.presentation.dto.req.CreateDiaryRequest
+import digdaserver.domain.diary.presentation.dto.req.ToggleDiaryReactionRequest
 import digdaserver.domain.diary.presentation.dto.req.UpdateDiaryRequest
 import digdaserver.domain.diary.presentation.dto.res.DiaryCalendarResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryCommentResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryDetailResponse
+import digdaserver.domain.diary.presentation.dto.res.DiaryLikeResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryListResponse
+import digdaserver.domain.diary.presentation.dto.res.DiaryReactionSummary
+import digdaserver.domain.diary.presentation.dto.res.DiaryReactionToggleResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryResponse
 import digdaserver.domain.diary.presentation.dto.res.DiarySummaryResponse
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
@@ -41,38 +50,25 @@ class DiaryServiceImpl(
     private val userRepository: UserRepository,
     private val notificationService: NotificationService,
     private val userActionLogService: UserActionLogService,
-    private val uploadedImageRepository: UploadedImageRepository
+    private val uploadedImageRepository: UploadedImageRepository,
+    private val diaryLikeRepository: DiaryLikeRepository,
+    private val diaryReactionRepository: DiaryReactionRepository
 ) : DiaryService {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    /**
-     * 클라이언트가 보내는 imageId(=UploadedImage 의 PK 문자열) 를 실제 S3 URL 로 변환.
-     * 입력이 null/blank/숫자가 아니거나 lookup 실패 시 null 을 반환한다.
-     * (기존엔 PK 문자열을 그대로 image_url 컬럼에 저장하여 클라이언트에서 이미지 로딩 실패)
-     */
-    private fun resolveImageUrl(imageId: String?): String? {
-        if (imageId.isNullOrBlank()) return null
-        val id = imageId.toLongOrNull() ?: run {
-            log.warn("imageId 가 Long 이 아님: imageId={}", imageId)
-            return null
-        }
-        val image = uploadedImageRepository.findById(id).orElse(null)
-        if (image == null) {
-            log.warn("imageId 에 해당하는 업로드 레코드 없음: imageId={}", id)
-            return null
-        }
-        return image.url
+    companion object {
+        private const val MAX_IMAGES_PER_DIARY = 10
     }
 
-    override fun getDiaries(userId: UUID, groupRoomId: Long, month: YearMonth?, limit: Int, offset: Int): DiaryListResponse {
-        val groupRoom = groupRoomRepository.findById(groupRoomId)
-            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
-
-        if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
-
-        membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
-            .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
+    override fun getDiaries(
+        userId: UUID,
+        groupRoomId: Long,
+        month: YearMonth?,
+        limit: Int,
+        offset: Int
+    ): DiaryListResponse {
+        ensureMember(userId, groupRoomId)
 
         val pageable = PageRequest.of(offset / limit, limit, Sort.by(Sort.Direction.DESC, "createdAt"))
 
@@ -84,7 +80,9 @@ class DiaryServiceImpl(
             diaryRepository.findAllByGroupRoomId(groupRoomId, pageable)
         }
 
-        val diaryIds = page.content.map { it.id }
+        val diaries = page.content
+        val diaryIds = diaries.map { it.id }
+
         val commentCountMap: Map<Long, Int> = if (diaryIds.isNotEmpty()) {
             commentRepository.countByTargetTypeAndTargetIdIn(CommentTargetType.DIARY, diaryIds)
                 .associate { row -> (row[0] as Long) to (row[1] as Long).toInt() }
@@ -92,47 +90,55 @@ class DiaryServiceImpl(
             emptyMap()
         }
 
+        val likeCountMap: Map<Long, Long> = if (diaryIds.isNotEmpty()) {
+            diaryLikeRepository.countByDiaryIdIn(diaryIds)
+                .associate { row -> (row[0] as Long) to (row[1] as Long) }
+        } else {
+            emptyMap()
+        }
+
+        val likedByMeSet: Set<Long> = if (diaryIds.isNotEmpty()) {
+            diaryLikeRepository.findLikedDiaryIds(diaryIds, userId).toSet()
+        } else {
+            emptySet()
+        }
+
         return DiaryListResponse(
-            diaries = page.content.map { diary ->
-                val commentCount = commentCountMap[diary.id] ?: 0
-                DiarySummaryResponse.from(diary, commentCount)
+            diaries = diaries.map { diary ->
+                DiarySummaryResponse.from(
+                    diary = diary,
+                    commentCount = commentCountMap[diary.id] ?: 0,
+                    likeCount = likeCountMap[diary.id] ?: 0L,
+                    likedByMe = diary.id in likedByMeSet
+                )
             },
             total = page.totalElements
         )
     }
 
     override fun getDiaryCalendar(userId: UUID, groupRoomId: Long, month: YearMonth): DiaryCalendarResponse {
-        val groupRoom = groupRoomRepository.findById(groupRoomId)
-            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
-
-        if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
-
-        membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
-            .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
-
+        ensureMember(userId, groupRoomId)
         val startDate = month.atDay(1)
         val endDate = month.atEndOfMonth()
         val dates = diaryRepository.findDistinctDatesByGroupRoomIdAndMonth(groupRoomId, startDate, endDate)
-
         return DiaryCalendarResponse(dates = dates)
     }
 
     override fun getDiaryDetail(userId: UUID, groupRoomId: Long, diaryId: Long): DiaryDetailResponse {
-        val groupRoom = groupRoomRepository.findById(groupRoomId)
-            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
-
-        if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
-
-        membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
-            .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
+        ensureMember(userId, groupRoomId)
 
         val diary = diaryRepository.findById(diaryId)
             .orElseThrow { DigdaException(ErrorCode.DIARY_NOT_FOUND) }
 
-        val comments = commentRepository.findAllByTargetTypeAndTargetIdOrderByCreatedAtAsc(CommentTargetType.DIARY, diaryId)
+        val comments = commentRepository
+            .findAllByTargetTypeAndTargetIdOrderByCreatedAtAsc(CommentTargetType.DIARY, diaryId)
+
+        val likeCount = diaryLikeRepository.countByDiaryId(diaryId)
+        val likedByMe = diaryLikeRepository.existsByDiaryIdAndUserId(diaryId, userId)
+        val reactions = buildReactionSummariesForOneDiary(diaryId, userId)
 
         return DiaryDetailResponse(
-            diary = DiaryResponse.from(diary),
+            diary = DiaryResponse.from(diary, likeCount, likedByMe, reactions),
             comments = comments.map { DiaryCommentResponse.from(it) }
         )
     }
@@ -150,40 +156,48 @@ class DiaryServiceImpl(
         if (request.date.isAfter(LocalDate.now())) throw DigdaException(ErrorCode.FUTURE_DATE_NOT_ALLOWED)
         validateWeather(request.weather)
         validateMood(request.mood)
+        validateImageCount(request.imageIds.size)
 
         val user = userRepository.findById(userId)
             .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
 
-        val diary = diaryRepository.save(
-            Diary(
-                groupRoom = groupRoom,
-                title = request.title,
-                content = request.content,
-                date = request.date,
-                weather = request.weather,
-                mood = request.mood,
-                imageUrl = resolveImageUrl(request.imageId),
-                createdBy = user
-            )
+        val resolvedUrls = resolveImageUrls(request.imageIds)
+
+        val diary = Diary(
+            groupRoom = groupRoom,
+            title = request.title,
+            content = request.content,
+            date = request.date,
+            weather = request.weather,
+            mood = request.mood,
+            location = request.location?.takeIf { it.isNotBlank() },
+            createdBy = user
         )
+        diary.replaceImages(resolvedUrls)
+        val saved = diaryRepository.save(diary)
 
         groupRoom.updateLastActivity()
 
-        notificationService.notifyDiaryWritten(groupRoomId, diary.id, userId, diary.title)
+        notificationService.notifyDiaryWritten(groupRoomId, saved.id, userId, saved.title)
 
         userActionLogService.record(
             actorId = userId,
             action = UserAction.CREATE_DIARY,
             targetType = "DIARY",
-            targetId = diary.id.toString(),
-            detail = "groupRoomId=$groupRoomId, title=${diary.title}"
+            targetId = saved.id.toString(),
+            detail = "groupRoomId=$groupRoomId, title=${saved.title}, images=${resolvedUrls.size}"
         )
 
-        return DiaryResponse.from(diary)
+        return DiaryResponse.from(saved, likeCount = 0L, likedByMe = false, reactions = emptyList())
     }
 
     @Transactional
-    override fun updateDiary(userId: UUID, groupRoomId: Long, diaryId: Long, request: UpdateDiaryRequest): DiaryResponse {
+    override fun updateDiary(
+        userId: UUID,
+        groupRoomId: Long,
+        diaryId: Long,
+        request: UpdateDiaryRequest
+    ): DiaryResponse {
         val groupRoom = groupRoomRepository.findById(groupRoomId)
             .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
 
@@ -204,19 +218,27 @@ class DiaryServiceImpl(
         }
         request.weather?.let { validateWeather(it) }
         request.mood?.let { validateMood(it) }
+        request.imageIds?.let { validateImageCount(it.size) }
 
-        diary.update(
+        diary.updateBasics(
             title = request.title,
             content = request.content,
             date = request.date,
             weather = request.weather,
             mood = request.mood,
-            imageUrl = resolveImageUrl(request.imageId)
+            location = request.location?.takeIf { it.isNotBlank() }
         )
+        request.imageIds?.let { ids ->
+            diary.replaceImages(resolveImageUrls(ids))
+        }
 
         groupRoom.updateLastActivity()
 
-        return DiaryResponse.from(diary)
+        val likeCount = diaryLikeRepository.countByDiaryId(diaryId)
+        val likedByMe = diaryLikeRepository.existsByDiaryIdAndUserId(diaryId, userId)
+        val reactions = buildReactionSummariesForOneDiary(diaryId, userId)
+
+        return DiaryResponse.from(diary, likeCount, likedByMe, reactions)
     }
 
     @Transactional
@@ -248,11 +270,103 @@ class DiaryServiceImpl(
         )
     }
 
+    @Transactional
+    override fun toggleLike(userId: UUID, groupRoomId: Long, diaryId: Long): DiaryLikeResponse {
+        ensureMember(userId, groupRoomId)
+        val diary = diaryRepository.findById(diaryId)
+            .orElseThrow { DigdaException(ErrorCode.DIARY_NOT_FOUND) }
+
+        val alreadyLiked = diaryLikeRepository.existsByDiaryIdAndUserId(diaryId, userId)
+        if (alreadyLiked) {
+            diaryLikeRepository.deleteByDiaryIdAndUserId(diaryId, userId)
+            log.info("action=일기 좋아요 취소, userId={}, diaryId={}", userId, diaryId)
+        } else {
+            val user = userRepository.findById(userId)
+                .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
+            diaryLikeRepository.save(DiaryLike(diary = diary, user = user))
+            log.info("action=일기 좋아요, userId={}, diaryId={}", userId, diaryId)
+        }
+        val newCount = diaryLikeRepository.countByDiaryId(diaryId)
+        return DiaryLikeResponse(likedByMe = !alreadyLiked, likeCount = newCount)
+    }
+
+    @Transactional
+    override fun toggleReaction(
+        userId: UUID,
+        groupRoomId: Long,
+        diaryId: Long,
+        request: ToggleDiaryReactionRequest
+    ): DiaryReactionToggleResponse {
+        ensureMember(userId, groupRoomId)
+        val diary = diaryRepository.findById(diaryId)
+            .orElseThrow { DigdaException(ErrorCode.DIARY_NOT_FOUND) }
+
+        val type = request.type
+        val exists = diaryReactionRepository.existsByDiaryIdAndUserIdAndType(diaryId, userId, type)
+        if (exists) {
+            diaryReactionRepository.deleteOne(diaryId, userId, type)
+            log.info("action=일기 리액션 취소, userId={}, diaryId={}, type={}", userId, diaryId, type)
+        } else {
+            val user = userRepository.findById(userId)
+                .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
+            diaryReactionRepository.save(DiaryReaction(diary = diary, user = user, type = type))
+            log.info("action=일기 리액션, userId={}, diaryId={}, type={}", userId, diaryId, type)
+        }
+
+        val reactions = buildReactionSummariesForOneDiary(diaryId, userId)
+        return DiaryReactionToggleResponse(reactions = reactions)
+    }
+
+    // ─── helpers ──────────────────────────────────────────────────────────────
+
+    private fun ensureMember(userId: UUID, groupRoomId: Long) {
+        val groupRoom = groupRoomRepository.findById(groupRoomId)
+            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
+        if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
+        membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+            .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
+    }
+
     private fun validateWeather(weather: Int) {
         if (weather !in 0..3) throw DigdaException(ErrorCode.INVALID_WEATHER_VALUE)
     }
 
     private fun validateMood(mood: Int) {
-        if (mood !in 0..3) throw DigdaException(ErrorCode.INVALID_MOOD_VALUE)
+        if (mood !in 0..4) throw DigdaException(ErrorCode.INVALID_MOOD_VALUE)
+    }
+
+    private fun validateImageCount(count: Int) {
+        if (count > MAX_IMAGES_PER_DIARY) throw DigdaException(ErrorCode.FILE_TOO_LARGE)
+    }
+
+    private fun resolveImageUrls(imageIds: List<String>): List<String> {
+        if (imageIds.isEmpty()) return emptyList()
+        val urls = mutableListOf<String>()
+        for (raw in imageIds) {
+            val id = raw.toLongOrNull()
+            if (id == null) {
+                log.warn("imageId 가 Long 이 아님: imageId={}", raw)
+                continue
+            }
+            val img = uploadedImageRepository.findById(id).orElse(null)
+            if (img == null) {
+                log.warn("imageId 에 해당하는 업로드 레코드 없음: imageId={}", id)
+                continue
+            }
+            urls.add(img.url)
+        }
+        return urls
+    }
+
+    private fun buildReactionSummariesForOneDiary(diaryId: Long, userId: UUID): List<DiaryReactionSummary> {
+        val all = diaryReactionRepository.findAllByDiaryId(diaryId)
+        if (all.isEmpty()) return emptyList()
+        val counts: Map<DiaryReactionType, Int> = all.groupingBy { it.type }.eachCount()
+        val mine: Set<DiaryReactionType> = all.filter { it.user.id == userId }.map { it.type }.toSet()
+        return counts.entries
+            .sortedBy { it.key.ordinal }
+            .map { (type, count) ->
+                DiaryReactionSummary(type = type, count = count, reactedByMe = type in mine)
+            }
     }
 }

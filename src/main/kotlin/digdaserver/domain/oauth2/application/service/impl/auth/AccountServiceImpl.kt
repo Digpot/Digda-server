@@ -2,6 +2,8 @@ package digdaserver.domain.oauth2.application.service.impl.auth
 
 import digdaserver.domain.comment.domain.repository.CommentRepository
 import digdaserver.domain.device.domain.repository.DeviceRepository
+import digdaserver.domain.diary.domain.repository.DiaryLikeRepository
+import digdaserver.domain.diary.domain.repository.DiaryReactionRepository
 import digdaserver.domain.diary.domain.repository.DiaryRepository
 import digdaserver.domain.group_room.domain.entity.GroupRoomRole
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
@@ -34,6 +36,8 @@ class AccountServiceImpl(
     private val scheduleRepository: ScheduleRepository,
     private val commentRepository: CommentRepository,
     private val diaryRepository: DiaryRepository,
+    private val diaryLikeRepository: DiaryLikeRepository,
+    private val diaryReactionRepository: DiaryReactionRepository,
     private val todoRepository: TodoRepository,
     private val notificationRepository: NotificationRepository,
     private val deviceRepository: DeviceRepository,
@@ -66,7 +70,9 @@ class AccountServiceImpl(
         scheduleParticipantRepository.deleteAllByUserId(userId)
         scheduleParticipantRepository.deleteAllByScheduleCreatedById(userId)
 
-        // 내가 만든 컨텐츠 삭제
+        // 내가 만든 컨텐츠 삭제 (다른 사람 일기에 단 좋아요·리액션은 cascade 가 아닌 직접 정리)
+        diaryLikeRepository.deleteAllByUserId(userId)
+        diaryReactionRepository.deleteAllByUserId(userId)
         scheduleRepository.deleteAllByCreatedById(userId)
         commentRepository.deleteAllByCreatedById(userId)
         diaryRepository.deleteAllByCreatedById(userId)

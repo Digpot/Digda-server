@@ -10,22 +10,38 @@ data class DiarySummaryResponse(
     val date: LocalDate,
     val weather: Int,
     val mood: Int,
-    val imageUrl: String?,
+    val location: String?,
+    val thumbnailUrl: String?,
+    val imageCount: Int,
     val createdBy: DiaryUserSummary,
     val commentCount: Int,
+    val likeCount: Long,
+    val likedByMe: Boolean,
     val createdAt: LocalDateTime
 ) {
     companion object {
-        fun from(diary: Diary, commentCount: Int): DiarySummaryResponse = DiarySummaryResponse(
-            id = diary.id,
-            title = diary.title,
-            date = diary.date,
-            weather = diary.weather,
-            mood = diary.mood,
-            imageUrl = diary.imageUrl,
-            createdBy = DiaryUserSummary.from(diary.createdBy),
-            commentCount = commentCount,
-            createdAt = diary.createdAt
-        )
+        fun from(
+            diary: Diary,
+            commentCount: Int,
+            likeCount: Long,
+            likedByMe: Boolean
+        ): DiarySummaryResponse {
+            val sorted = diary.images.sortedBy { it.sortOrder }
+            return DiarySummaryResponse(
+                id = diary.id,
+                title = diary.title,
+                date = diary.date,
+                weather = diary.weather,
+                mood = diary.mood,
+                location = diary.location,
+                thumbnailUrl = sorted.firstOrNull()?.url,
+                imageCount = sorted.size,
+                createdBy = DiaryUserSummary.from(diary.createdBy),
+                commentCount = commentCount,
+                likeCount = likeCount,
+                likedByMe = likedByMe,
+                createdAt = diary.createdAt
+            )
+        }
     }
 }

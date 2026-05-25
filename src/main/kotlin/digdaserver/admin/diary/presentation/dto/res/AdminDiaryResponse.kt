@@ -35,11 +35,14 @@ data class AdminDiaryResponse(
     @Schema(description = "날씨(0~3)")
     val weather: Int,
 
-    @Schema(description = "기분(0~3)")
+    @Schema(description = "기분(0~4)")
     val mood: Int,
 
-    @Schema(description = "이미지 URL")
-    val imageUrl: String?,
+    @Schema(description = "장소")
+    val location: String?,
+
+    @Schema(description = "이미지 URL 목록 (정렬 순)")
+    val imageUrls: List<String>,
 
     @Schema(description = "생성 시각")
     val createdAt: LocalDateTime,
@@ -59,7 +62,8 @@ data class AdminDiaryResponse(
             date = diary.date,
             weather = diary.weather,
             mood = diary.mood,
-            imageUrl = diary.imageUrl,
+            location = diary.location,
+            imageUrls = diary.images.sortedBy { it.sortOrder }.map { it.url },
             createdAt = diary.createdAt,
             updatedAt = diary.updatedAt
         )

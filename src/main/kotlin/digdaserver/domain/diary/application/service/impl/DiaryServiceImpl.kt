@@ -339,13 +339,29 @@ class DiaryServiceImpl(
         if (count > MAX_IMAGES_PER_DIARY) throw DigdaException(ErrorCode.FILE_TOO_LARGE)
     }
 
+    /**
+     * 클라이언트가 보낸 항목별로 처리하여 일기 image_url 리스트로 변환.
+     *
+     * - "http://" 또는 "https://" 로 시작하는 항목은 *기존 사진 URL* 로 간주하고 그대로 보존.
+     *   (수정 시 보유 사진 일부만 추가/삭제할 수 있게 함)
+     * - 그 외 숫자 문자열은 *신규 업로드 ID* 로 간주하고 UploadedImage 에서 lookup.
+     * - 어느 쪽도 아니거나 lookup 실패 항목은 로그만 남기고 건너뜀.
+     *
+     * 순서는 입력 순서를 유지해 클라이언트가 정렬 순서를 결정한다.
+     */
     private fun resolveImageUrls(imageIds: List<String>): List<String> {
         if (imageIds.isEmpty()) return emptyList()
         val urls = mutableListOf<String>()
         for (raw in imageIds) {
-            val id = raw.toLongOrNull()
+            val trimmed = raw.trim()
+            if (trimmed.isEmpty()) continue
+            if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+                urls.add(trimmed)
+                continue
+            }
+            val id = trimmed.toLongOrNull()
             if (id == null) {
-                log.warn("imageId 가 Long 이 아님: imageId={}", raw)
+                log.warn("imageIds 항목이 URL/Long 둘 다 아님: value={}", trimmed)
                 continue
             }
             val img = uploadedImageRepository.findById(id).orElse(null)

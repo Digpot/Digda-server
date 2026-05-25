@@ -2,10 +2,13 @@ package digdaserver.domain.diary.presentation.controller
 
 import digdaserver.domain.diary.application.service.DiaryService
 import digdaserver.domain.diary.presentation.dto.req.CreateDiaryRequest
+import digdaserver.domain.diary.presentation.dto.req.ToggleDiaryReactionRequest
 import digdaserver.domain.diary.presentation.dto.req.UpdateDiaryRequest
 import digdaserver.domain.diary.presentation.dto.res.DiaryCalendarResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryDetailResponse
+import digdaserver.domain.diary.presentation.dto.res.DiaryLikeResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryListResponse
+import digdaserver.domain.diary.presentation.dto.res.DiaryReactionToggleResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -64,7 +67,7 @@ class DiaryController(
         return ResponseEntity.ok(response)
     }
 
-    @Operation(summary = "일기 작성", description = "새 일기를 작성합니다.")
+    @Operation(summary = "일기 작성", description = "새 일기를 작성합니다. 이미지는 imageIds 배열로 0..10장.")
     @PostMapping("/group-rooms/{groupRoomId}/diaries")
     fun createDiary(
         @AuthenticationPrincipal userId: String,
@@ -96,5 +99,28 @@ class DiaryController(
     ): ResponseEntity<Void> {
         diaryService.deleteDiary(UUID.fromString(userId), groupRoomId, diaryId)
         return ResponseEntity.noContent().build()
+    }
+
+    @Operation(summary = "일기 좋아요 토글", description = "해당 일기에 좋아요를 누르거나 취소합니다.")
+    @PostMapping("/group-rooms/{groupRoomId}/diaries/{diaryId}/like")
+    fun toggleLike(
+        @AuthenticationPrincipal userId: String,
+        @PathVariable groupRoomId: Long,
+        @PathVariable diaryId: Long
+    ): ResponseEntity<DiaryLikeResponse> {
+        val response = diaryService.toggleLike(UUID.fromString(userId), groupRoomId, diaryId)
+        return ResponseEntity.ok(response)
+    }
+
+    @Operation(summary = "일기 이모지 리액션 토글", description = "type 이미 누른 상태면 취소, 아니면 추가.")
+    @PostMapping("/group-rooms/{groupRoomId}/diaries/{diaryId}/reactions")
+    fun toggleReaction(
+        @AuthenticationPrincipal userId: String,
+        @PathVariable groupRoomId: Long,
+        @PathVariable diaryId: Long,
+        @RequestBody request: ToggleDiaryReactionRequest
+    ): ResponseEntity<DiaryReactionToggleResponse> {
+        val response = diaryService.toggleReaction(UUID.fromString(userId), groupRoomId, diaryId, request)
+        return ResponseEntity.ok(response)
     }
 }

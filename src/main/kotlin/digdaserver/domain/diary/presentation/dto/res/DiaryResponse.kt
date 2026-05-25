@@ -11,23 +11,36 @@ data class DiaryResponse(
     val date: LocalDate,
     val weather: Int,
     val mood: Int,
-    val imageUrl: String?,
+    val location: String?,
+    val imageUrls: List<String>,
     val createdBy: DiaryUserSummary,
     val createdAt: LocalDateTime,
-    val updatedAt: LocalDateTime
+    val updatedAt: LocalDateTime,
+    val likeCount: Long,
+    val likedByMe: Boolean,
+    val reactions: List<DiaryReactionSummary>
 ) {
     companion object {
-        fun from(diary: Diary): DiaryResponse = DiaryResponse(
+        fun from(
+            diary: Diary,
+            likeCount: Long,
+            likedByMe: Boolean,
+            reactions: List<DiaryReactionSummary>
+        ): DiaryResponse = DiaryResponse(
             id = diary.id,
             title = diary.title,
             content = diary.content,
             date = diary.date,
             weather = diary.weather,
             mood = diary.mood,
-            imageUrl = diary.imageUrl,
+            location = diary.location,
+            imageUrls = diary.images.sortedBy { it.sortOrder }.map { it.url },
             createdBy = DiaryUserSummary.from(diary.createdBy),
             createdAt = diary.createdAt,
-            updatedAt = diary.updatedAt
+            updatedAt = diary.updatedAt,
+            likeCount = likeCount,
+            likedByMe = likedByMe,
+            reactions = reactions
         )
     }
 }

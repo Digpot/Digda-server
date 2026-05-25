@@ -11,6 +11,7 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.multipart.MaxUploadSizeExceededException
 import org.springframework.web.servlet.resource.NoResourceFoundException
 
 @RestControllerAdvice
@@ -46,6 +47,28 @@ class GlobalExceptionHandler {
         return ResponseEntity
             .status(e.httpStatusCode)
             .body(ErrorResponse.of(e))
+    }
+
+    /**
+     * Spring multipart 가 application yml 의 max-file-size / max-request-size 한도를
+     * 넘는 업로드를 거부할 때 던지는 예외. 기본 Spring 응답은 영문 "Request Entity Too Large"
+     * 라 사용자에게 그대로 노출되면 의미 전달 안 됨. ErrorCode.FILE_TOO_LARGE 의 한글
+     * 메시지로 통일해서 413 으로 응답.
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException::class)
+    fun handleMaxUploadSizeExceeded(
+        e: MaxUploadSizeExceededException,
+        request: HttpServletRequest
+    ): ResponseEntity<ErrorResponse> {
+        log.warn(
+            "업로드 크기 초과 {}, maxUploadSize={}, message={}",
+            requestContext(request),
+            e.maxUploadSize,
+            e.message
+        )
+        return ResponseEntity
+            .status(ErrorCode.FILE_TOO_LARGE.httpCode)
+            .body(ErrorResponse.of(ErrorCode.FILE_TOO_LARGE))
     }
 
     @ExceptionHandler(NoResourceFoundException::class)

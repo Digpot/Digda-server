@@ -3,6 +3,8 @@ package digdaserver.global.infra.migration
 import org.slf4j.LoggerFactory
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
+import org.springframework.boot.context.event.ApplicationReadyEvent
+import org.springframework.context.event.EventListener
 import org.springframework.dao.DataAccessException
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
@@ -141,11 +143,82 @@ class SchemaAutoMigration(
     )
 
     override fun run(args: ApplicationArguments?) {
-        log.info("action=startup schema auto-migration 시작")
+        runAll(trigger = "ApplicationRunner")
+    }
+
+    /**
+     * 일부 환경(컨테이너 health-check 이전 traffic) 에서 ApplicationRunner 가 늦게 도는
+     * 케이스를 방어. 같은 ledger 가드로 멱등이라 두 번 돌아도 안전.
+     */
+    @EventListener(ApplicationReadyEvent::class)
+    fun onReady() {
+        runAll(trigger = "ApplicationReadyEvent")
+    }
+
+    private fun runAll(trigger: String) {
+        log.info("action=schema auto-migration 시작, trigger={}", trigger)
         runRequiredColumns()
         runOneShotStatements()
-        log.info("action=startup schema auto-migration 완료")
+        verifyCriticalSchema()
+        log.info("action=schema auto-migration 완료, trigger={}", trigger)
     }
+
+    /**
+     * 마이그레이션이 모두 성공했는지 사후 검증.
+     * 어떤 이유로 step 이 catch 되거나 traffic 이 먼저 도착해 컬럼이 비어있을 때
+     * 운영 대시보드에서 즉시 알 수 있도록 error 로그 + 한 번 더 직접 ALTER 시도.
+     */
+    private fun verifyCriticalSchema() {
+        val checks = listOf(
+            CriticalColumn(
+                table = "diary",
+                column = "location",
+                rescueSql = "ALTER TABLE diary ADD COLUMN location VARCHAR(100) NULL"
+            )
+        )
+        for (c in checks) {
+            if (doesColumnExist(c.table, c.column)) {
+                log.info("action=schema verify OK, table={}, column={}", c.table, c.column)
+                continue
+            }
+            log.error(
+                "action=schema verify 누락, table={}, column={} — rescue ALTER 시도",
+                c.table,
+                c.column
+            )
+            try {
+                jdbcTemplate.execute(c.rescueSql)
+                log.warn(
+                    "action=schema verify rescue 성공, table={}, column={}",
+                    c.table,
+                    c.column
+                )
+            } catch (e: Exception) {
+                log.error(
+                    "action=schema verify rescue 실패, table={}, column={}, error={}",
+                    c.table,
+                    c.column,
+                    e.message,
+                    e
+                )
+            }
+        }
+
+        val tableChecks = listOf("diary_image", "diary_like", "diary_reaction")
+        for (t in tableChecks) {
+            if (doesTableExist(t)) {
+                log.info("action=schema verify OK, table={}", t)
+            } else {
+                log.error("action=schema verify 누락 테이블={}", t)
+            }
+        }
+    }
+
+    private data class CriticalColumn(
+        val table: String,
+        val column: String,
+        val rescueSql: String
+    )
 
     private fun runRequiredColumns() {
         log.info("action=schema auto-migration column 단계, 대상={}건", requiredColumns.size)

@@ -27,7 +27,7 @@ class UploadServiceImpl(
     private val log = LoggerFactory.getLogger(javaClass)
 
     companion object {
-        private const val MAX_SIZE_BYTES = 8L * 1024 * 1024
+        private const val MAX_SIZE_BYTES = 50L * 1024 * 1024
         private val ALLOWED_CONTENT_TYPES = setOf("image/png", "image/jpeg", "image/jpg")
     }
 

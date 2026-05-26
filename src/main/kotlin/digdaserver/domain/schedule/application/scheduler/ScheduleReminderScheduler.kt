@@ -16,14 +16,13 @@ import java.util.UUID
 /**
  * 일정 시작일을 기준으로 리마인더 알림을 발송하는 잡.
  *
- * - 매시 정각(KST 09:00 ~ 23:00) 실행. 첫 발송은 09:00이지만,
- *   배포·재시작·9시 이후 새로 생긴 일정 등으로 9시 슬롯이 비더라도
- *   같은 날 안에 자동으로 따라잡는다. 중복 방지는 [NotificationService] 가 담당.
+ * - KST 09:00 / 12:00 / 18:00 세 슬롯에서만 실행. 9시 이후 등록된 일정이라도
+ *   같은 날 안에 다음 슬롯이 따라잡아 발송한다. 중복 방지는 [NotificationService] 가 담당.
  * - 시작일이 "내일"인 일정 → 하루 전 리마인더(SCHEDULE_DAY_BEFORE).
  * - 시작일이 "오늘"인 일정 → 당일 리마인더(SCHEDULE_TODAY).
  * - 발송 대상: 일정 참가자 전원 + 일정을 생성한 사람(중복은 제거).
  * - 중복 발송 방지는 [NotificationService] 내부에서 처리한다. 동일 일정·동일 종류의
- *   리마인더가 이미 존재하면 건너뛰므로, 잡이 시간당 다시 돌아도 같은 알림이 두 번 가지 않는다.
+ *   리마인더가 이미 존재하면 건너뛰므로, 잡이 다른 슬롯에서 다시 돌아도 같은 알림이 두 번 가지 않는다.
  * - row 단위 격리: 한 일정의 처리가 실패해도 나머지 일정은 계속 처리한다.
  */
 @Component
@@ -34,24 +33,24 @@ class ScheduleReminderScheduler(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    @Scheduled(cron = CRON_HOURLY_9_TO_23, zone = KST)
+    @Scheduled(cron = CRON_3_SLOTS_DAILY, zone = KST)
     fun sendScheduleReminders() {
         runReminderJob(trigger = "cron")
     }
 
     /**
-     * 부팅 직후 catch-up. cron 슬롯은 [REMINDER_START_HOUR]~[REMINDER_END_HOUR] 매시 정각에만
-     * 발사되므로, 그 사이에 재배포/재시작이 끼면 그날치 리마인더가 통째로 유실될 수 있다.
+     * 부팅 직후 catch-up. cron 슬롯은 09/12/18시 정각에만 발사되므로
+     * 그 사이에 재배포/재시작이 끼면 그날치 리마인더가 유실될 수 있다.
+     * 첫 슬롯(09:00) 이전엔 너무 이른 발송이라 건너뛰고, 그 외엔 catch-up 실행.
      * 멱등 가드(`existsByTypeAndRelatedId`)가 있어 cron 이 이미 보냈으면 중복 발송되지 않는다.
      */
     @EventListener(ApplicationReadyEvent::class)
     fun catchUpOnStartup() {
         val nowKst = LocalTime.now(ZoneId.of(KST))
-        val startBoundary = LocalTime.of(REMINDER_START_HOUR, 0)
-        val endBoundary = LocalTime.of(REMINDER_END_HOUR, 59)
-        if (nowKst.isBefore(startBoundary) || nowKst.isAfter(endBoundary)) {
+        val firstSlot = LocalTime.of(FIRST_SLOT_HOUR, 0)
+        if (nowKst.isBefore(firstSlot)) {
             log.info(
-                "action=일정 리마인더 startup catch-up 건너뜀(시간대 외), nowKst={}",
+                "action=일정 리마인더 startup catch-up 건너뜀(첫 슬롯 이전), nowKst={}",
                 nowKst
             )
             return
@@ -137,11 +136,10 @@ class ScheduleReminderScheduler(
         (schedule.participants.map { it.user.id } + schedule.createdBy.id).distinct()
 
     companion object {
-        private const val REMINDER_START_HOUR = 9
-        private const val REMINDER_END_HOUR = 23
+        private const val FIRST_SLOT_HOUR = 9
 
-        // 초 분 시 일 월 요일 — KST 09:00 ~ 23:00 매시 정각 (재실행은 멱등).
-        private const val CRON_HOURLY_9_TO_23 = "0 0 9-23 * * *"
+        // 초 분 시 일 월 요일 — KST 09:00 / 12:00 / 18:00 세 슬롯 (재실행은 멱등).
+        private const val CRON_3_SLOTS_DAILY = "0 0 9,12,18 * * *"
         private const val KST = "Asia/Seoul"
     }
 }

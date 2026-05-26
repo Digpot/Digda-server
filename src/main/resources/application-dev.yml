@@ -1,8 +1,8 @@
 server:
   port: 8080
   tomcat:
-    max-http-form-post-size: 60MB
-    max-swallow-size: 60MB
+    max-http-form-post-size: 110MB
+    max-swallow-size: 110MB
 
 spring:
   config:
@@ -38,8 +38,8 @@ spring:
   servlet:
     multipart:
       enabled: true
-      max-file-size: 50MB
-      max-request-size: 50MB
+      max-file-size: 100MB
+      max-request-size: 100MB
 
   task:
     scheduling:

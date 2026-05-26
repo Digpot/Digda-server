@@ -91,7 +91,7 @@ enum class ErrorCode(
     DEVICE_NOT_FOUND("DEVICE_NOT_FOUND", "존재하지 않는 디바이스입니다.", 404),
 
     // ── Upload ──
-    FILE_TOO_LARGE("FILE_TOO_LARGE", "사진 용량이 너무 커요. 50MB 이하로 올려주세요.", 413),
+    FILE_TOO_LARGE("FILE_TOO_LARGE", "사진 용량이 너무 커요. 100MB 이하로 올려주세요.", 413),
     INVALID_FILE_TYPE("INVALID_FILE_TYPE", "PNG 또는 JPEG 사진만 올릴 수 있어요.", 400),
     IMAGE_NOT_FOUND("IMAGE_NOT_FOUND", "존재하지 않는 이미지입니다.", 404),
 

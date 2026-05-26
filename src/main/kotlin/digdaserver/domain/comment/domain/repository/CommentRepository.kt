@@ -35,4 +35,11 @@ interface CommentRepository : JpaRepository<Comment, Long> {
     @Modifying
     @Query("DELETE FROM Comment c WHERE c.createdBy.id = :userId")
     fun deleteAllByCreatedById(@Param("userId") userId: UUID)
+
+    @Modifying
+    @Query("DELETE FROM Comment c WHERE c.targetType = :targetType AND c.targetId = :targetId")
+    fun deleteAllByTargetTypeAndTargetId(
+        @Param("targetType") targetType: CommentTargetType,
+        @Param("targetId") targetId: Long
+    ): Int
 }

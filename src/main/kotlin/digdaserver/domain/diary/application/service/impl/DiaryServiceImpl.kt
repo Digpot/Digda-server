@@ -259,6 +259,22 @@ class DiaryServiceImpl(
         }
 
         val title = diary.title
+
+        // diary 에 매달린 자식 레코드들을 먼저 정리해야 FK constraint 위반을 피한다.
+        //   · diary_like / diary_reaction : diary_id FK + cascade 미설정 → 수동 삭제
+        //   · comment : FK 는 없지만 target_type=DIARY 로 매핑돼있어 orphan 으로 남음 → 같이 삭제
+        val likeDeleted = diaryLikeRepository.deleteAllByDiaryId(diaryId)
+        val reactionDeleted = diaryReactionRepository.deleteAllByDiaryId(diaryId)
+        val commentDeleted =
+            commentRepository.deleteAllByTargetTypeAndTargetId(CommentTargetType.DIARY, diaryId)
+        log.info(
+            "diary 삭제 준비 - diaryId={}, likes={}, reactions={}, comments={}",
+            diaryId,
+            likeDeleted,
+            reactionDeleted,
+            commentDeleted
+        )
+
         diaryRepository.delete(diary)
 
         userActionLogService.record(

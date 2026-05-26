@@ -2,12 +2,12 @@ server:
   port: 8080
   forward-headers-strategy: framework
   tomcat:
-    # 사진 50MB 업로드 시 Tomcat 단에서 잘리지 않도록 풀어둠.
+    # 사진 100MB 업로드 시 Tomcat 단에서 잘리지 않도록 풀어둠.
     # max-http-form-post-size: multipart 본문 size limit (default 2MB).
     # max-swallow-size: max-file-size 초과 시 클라이언트가 끝까지 보낸 바이트를 빨아들이는 한도.
     #   너무 작으면 connection reset 으로 클라에 한글 에러가 못 가고 끊김.
-    max-http-form-post-size: 60MB
-    max-swallow-size: 60MB
+    max-http-form-post-size: 110MB
+    max-swallow-size: 110MB
 
 spring:
   config:
@@ -42,8 +42,8 @@ spring:
   servlet:
     multipart:
       enabled: true
-      max-file-size: 50MB
-      max-request-size: 50MB
+      max-file-size: 100MB
+      max-request-size: 100MB
 
   task:
     scheduling:

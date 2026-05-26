@@ -44,4 +44,8 @@ interface DiaryLikeRepository : JpaRepository<DiaryLike, Long> {
     @Modifying
     @Query("DELETE FROM DiaryLike dl WHERE dl.user.id = :userId")
     fun deleteAllByUserId(@Param("userId") userId: UUID)
+
+    @Modifying
+    @Query("DELETE FROM DiaryLike dl WHERE dl.diary.id = :diaryId")
+    fun deleteAllByDiaryId(@Param("diaryId") diaryId: Long): Int
 }

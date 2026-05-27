@@ -1,0 +1,217 @@
+package digdaserver.domain.character.application.service.impl
+
+import digdaserver.domain.character.application.service.CharacterQuizService
+import digdaserver.domain.character.domain.entity.CharacterQuiz
+import digdaserver.domain.character.domain.entity.CharacterQuizAttempt
+import digdaserver.domain.character.domain.entity.UserCharacter
+import digdaserver.domain.character.domain.repository.CharacterQuizAttemptRepository
+import digdaserver.domain.character.domain.repository.CharacterQuizRepository
+import digdaserver.domain.character.domain.repository.UserCharacterRepository
+import digdaserver.domain.character.presentation.dto.req.CreateQuizRequest
+import digdaserver.domain.character.presentation.dto.res.CharacterQuizListResponse
+import digdaserver.domain.character.presentation.dto.res.CharacterQuizResponse
+import digdaserver.domain.character.presentation.dto.res.CharacterStateResponse
+import digdaserver.domain.character.presentation.dto.res.QuizAttemptResultResponse
+import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
+import digdaserver.domain.membership.domain.repository.MembershipRepository
+import digdaserver.domain.user.domain.repository.UserRepository
+import digdaserver.global.infra.exception.error.DigdaException
+import digdaserver.global.infra.exception.error.ErrorCode
+import org.slf4j.LoggerFactory
+import org.springframework.data.domain.PageRequest
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
+
+@Service
+@Transactional(readOnly = true)
+class CharacterQuizServiceImpl(
+    private val quizRepository: CharacterQuizRepository,
+    private val attemptRepository: CharacterQuizAttemptRepository,
+    private val userCharacterRepository: UserCharacterRepository,
+    private val groupRoomRepository: GroupRoomRepository,
+    private val membershipRepository: MembershipRepository,
+    private val userRepository: UserRepository
+) : CharacterQuizService {
+
+    private val log = LoggerFactory.getLogger(javaClass)
+
+    companion object {
+        private const val QUESTION_MAX = 200
+        private const val OPTION_MAX = 100
+        private const val OPTION_COUNT = 4
+        private const val MULTIPLIER_MIN = 1
+        private const val MULTIPLIER_MAX = 3
+        private const val EXP_PER_MULTIPLIER_CORRECT = 30
+        private const val COIN_PER_MULTIPLIER_CORRECT = 5
+        private const val EXP_CONSOLATION_WRONG = 5
+    }
+
+    @Transactional
+    override fun createQuiz(
+        userId: UUID,
+        request: CreateQuizRequest
+    ): CharacterQuizResponse {
+        validateQuizPayload(request)
+        validateGroupMember(request.groupRoomId, userId)
+
+        val groupRoom = groupRoomRepository.findById(request.groupRoomId)
+            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
+        val author = userRepository.findById(userId)
+            .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
+
+        val quiz = quizRepository.save(
+            CharacterQuiz(
+                groupRoom = groupRoom,
+                author = author,
+                category = request.category,
+                question = request.question,
+                option1 = request.options[0],
+                option2 = request.options[1],
+                option3 = request.options[2],
+                option4 = request.options[3],
+                correctIndex = request.correctIndex,
+                expMultiplier = request.expMultiplier
+            )
+        )
+        log.info(
+            "action=character_quiz_create, userId={}, quizId={}, groupRoomId={}, category={}, multiplier={}",
+            userId,
+            quiz.id,
+            request.groupRoomId,
+            request.category,
+            request.expMultiplier
+        )
+        return CharacterQuizResponse.from(quiz)
+    }
+
+    @Transactional
+    override fun listQuizzes(
+        userId: UUID,
+        groupRoomId: Long,
+        page: Int,
+        size: Int
+    ): CharacterQuizListResponse {
+        validateGroupMember(groupRoomId, userId)
+        val safePage = page.coerceAtLeast(0)
+        val safeSize = size.coerceIn(1, 100)
+        val result =
+            quizRepository.findPageByGroupRoomId(groupRoomId, PageRequest.of(safePage, safeSize))
+        return CharacterQuizListResponse(
+            items = result.content.map(CharacterQuizResponse::from),
+            page = result.number,
+            totalPages = result.totalPages,
+            totalElements = result.totalElements
+        )
+    }
+
+    @Transactional
+    override fun pickRandom(userId: UUID, groupRoomId: Long): CharacterQuizResponse {
+        validateGroupMember(groupRoomId, userId)
+        val candidates = quizRepository.findAvailableForUser(groupRoomId, userId)
+        if (candidates.isEmpty()) throw DigdaException(ErrorCode.QUIZ_NO_AVAILABLE)
+        // DB 종속 RAND() 회피 — JPQL 로 후보 가져온 뒤 Kotlin random.
+        val picked = candidates.random()
+        log.info("action=character_quiz_pick, userId={}, quizId={}, groupRoomId={}", userId, picked.id, groupRoomId)
+        return CharacterQuizResponse.from(picked)
+    }
+
+    @Transactional
+    override fun submitAttempt(
+        userId: UUID,
+        quizId: Long,
+        selectedIndex: Int
+    ): QuizAttemptResultResponse {
+        if (selectedIndex !in 1..OPTION_COUNT) {
+            throw DigdaException(ErrorCode.QUIZ_INVALID_CORRECT_INDEX)
+        }
+
+        val quiz = quizRepository.findById(quizId)
+            .orElseThrow { DigdaException(ErrorCode.QUIZ_NOT_FOUND) }
+
+        if (quiz.author.id == userId) throw DigdaException(ErrorCode.QUIZ_CANNOT_ATTEMPT_OWN)
+        validateGroupMember(quiz.groupRoom.id, userId)
+
+        if (attemptRepository.existsByQuizIdAndUserId(quizId, userId)) {
+            throw DigdaException(ErrorCode.QUIZ_ALREADY_ATTEMPTED)
+        }
+
+        val correct = selectedIndex == quiz.correctIndex
+        val earnedExp = if (correct) EXP_PER_MULTIPLIER_CORRECT * quiz.expMultiplier else EXP_CONSOLATION_WRONG
+        val earnedCoin = if (correct) COIN_PER_MULTIPLIER_CORRECT * quiz.expMultiplier else 0
+
+        val character = loadOrCreateCharacter(userId)
+        val gain = character.gainExp(earnedExp)
+        if (earnedCoin > 0) character.addCoin(earnedCoin)
+
+        val user = userRepository.findById(userId)
+            .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
+        attemptRepository.save(
+            CharacterQuizAttempt(
+                quiz = quiz,
+                user = user,
+                selectedIndex = selectedIndex,
+                correct = correct,
+                earnedExp = earnedExp,
+                earnedCoin = earnedCoin
+            )
+        )
+
+        log.info(
+            "action=character_quiz_attempt, userId={}, quizId={}, selected={}, correct={}, earnedExp={}, earnedCoin={}, levelGained={}, stageChanged={}",
+            userId, quizId, selectedIndex, correct, earnedExp, earnedCoin, gain.levelGained, gain.stageChanged
+        )
+
+        return QuizAttemptResultResponse(
+            quizId = quiz.id,
+            correct = correct,
+            correctIndex = quiz.correctIndex,
+            selectedIndex = selectedIndex,
+            earnedExp = earnedExp,
+            earnedCoin = earnedCoin,
+            character = CharacterStateResponse.from(character),
+            levelGained = gain.levelGained,
+            stageBefore = gain.stageBefore,
+            stageAfter = gain.stageAfter,
+            stageChanged = gain.stageChanged
+        )
+    }
+
+    private fun validateQuizPayload(request: CreateQuizRequest) {
+        if (request.options.size != OPTION_COUNT) {
+            throw DigdaException(ErrorCode.QUIZ_INVALID_OPTION_COUNT)
+        }
+        if (request.question.isBlank() || request.question.length > QUESTION_MAX) {
+            throw DigdaException(ErrorCode.QUIZ_QUESTION_INVALID)
+        }
+        request.options.forEachIndexed { idx, opt ->
+            if (opt.isBlank() || opt.length > OPTION_MAX) {
+                log.warn("action=character_quiz_create_invalid_option, index={}", idx)
+                throw DigdaException(ErrorCode.QUIZ_OPTION_INVALID)
+            }
+        }
+        if (request.correctIndex !in 1..OPTION_COUNT) {
+            throw DigdaException(ErrorCode.QUIZ_INVALID_CORRECT_INDEX)
+        }
+        if (request.expMultiplier !in MULTIPLIER_MIN..MULTIPLIER_MAX) {
+            throw DigdaException(ErrorCode.QUIZ_INVALID_MULTIPLIER)
+        }
+    }
+
+    private fun validateGroupMember(groupRoomId: Long, userId: UUID) {
+        val groupRoom = groupRoomRepository.findById(groupRoomId)
+            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
+        if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
+        membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+            .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
+    }
+
+    private fun loadOrCreateCharacter(userId: UUID): UserCharacter {
+        userCharacterRepository.findByUserId(userId)?.let { return it }
+        val user = userRepository.findById(userId)
+            .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
+        val fresh = userCharacterRepository.save(UserCharacter(user = user))
+        log.info("action=character_create_via_quiz, userId={}, characterId={}", userId, fresh.id)
+        return fresh
+    }
+}

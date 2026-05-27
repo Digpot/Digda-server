@@ -95,6 +95,23 @@ enum class ErrorCode(
     INVALID_FILE_TYPE("INVALID_FILE_TYPE", "PNG 또는 JPEG 사진만 올릴 수 있어요.", 400),
     IMAGE_NOT_FOUND("IMAGE_NOT_FOUND", "존재하지 않는 이미지입니다.", 404),
 
+    // ── Character ──
+    CHARACTER_NOT_FOUND("CHARACTER_NOT_FOUND", "캐릭터 정보를 찾을 수 없습니다.", 404),
+    INSUFFICIENT_COIN("INSUFFICIENT_COIN", "코인이 부족합니다.", 400),
+    ALREADY_OWNED_COLOR("ALREADY_OWNED_COLOR", "이미 보유한 색상입니다.", 409),
+    COLOR_NOT_OWNED("COLOR_NOT_OWNED", "보유하지 않은 색상은 적용할 수 없습니다.", 400),
+
+    // ── Character Quiz ──
+    QUIZ_NOT_FOUND("QUIZ_NOT_FOUND", "존재하지 않는 퀴즈입니다.", 404),
+    QUIZ_ALREADY_ATTEMPTED("QUIZ_ALREADY_ATTEMPTED", "이미 응시한 퀴즈입니다.", 409),
+    QUIZ_CANNOT_ATTEMPT_OWN("QUIZ_CANNOT_ATTEMPT_OWN", "직접 만든 퀴즈는 응시할 수 없습니다.", 400),
+    QUIZ_NO_AVAILABLE("QUIZ_NO_AVAILABLE", "풀 수 있는 퀴즈가 없어요.", 404),
+    QUIZ_INVALID_OPTION_COUNT("QUIZ_INVALID_OPTION_COUNT", "선택지는 정확히 4개여야 합니다.", 400),
+    QUIZ_OPTION_INVALID("QUIZ_OPTION_INVALID", "각 선택지는 1자 이상 100자 이하여야 합니다.", 400),
+    QUIZ_QUESTION_INVALID("QUIZ_QUESTION_INVALID", "문제는 1자 이상 200자 이하여야 합니다.", 400),
+    QUIZ_INVALID_CORRECT_INDEX("QUIZ_INVALID_CORRECT_INDEX", "정답 번호는 1-4 사이여야 합니다.", 400),
+    QUIZ_INVALID_MULTIPLIER("QUIZ_INVALID_MULTIPLIER", "EXP 배수는 1-3 사이여야 합니다.", 400),
+
     // ── Rate Limit ──
     RATE_LIMIT_EXCEEDED("RATE_LIMIT_EXCEEDED", "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.", 429),
 

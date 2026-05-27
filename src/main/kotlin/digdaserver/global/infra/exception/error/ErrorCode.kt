@@ -95,6 +95,12 @@ enum class ErrorCode(
     INVALID_FILE_TYPE("INVALID_FILE_TYPE", "PNG 또는 JPEG 사진만 올릴 수 있어요.", 400),
     IMAGE_NOT_FOUND("IMAGE_NOT_FOUND", "존재하지 않는 이미지입니다.", 404),
 
+    // ── Character ──
+    CHARACTER_NOT_FOUND("CHARACTER_NOT_FOUND", "캐릭터 정보를 찾을 수 없습니다.", 404),
+    INSUFFICIENT_COIN("INSUFFICIENT_COIN", "코인이 부족합니다.", 400),
+    ALREADY_OWNED_COLOR("ALREADY_OWNED_COLOR", "이미 보유한 색상입니다.", 409),
+    COLOR_NOT_OWNED("COLOR_NOT_OWNED", "보유하지 않은 색상은 적용할 수 없습니다.", 400),
+
     // ── Rate Limit ──
     RATE_LIMIT_EXCEEDED("RATE_LIMIT_EXCEEDED", "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.", 429),
 

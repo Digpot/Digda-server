@@ -1,15 +1,16 @@
 -- ============================================================
 -- character 도메인 초기 스키마 (prod 적용용)
 --
--- dev/local 은 ddl-auto 가 schema 를 자동 생성하지만, prod 는 ddl-auto: none 이므로
--- feature/character 배포 전에 운영 DB 에 아래 DDL 을 수동 실행한다.
+-- 신규 환경 셋업 시 사용. 캐릭터는 그룹방 1개당 1마리 (group_character),
+-- 그룹 보유 색상 이력은 group_character_color 에 누적. 퀴즈는 그룹 스코프.
 --
 -- 컬럼/enum 후속 변경이 생기면 SchemaAutoMigration 에 ALTER 케이스를 추가할 것.
+-- (기존 user-scope → group-scope 전환 스크립트는 character_group_scope.sql)
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS `user_character` (
-    `user_character_id`  BIGINT       NOT NULL AUTO_INCREMENT,
-    `user_id`            BINARY(16)   NOT NULL,
+CREATE TABLE IF NOT EXISTS `group_character` (
+    `group_character_id` BIGINT       NOT NULL AUTO_INCREMENT,
+    `group_room_id`      BIGINT       NOT NULL,
     `stage`              VARCHAR(32)  NOT NULL,
     `color`              VARCHAR(32)  NOT NULL,
     `level`              INT          NOT NULL DEFAULT 1,
@@ -17,23 +18,23 @@ CREATE TABLE IF NOT EXISTS `user_character` (
     `coin`               INT          NOT NULL DEFAULT 0,
     `created_at`         DATETIME(6)  NOT NULL,
     `updated_at`         DATETIME(6)  NOT NULL,
-    PRIMARY KEY (`user_character_id`),
-    UNIQUE KEY `uq_user_character_user` (`user_id`),
-    CONSTRAINT `fk_user_character_user`
-        FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`)
+    PRIMARY KEY (`group_character_id`),
+    UNIQUE KEY `uq_group_character_group` (`group_room_id`),
+    CONSTRAINT `fk_group_character_group`
+        FOREIGN KEY (`group_room_id`) REFERENCES `group_room`(`group_room_id`)
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `user_character_color` (
-    `user_character_color_id`  BIGINT       NOT NULL AUTO_INCREMENT,
-    `user_id`                  BINARY(16)   NOT NULL,
+CREATE TABLE IF NOT EXISTS `group_character_color` (
+    `group_character_color_id` BIGINT       NOT NULL AUTO_INCREMENT,
+    `group_room_id`            BIGINT       NOT NULL,
     `color`                    VARCHAR(32)  NOT NULL,
     `price_paid`               INT          NOT NULL,
     `acquired_at`              DATETIME(6)  NOT NULL,
-    PRIMARY KEY (`user_character_color_id`),
-    UNIQUE KEY `uq_user_character_color` (`user_id`, `color`),
-    CONSTRAINT `fk_user_character_color_user`
-        FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`)
+    PRIMARY KEY (`group_character_color_id`),
+    UNIQUE KEY `uq_group_character_color` (`group_room_id`, `color`),
+    CONSTRAINT `fk_group_character_color_group`
+        FOREIGN KEY (`group_room_id`) REFERENCES `group_room`(`group_room_id`)
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

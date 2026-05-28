@@ -1,6 +1,6 @@
 package digdaserver.domain.character.domain.entity
 
-import digdaserver.domain.user.domain.entity.User
+import digdaserver.domain.group_room.domain.entity.GroupRoom
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -16,27 +16,27 @@ import jakarta.persistence.UniqueConstraint
 import java.time.LocalDateTime
 
 /**
- * 유저별 색상 보유. (user, color) 유니크. 같은 색을 중복 구매할 수 없다.
+ * 그룹별 색상 보유. (group_room, color) 유니크. 같은 색을 중복 구매할 수 없다.
  *
  * 기본 색상(CORAL) 은 명시적으로 row 를 만들지 않고, 보유 여부 판정 시 항상 true 로
- * 처리한다 ([CharacterColor.isDefault]). 이걸로 빈 신규 유저에게도 row 0 으로 시작
+ * 처리한다 ([CharacterColor.isDefault]). 이걸로 빈 신규 그룹에게도 row 0 으로 시작
  * 가능하게 함.
  */
 @Entity
 @Table(
-    name = "user_character_color",
-    uniqueConstraints = [UniqueConstraint(columnNames = ["user_id", "color"])]
+    name = "group_character_color",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["group_room_id", "color"])]
 )
-class UserCharacterColor(
+class GroupCharacterColor(
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "user_character_color_id")
+    @Column(name = "group_character_color_id")
     val id: Long = 0L,
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    val user: User,
+    @JoinColumn(name = "group_room_id", nullable = false)
+    val groupRoom: GroupRoom,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)

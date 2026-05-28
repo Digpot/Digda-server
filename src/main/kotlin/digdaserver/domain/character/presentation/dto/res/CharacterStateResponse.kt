@@ -3,7 +3,7 @@ package digdaserver.domain.character.presentation.dto.res
 import digdaserver.domain.character.application.level.CharacterLevelTable
 import digdaserver.domain.character.domain.entity.CharacterColor
 import digdaserver.domain.character.domain.entity.CharacterStage
-import digdaserver.domain.character.domain.entity.UserCharacter
+import digdaserver.domain.character.domain.entity.GroupCharacter
 
 /**
  * 캐릭터 현재 상태 응답. 클라가 progress bar 등을 계산할 수 있도록 next-level 임계치까지
@@ -21,7 +21,7 @@ data class CharacterStateResponse(
     val maxLevelReached: Boolean
 ) {
     companion object {
-        fun from(character: UserCharacter): CharacterStateResponse {
+        fun from(character: GroupCharacter): CharacterStateResponse {
             val nextThreshold = CharacterLevelTable.expForNextLevel(character.level)
             val atMax = character.level >= CharacterLevelTable.MAX_LEVEL
             return CharacterStateResponse(

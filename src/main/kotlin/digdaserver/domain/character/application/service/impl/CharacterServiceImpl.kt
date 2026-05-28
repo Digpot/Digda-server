@@ -3,17 +3,18 @@ package digdaserver.domain.character.application.service.impl
 import digdaserver.domain.character.application.service.CharacterService
 import digdaserver.domain.character.domain.entity.CharacterColor
 import digdaserver.domain.character.domain.entity.CharacterStage
-import digdaserver.domain.character.domain.entity.UserCharacter
-import digdaserver.domain.character.domain.entity.UserCharacterColor
-import digdaserver.domain.character.domain.repository.UserCharacterColorRepository
-import digdaserver.domain.character.domain.repository.UserCharacterRepository
+import digdaserver.domain.character.domain.entity.GroupCharacter
+import digdaserver.domain.character.domain.entity.GroupCharacterColor
+import digdaserver.domain.character.domain.repository.GroupCharacterColorRepository
+import digdaserver.domain.character.domain.repository.GroupCharacterRepository
 import digdaserver.domain.character.presentation.dto.res.AddExpResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterColorInfo
 import digdaserver.domain.character.presentation.dto.res.CharacterColorShopResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStageInfo
 import digdaserver.domain.character.presentation.dto.res.CharacterStageTreeResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStateResponse
-import digdaserver.domain.user.domain.repository.UserRepository
+import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
+import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
 import org.slf4j.LoggerFactory
@@ -24,39 +25,57 @@ import java.util.UUID
 @Service
 @Transactional(readOnly = true)
 class CharacterServiceImpl(
-    private val userCharacterRepository: UserCharacterRepository,
-    private val userCharacterColorRepository: UserCharacterColorRepository,
-    private val userRepository: UserRepository
+    private val groupCharacterRepository: GroupCharacterRepository,
+    private val groupCharacterColorRepository: GroupCharacterColorRepository,
+    private val groupRoomRepository: GroupRoomRepository,
+    private val membershipRepository: MembershipRepository
 ) : CharacterService {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
     @Transactional
-    override fun getMyCharacter(userId: UUID): CharacterStateResponse {
-        val character = loadOrCreate(userId)
-        log.info("action=character_get_me, userId={}, stage={}, level={}", userId, character.stage, character.level)
+    override fun getGroupCharacter(userId: UUID, groupRoomId: Long): CharacterStateResponse {
+        validateGroupMember(groupRoomId, userId)
+        val character = loadOrCreate(groupRoomId)
+        log.info(
+            "action=character_get, userId={}, groupRoomId={}, stage={}, level={}",
+            userId,
+            groupRoomId,
+            character.stage,
+            character.level
+        )
         return CharacterStateResponse.from(character)
     }
 
     @Transactional
-    override fun gainExp(userId: UUID, amount: Int, coinDelta: Int, source: String?): AddExpResponse {
+    override fun gainExp(
+        userId: UUID,
+        groupRoomId: Long,
+        amount: Int,
+        coinDelta: Int,
+        source: String?
+    ): AddExpResponse {
         if (amount < 0) throw DigdaException(ErrorCode.INVALID_PARAMETER)
         if (coinDelta < 0) throw DigdaException(ErrorCode.INVALID_PARAMETER)
 
-        val character = loadOrCreate(userId)
+        validateGroupMember(groupRoomId, userId)
+        val character = loadOrCreate(groupRoomId)
         val result = character.gainExp(amount)
         if (coinDelta > 0) character.addCoin(coinDelta)
 
         log.info(
-            "action=character_gain_exp, userId={}, amount={}, coinDelta={}, source={}, level={}, stage={}, levelGained={}, stageChanged={}",
-            userId, amount, coinDelta, source, character.level, character.stage, result.levelGained, result.stageChanged
+            "action=character_gain_exp, userId={}, groupRoomId={}, amount={}, coinDelta={}, " +
+                "source={}, level={}, stage={}, levelGained={}, stageChanged={}",
+            userId, groupRoomId, amount, coinDelta, source,
+            character.level, character.stage, result.levelGained, result.stageChanged
         )
         return AddExpResponse.from(character, result, coinDelta)
     }
 
     @Transactional
-    override fun getStageTree(userId: UUID): CharacterStageTreeResponse {
-        val character = loadOrCreate(userId)
+    override fun getStageTree(userId: UUID, groupRoomId: Long): CharacterStageTreeResponse {
+        validateGroupMember(groupRoomId, userId)
+        val character = loadOrCreate(groupRoomId)
         val stages = CharacterStage.entries.map {
             CharacterStageInfo(
                 stage = it,
@@ -73,9 +92,11 @@ class CharacterServiceImpl(
     }
 
     @Transactional
-    override fun getColorShop(userId: UUID): CharacterColorShopResponse {
-        val character = loadOrCreate(userId)
-        val ownedColors = userCharacterColorRepository.findAllByUserId(userId).map { it.color }.toSet()
+    override fun getColorShop(userId: UUID, groupRoomId: Long): CharacterColorShopResponse {
+        validateGroupMember(groupRoomId, userId)
+        val character = loadOrCreate(groupRoomId)
+        val ownedColors =
+            groupCharacterColorRepository.findAllByGroupRoomId(groupRoomId).map { it.color }.toSet()
         val items = CharacterColor.entries.map { color ->
             CharacterColorInfo(
                 color = color,
@@ -91,45 +112,81 @@ class CharacterServiceImpl(
     }
 
     @Transactional
-    override fun buyColor(userId: UUID, color: CharacterColor): CharacterColorShopResponse {
-        val character = loadOrCreate(userId)
+    override fun buyColor(
+        userId: UUID,
+        groupRoomId: Long,
+        color: CharacterColor
+    ): CharacterColorShopResponse {
+        validateGroupMember(groupRoomId, userId)
+        val character = loadOrCreate(groupRoomId)
 
         if (color.isDefault) throw DigdaException(ErrorCode.ALREADY_OWNED_COLOR)
-        if (userCharacterColorRepository.existsByUserIdAndColor(userId, color)) {
+        if (groupCharacterColorRepository.existsByGroupRoomIdAndColor(groupRoomId, color)) {
             throw DigdaException(ErrorCode.ALREADY_OWNED_COLOR)
         }
         if (character.coin < color.cost) throw DigdaException(ErrorCode.INSUFFICIENT_COIN)
 
         character.deductCoin(color.cost)
-        userCharacterColorRepository.save(
-            UserCharacterColor(
-                user = character.user,
+        groupCharacterColorRepository.save(
+            GroupCharacterColor(
+                groupRoom = character.groupRoom,
                 color = color,
                 pricePaid = color.cost
             )
         )
-        log.info("action=character_buy_color, userId={}, color={}, cost={}, balanceAfter={}", userId, color, color.cost, character.coin)
+        log.info(
+            "action=character_buy_color, userId={}, groupRoomId={}, color={}, cost={}, balanceAfter={}",
+            userId,
+            groupRoomId,
+            color,
+            color.cost,
+            character.coin
+        )
 
-        return getColorShop(userId)
+        return getColorShop(userId, groupRoomId)
     }
 
     @Transactional
-    override fun applyColor(userId: UUID, color: CharacterColor): CharacterStateResponse {
-        val character = loadOrCreate(userId)
-        if (!color.isDefault && !userCharacterColorRepository.existsByUserIdAndColor(userId, color)) {
+    override fun applyColor(
+        userId: UUID,
+        groupRoomId: Long,
+        color: CharacterColor
+    ): CharacterStateResponse {
+        validateGroupMember(groupRoomId, userId)
+        val character = loadOrCreate(groupRoomId)
+        if (!color.isDefault &&
+            !groupCharacterColorRepository.existsByGroupRoomIdAndColor(groupRoomId, color)
+        ) {
             throw DigdaException(ErrorCode.COLOR_NOT_OWNED)
         }
         character.applyColor(color)
-        log.info("action=character_apply_color, userId={}, color={}", userId, color)
+        log.info(
+            "action=character_apply_color, userId={}, groupRoomId={}, color={}",
+            userId,
+            groupRoomId,
+            color
+        )
         return CharacterStateResponse.from(character)
     }
 
-    private fun loadOrCreate(userId: UUID): UserCharacter {
-        userCharacterRepository.findByUserId(userId)?.let { return it }
-        val user = userRepository.findById(userId)
-            .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
-        val fresh = userCharacterRepository.save(UserCharacter(user = user))
-        log.info("action=character_create, userId={}, characterId={}", userId, fresh.id)
+    private fun validateGroupMember(groupRoomId: Long, userId: UUID) {
+        val groupRoom = groupRoomRepository.findById(groupRoomId)
+            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
+        if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
+        membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+            .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
+    }
+
+    private fun loadOrCreate(groupRoomId: Long): GroupCharacter {
+        groupCharacterRepository.findByGroupRoomId(groupRoomId)?.let { return it }
+        val groupRoom = groupRoomRepository.findById(groupRoomId)
+            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
+        val fresh = groupCharacterRepository.save(GroupCharacter(groupRoom = groupRoom))
+        log.info(
+            "action=character_create, groupRoomId={}, characterId={}",
+            groupRoomId,
+            fresh.id
+        )
         return fresh
     }
 }

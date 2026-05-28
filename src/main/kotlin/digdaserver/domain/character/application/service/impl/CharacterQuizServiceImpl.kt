@@ -3,10 +3,10 @@ package digdaserver.domain.character.application.service.impl
 import digdaserver.domain.character.application.service.CharacterQuizService
 import digdaserver.domain.character.domain.entity.CharacterQuiz
 import digdaserver.domain.character.domain.entity.CharacterQuizAttempt
-import digdaserver.domain.character.domain.entity.UserCharacter
+import digdaserver.domain.character.domain.entity.GroupCharacter
 import digdaserver.domain.character.domain.repository.CharacterQuizAttemptRepository
 import digdaserver.domain.character.domain.repository.CharacterQuizRepository
-import digdaserver.domain.character.domain.repository.UserCharacterRepository
+import digdaserver.domain.character.domain.repository.GroupCharacterRepository
 import digdaserver.domain.character.presentation.dto.req.CreateQuizRequest
 import digdaserver.domain.character.presentation.dto.res.CharacterQuizListResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterQuizResponse
@@ -28,7 +28,7 @@ import java.util.UUID
 class CharacterQuizServiceImpl(
     private val quizRepository: CharacterQuizRepository,
     private val attemptRepository: CharacterQuizAttemptRepository,
-    private val userCharacterRepository: UserCharacterRepository,
+    private val groupCharacterRepository: GroupCharacterRepository,
     private val groupRoomRepository: GroupRoomRepository,
     private val membershipRepository: MembershipRepository,
     private val userRepository: UserRepository
@@ -140,7 +140,8 @@ class CharacterQuizServiceImpl(
         val earnedExp = if (correct) EXP_PER_MULTIPLIER_CORRECT * quiz.expMultiplier else EXP_CONSOLATION_WRONG
         val earnedCoin = if (correct) COIN_PER_MULTIPLIER_CORRECT * quiz.expMultiplier else 0
 
-        val character = loadOrCreateCharacter(userId)
+        // 보상은 그룹 캐릭터에 누적 (응시자 개인이 아닌 그룹 공용)
+        val character = loadOrCreateGroupCharacter(quiz.groupRoom.id)
         val gain = character.gainExp(earnedExp)
         if (earnedCoin > 0) character.addCoin(earnedCoin)
 
@@ -158,8 +159,10 @@ class CharacterQuizServiceImpl(
         )
 
         log.info(
-            "action=character_quiz_attempt, userId={}, quizId={}, selected={}, correct={}, earnedExp={}, earnedCoin={}, levelGained={}, stageChanged={}",
-            userId, quizId, selectedIndex, correct, earnedExp, earnedCoin, gain.levelGained, gain.stageChanged
+            "action=character_quiz_attempt, userId={}, groupRoomId={}, quizId={}, selected={}, " +
+                "correct={}, earnedExp={}, earnedCoin={}, levelGained={}, stageChanged={}",
+            userId, quiz.groupRoom.id, quizId, selectedIndex,
+            correct, earnedExp, earnedCoin, gain.levelGained, gain.stageChanged
         )
 
         return QuizAttemptResultResponse(
@@ -206,12 +209,16 @@ class CharacterQuizServiceImpl(
             .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
     }
 
-    private fun loadOrCreateCharacter(userId: UUID): UserCharacter {
-        userCharacterRepository.findByUserId(userId)?.let { return it }
-        val user = userRepository.findById(userId)
-            .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
-        val fresh = userCharacterRepository.save(UserCharacter(user = user))
-        log.info("action=character_create_via_quiz, userId={}, characterId={}", userId, fresh.id)
+    private fun loadOrCreateGroupCharacter(groupRoomId: Long): GroupCharacter {
+        groupCharacterRepository.findByGroupRoomId(groupRoomId)?.let { return it }
+        val groupRoom = groupRoomRepository.findById(groupRoomId)
+            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
+        val fresh = groupCharacterRepository.save(GroupCharacter(groupRoom = groupRoom))
+        log.info(
+            "action=character_create_via_quiz, groupRoomId={}, characterId={}",
+            groupRoomId,
+            fresh.id
+        )
         return fresh
     }
 }

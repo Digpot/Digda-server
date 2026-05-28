@@ -1,7 +1,7 @@
 package digdaserver.domain.character.domain.entity
 
 import digdaserver.domain.character.application.level.CharacterLevelTable
-import digdaserver.domain.user.domain.entity.User
+import digdaserver.domain.group_room.domain.entity.GroupRoom
 import digdaserver.global.common.entity.BaseTimeEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -17,27 +17,29 @@ import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 
 /**
- * 유저 1인당 1행. 회원가입 시점에 생성하지 않고, 캐릭터 진입 시점에 lazy 생성한다
- * (퀴즈/캐릭터를 안 쓰는 유저에 대해 빈 row 를 누적하지 않으려는 목적).
+ * 그룹방 1개당 1행. 그룹원들이 함께 키우는 공용 캐릭터.
+ * 그룹에서 누구든 캐릭터 화면 진입 시 lazy 생성된다.
  *
  * 경험치 가산은 [gainExp] 만 통해서 일어나고, 곡선/단계 갱신은 모두 그 안에서 처리한다.
  * 직접 [level], [exp] 를 set 하지 말 것.
+ *
+ * 그룹원이 퀴즈를 풀어 얻은 EXP/코인은 모두 이 한 행에 누적된다.
  */
 @Entity
 @Table(
-    name = "user_character",
-    uniqueConstraints = [UniqueConstraint(columnNames = ["user_id"])]
+    name = "group_character",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["group_room_id"])]
 )
-class UserCharacter(
+class GroupCharacter(
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "user_character_id")
+    @Column(name = "group_character_id")
     val id: Long = 0L,
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    val user: User,
+    @JoinColumn(name = "group_room_id", nullable = false)
+    val groupRoom: GroupRoom,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
@@ -76,7 +78,6 @@ class UserCharacter(
             level += 1
             levelsGained += 1
             if (level >= CharacterLevelTable.MAX_LEVEL) {
-                // MAX 도달 시 잉여 exp 는 0으로 고정 (저장만 누적해도 무의미한 표시 방지).
                 remaining = 0
                 break
             }

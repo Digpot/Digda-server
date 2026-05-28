@@ -1,7 +1,7 @@
 package digdaserver.domain.character.presentation.dto.res
 
 import digdaserver.domain.character.domain.entity.CharacterStage
-import digdaserver.domain.character.domain.entity.UserCharacter
+import digdaserver.domain.character.domain.entity.GroupCharacter
 
 /**
  * exp 가산 결과 + 갱신된 캐릭터 상태. 클라이언트는 [levelGained]>0 이면 레벨업 연출,
@@ -17,8 +17,8 @@ data class AddExpResponse(
 ) {
     companion object {
         fun from(
-            character: UserCharacter,
-            result: UserCharacter.GainResult,
+            character: GroupCharacter,
+            result: GroupCharacter.GainResult,
             coinDelta: Int
         ): AddExpResponse {
             return AddExpResponse(

@@ -19,37 +19,55 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 @RestController
 @RequestMapping("/character")
-@Tag(name = "Character", description = "캐릭터(모찌) 키우기 API")
+@Tag(name = "Character", description = "캐릭터(모찌) 키우기 API — 그룹 1개당 1마리 공유")
 class CharacterController(
     private val characterService: CharacterService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    @Operation(summary = "내 캐릭터 상태 조회", description = "첫 진입 시 자동 생성됩니다.")
-    @GetMapping("/me")
-    fun getMyCharacter(
-        @AuthenticationPrincipal userId: String
+    @Operation(
+        summary = "그룹 캐릭터 상태 조회",
+        description = "해당 그룹의 모찌. 첫 진입 시 자동 생성됩니다. 호출자가 그룹 멤버여야 함."
+    )
+    @GetMapping
+    fun getGroupCharacter(
+        @AuthenticationPrincipal userId: String,
+        @RequestParam groupRoomId: Long
     ): ResponseEntity<CharacterStateResponse> {
-        log.info("api=GET /character/me, userId={}", userId)
-        return ResponseEntity.ok(characterService.getMyCharacter(UUID.fromString(userId)))
+        log.info("api=GET /character, userId={}, groupRoomId={}", userId, groupRoomId)
+        return ResponseEntity.ok(
+            characterService.getGroupCharacter(UUID.fromString(userId), groupRoomId)
+        )
     }
 
-    @Operation(summary = "경험치 가산", description = "amount만큼 EXP를 더하고, 레벨업/진화는 서버가 계산해 응답에 포함합니다.")
-    @PostMapping("/me/exp")
+    @Operation(
+        summary = "경험치 가산",
+        description = "그룹 캐릭터에 amount만큼 EXP를 더하고, 레벨업/진화는 서버가 계산해 응답에 포함합니다."
+    )
+    @PostMapping("/exp")
     fun gainExp(
         @AuthenticationPrincipal userId: String,
+        @RequestParam groupRoomId: Long,
         @RequestBody request: AddExpRequest
     ): ResponseEntity<AddExpResponse> {
-        log.info("api=POST /character/me/exp, userId={}, amount={}, source={}", userId, request.amount, request.source)
+        log.info(
+            "api=POST /character/exp, userId={}, groupRoomId={}, amount={}, source={}",
+            userId,
+            groupRoomId,
+            request.amount,
+            request.source
+        )
         return ResponseEntity.ok(
             characterService.gainExp(
                 userId = UUID.fromString(userId),
+                groupRoomId = groupRoomId,
                 amount = request.amount,
                 coinDelta = 0,
                 source = request.source
@@ -57,41 +75,72 @@ class CharacterController(
         )
     }
 
-    @Operation(summary = "진화 트리 조회", description = "전체 단계 + 내 도달 여부.")
+    @Operation(summary = "진화 트리 조회", description = "전체 단계 + 그룹 캐릭터 도달 여부.")
     @GetMapping("/stages")
     fun getStageTree(
-        @AuthenticationPrincipal userId: String
+        @AuthenticationPrincipal userId: String,
+        @RequestParam groupRoomId: Long
     ): ResponseEntity<CharacterStageTreeResponse> {
-        log.info("api=GET /character/stages, userId={}", userId)
-        return ResponseEntity.ok(characterService.getStageTree(UUID.fromString(userId)))
+        log.info("api=GET /character/stages, userId={}, groupRoomId={}", userId, groupRoomId)
+        return ResponseEntity.ok(
+            characterService.getStageTree(UUID.fromString(userId), groupRoomId)
+        )
     }
 
-    @Operation(summary = "색상 상점 조회", description = "구매 가능 색상 + 내 보유/현재 여부 + 잔액 코인.")
+    @Operation(
+        summary = "색상 상점 조회",
+        description = "구매 가능 색상 + 그룹 보유/현재 여부 + 잔액 코인."
+    )
     @GetMapping("/shop/colors")
     fun getColorShop(
-        @AuthenticationPrincipal userId: String
+        @AuthenticationPrincipal userId: String,
+        @RequestParam groupRoomId: Long
     ): ResponseEntity<CharacterColorShopResponse> {
-        log.info("api=GET /character/shop/colors, userId={}", userId)
-        return ResponseEntity.ok(characterService.getColorShop(UUID.fromString(userId)))
+        log.info("api=GET /character/shop/colors, userId={}, groupRoomId={}", userId, groupRoomId)
+        return ResponseEntity.ok(
+            characterService.getColorShop(UUID.fromString(userId), groupRoomId)
+        )
     }
 
-    @Operation(summary = "색상 구매", description = "코인을 차감해 색상을 영구 해금합니다.")
+    @Operation(
+        summary = "색상 구매",
+        description = "그룹 코인을 차감해 색상을 영구 해금합니다. 그룹원 누구나 호출 가능."
+    )
     @PostMapping("/shop/colors/{color}/buy")
     fun buyColor(
         @AuthenticationPrincipal userId: String,
+        @RequestParam groupRoomId: Long,
         @PathVariable color: CharacterColor
     ): ResponseEntity<CharacterColorShopResponse> {
-        log.info("api=POST /character/shop/colors/{}/buy, userId={}", color, userId)
-        return ResponseEntity.ok(characterService.buyColor(UUID.fromString(userId), color))
+        log.info(
+            "api=POST /character/shop/colors/{}/buy, userId={}, groupRoomId={}",
+            color,
+            userId,
+            groupRoomId
+        )
+        return ResponseEntity.ok(
+            characterService.buyColor(UUID.fromString(userId), groupRoomId, color)
+        )
     }
 
-    @Operation(summary = "색상 변경 적용", description = "보유한 색으로 현재 캐릭터 색을 변경합니다.")
-    @PutMapping("/me/color")
+    @Operation(
+        summary = "색상 변경 적용",
+        description = "보유한 색으로 그룹 캐릭터 색을 변경합니다. 그룹원 누구나 호출 가능."
+    )
+    @PutMapping("/color")
     fun applyColor(
         @AuthenticationPrincipal userId: String,
+        @RequestParam groupRoomId: Long,
         @RequestBody request: ChangeColorRequest
     ): ResponseEntity<CharacterStateResponse> {
-        log.info("api=PUT /character/me/color, userId={}, color={}", userId, request.color)
-        return ResponseEntity.ok(characterService.applyColor(UUID.fromString(userId), request.color))
+        log.info(
+            "api=PUT /character/color, userId={}, groupRoomId={}, color={}",
+            userId,
+            groupRoomId,
+            request.color
+        )
+        return ResponseEntity.ok(
+            characterService.applyColor(UUID.fromString(userId), groupRoomId, request.color)
+        )
     }
 }

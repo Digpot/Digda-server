@@ -23,7 +23,7 @@ class CharacterGearInitializer(
 
     fun ensureDefaults(character: GroupCharacter) {
         val groupRoomId = character.groupRoom.id
-        val defaults = shopItemRepository.findAllByIsDefaultTrue()
+        val defaults = shopItemRepository.findAllDefaults()
         if (defaults.isEmpty()) return
 
         defaults.forEach { def ->

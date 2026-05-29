@@ -48,8 +48,7 @@ class CharacterShopServiceImpl(
         validateGroupMember(groupRoomId, userId)
         val character = loadOrInitCharacter(groupRoomId)
 
-        val allItems = shopItemRepository
-            .findAllByEnabledTrueOrderByItemTypeAscSortOrderAscShopItemIdAsc()
+        val allItems = shopItemRepository.findAllEnabled()
         val ownedIds = groupCharacterItemRepository.findAllByGroupRoomId(groupRoomId)
             .map { it.shopItem.id }
             .toSet()
@@ -151,7 +150,7 @@ class CharacterShopServiceImpl(
 
         if (itemType == ShopItemType.SKIN) {
             // 스킨은 렌더 필수 — default 로 복귀
-            val default = shopItemRepository.findFirstByItemTypeAndIsDefaultTrue(itemType)
+            val default = shopItemRepository.findFirstDefaultByItemType(itemType)
                 ?: throw DigdaException(ErrorCode.SHOP_ITEM_NOT_FOUND)
             ensureOwned(groupRoomId, default)
             upsertEquipped(character, default)

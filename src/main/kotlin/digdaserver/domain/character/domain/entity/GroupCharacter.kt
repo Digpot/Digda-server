@@ -27,6 +27,9 @@ import jakarta.persistence.UniqueConstraint
  *
  * 외형(색·아이템)은 이 엔티티가 직접 갖지 않고 [GroupCharacterEquipped] 에서 카테고리
  * 슬롯별로 관리한다 (스킨 1 + 모자/안경/머리핀/액세서리/잡화 각 1).
+ *
+ * 조력자 캐릭터 디코는 [dikoUnlocked] 플래그 하나로만 표현한다. 별도 레벨/성장 시스템이
+ * 없는 동반 캐릭터라 엔티티를 새로 두지 않고 모찌 행에 같이 매단다.
  */
 @Entity
 @Table(
@@ -55,7 +58,10 @@ class GroupCharacter(
     var exp: Int = 0,
 
     @Column(nullable = false)
-    var coin: Int = 0
+    var coin: Int = 0,
+
+    @Column(name = "diko_unlocked", nullable = false)
+    var dikoUnlocked: Boolean = false
 
 ) : BaseTimeEntity() {
 
@@ -64,12 +70,23 @@ class GroupCharacter(
      * (대량 보상 케이스). 반환값은 이번 호출로 도달한 새 레벨 수(>=0).
      *
      * 동시 호출에 대한 race 는 호출자에서 트랜잭션·잠금으로 처리.
+     *
+     * 추가로, 이번 호출 도중 [DIKO_UNLOCK_LEVEL] 이상에 처음 도달하면 [dikoUnlocked] 를
+     * true 로 전환하고 [GainResult.dikoJustUnlocked] 에 한 번만 true 로 반영한다.
      */
     fun gainExp(amount: Int): GainResult {
         require(amount >= 0) { "exp gain must be non-negative" }
-        if (amount == 0) return GainResult(levelGained = 0, stageBefore = stage, stageAfter = stage)
+        if (amount == 0) {
+            return GainResult(
+                levelGained = 0,
+                stageBefore = stage,
+                stageAfter = stage,
+                dikoJustUnlocked = false
+            )
+        }
 
         val stageBefore = stage
+        val dikoWasUnlocked = dikoUnlocked
         var remaining = exp + amount
         var levelsGained = 0
         while (remaining >= CharacterLevelTable.expForNextLevel(level)) {
@@ -83,7 +100,20 @@ class GroupCharacter(
         }
         exp = remaining
         stage = CharacterStage.forLevel(level)
-        return GainResult(levelGained = levelsGained, stageBefore = stageBefore, stageAfter = stage)
+
+        val dikoJustUnlocked = if (!dikoWasUnlocked && level >= DIKO_UNLOCK_LEVEL) {
+            dikoUnlocked = true
+            true
+        } else {
+            false
+        }
+
+        return GainResult(
+            levelGained = levelsGained,
+            stageBefore = stageBefore,
+            stageAfter = stage,
+            dikoJustUnlocked = dikoJustUnlocked
+        )
     }
 
     fun addCoin(amount: Int) {
@@ -101,8 +131,14 @@ class GroupCharacter(
     data class GainResult(
         val levelGained: Int,
         val stageBefore: CharacterStage,
-        val stageAfter: CharacterStage
+        val stageAfter: CharacterStage,
+        val dikoJustUnlocked: Boolean = false
     ) {
         val stageChanged: Boolean get() = stageBefore != stageAfter
+    }
+
+    companion object {
+        /** 디코가 처음 등장하는 레벨. 모찌 본체 진화와는 별개 트리거. */
+        const val DIKO_UNLOCK_LEVEL: Int = 10
     }
 }

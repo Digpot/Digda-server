@@ -4,5 +4,6 @@ enum class ImagePurpose {
 
     PROFILE,
     GROUP_THUMBNAIL,
-    DIARY;
+    DIARY,
+    QUIZ;
 }

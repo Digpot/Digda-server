@@ -19,5 +19,6 @@ data class QuizAttemptResultResponse(
     val levelGained: Int,
     val stageBefore: CharacterStage,
     val stageAfter: CharacterStage,
-    val stageChanged: Boolean
+    val stageChanged: Boolean,
+    val dikoJustUnlocked: Boolean = false
 )

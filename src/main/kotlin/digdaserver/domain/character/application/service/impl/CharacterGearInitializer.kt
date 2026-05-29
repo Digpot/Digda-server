@@ -28,7 +28,7 @@ class CharacterGearInitializer(
 
         defaults.forEach { def ->
             if (!groupCharacterItemRepository
-                    .existsByGroupRoomIdAndShopItemId(groupRoomId, def.id)
+                .existsByGroupRoomIdAndShopItemId(groupRoomId, def.id)
             ) {
                 groupCharacterItemRepository.save(
                     GroupCharacterItem(

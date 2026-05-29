@@ -27,10 +27,12 @@ import java.time.LocalDateTime
 @Entity
 @Table(
     name = "group_character_equipped",
-    uniqueConstraints = [UniqueConstraint(
-        name = "uq_gce_group_type",
-        columnNames = ["group_room_id", "item_type"]
-    )]
+    uniqueConstraints = [
+        UniqueConstraint(
+            name = "uq_gce_group_type",
+            columnNames = ["group_room_id", "item_type"]
+        )
+    ]
 )
 class GroupCharacterEquipped(
 

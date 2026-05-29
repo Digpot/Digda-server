@@ -47,8 +47,36 @@ class SchemaAutoMigration(
         )
     )
 
+    /**
+     * 신규 환경/누락 환경 보강용 — 엔티티에는 있지만 prod 테이블에 아직 없는 컬럼을
+     * 멱등하게 ADD. ADD COLUMN 은 컬럼이 존재하면 스킵해 안전하다.
+     *
+     * - `group_character.diko_unlocked`: 디코(조력자) 등장 여부. 기존 Lv.10+ 데이터는
+     *    추가 직후 한 번에 UPDATE 로 backfill.
+     * - `character_quiz.image_url`: 이미지 퀴즈 URL. NULL 허용이라 추가만으로 충분.
+     */
+    private val missingColumns: List<MissingColumn> = listOf(
+        MissingColumn(
+            table = "group_character",
+            column = "diko_unlocked",
+            addSql = "ALTER TABLE group_character ADD COLUMN diko_unlocked BIT(1) NOT NULL DEFAULT b'0'",
+            postSql = listOf(
+                "UPDATE group_character SET diko_unlocked = b'1' WHERE level >= 10"
+            )
+        ),
+        MissingColumn(
+            table = "character_quiz",
+            column = "image_url",
+            addSql = "ALTER TABLE character_quiz ADD COLUMN image_url VARCHAR(2048) NULL"
+        )
+    )
+
     override fun run(args: ApplicationArguments?) {
-        log.info("action=startup schema auto-migration 시작, 대상={}건", requiredColumns.size)
+        log.info(
+            "action=startup schema auto-migration 시작, modify={}건, addIfMissing={}건",
+            requiredColumns.size,
+            missingColumns.size
+        )
         for (rc in requiredColumns) {
             try {
                 migrateOne(rc)
@@ -63,7 +91,60 @@ class SchemaAutoMigration(
                 )
             }
         }
+        for (mc in missingColumns) {
+            try {
+                addIfMissing(mc)
+            } catch (e: Exception) {
+                log.error(
+                    "action=startup schema auto-migration ADD 실패, table={}, column={}, error={}",
+                    mc.table,
+                    mc.column,
+                    e.message,
+                    e
+                )
+            }
+        }
         log.info("action=startup schema auto-migration 완료")
+    }
+
+    private fun addIfMissing(mc: MissingColumn) {
+        val info = readColumnInfo(mc.table, mc.column)
+        if (info != null) {
+            log.info(
+                "action=startup schema auto-migration ADD 스킵(이미 있음), table={}, column={}",
+                mc.table,
+                mc.column
+            )
+            return
+        }
+        log.warn(
+            "action=startup schema auto-migration ADD 실행, table={}, column={}, sql={}",
+            mc.table,
+            mc.column,
+            mc.addSql
+        )
+        jdbcTemplate.execute(mc.addSql)
+        for (sql in mc.postSql) {
+            try {
+                val rows = jdbcTemplate.update(sql)
+                log.info(
+                    "action=startup schema auto-migration ADD post-sql 적용, table={}, column={}, rows={}, sql={}",
+                    mc.table,
+                    mc.column,
+                    rows,
+                    sql
+                )
+            } catch (e: Exception) {
+                log.error(
+                    "action=startup schema auto-migration ADD post-sql 실패, table={}, column={}, sql={}, error={}",
+                    mc.table,
+                    mc.column,
+                    sql,
+                    e.message,
+                    e
+                )
+            }
+        }
     }
 
     private fun migrateOne(rc: RequiredColumn) {
@@ -155,4 +236,12 @@ class SchemaAutoMigration(
             return true
         }
     }
+
+    /** [postSql] 은 backfill 처럼 ADD 직후 1회 더 돌릴 SQL. 실패해도 부팅은 막지 않는다. */
+    private data class MissingColumn(
+        val table: String,
+        val column: String,
+        val addSql: String,
+        val postSql: List<String> = emptyList()
+    )
 }

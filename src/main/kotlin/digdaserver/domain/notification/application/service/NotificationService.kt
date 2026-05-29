@@ -92,6 +92,9 @@ interface NotificationService {
         stageName: String
     )
 
+    /** 디코(조력자) 최초 등장. 그룹 멤버 전원에게 1회만 발송. */
+    fun notifyDikoUnlocked(groupRoomId: Long, actorUserId: UUID)
+
     fun sendAnnouncement(
         targetUserIds: List<UUID>?,
         title: String,

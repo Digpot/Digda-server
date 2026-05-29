@@ -33,6 +33,7 @@ class CharacterQuizServiceImpl(
     private val attemptRepository: CharacterQuizAttemptRepository,
     private val groupCharacterRepository: GroupCharacterRepository,
     private val groupCharacterEquippedRepository: GroupCharacterEquippedRepository,
+    private val gearInitializer: CharacterGearInitializer,
     private val groupRoomRepository: GroupRoomRepository,
     private val membershipRepository: MembershipRepository,
     private val userRepository: UserRepository,
@@ -252,10 +253,15 @@ class CharacterQuizServiceImpl(
     }
 
     private fun loadOrCreateGroupCharacter(groupRoomId: Long): GroupCharacter {
-        groupCharacterRepository.findByGroupRoomId(groupRoomId)?.let { return it }
+        val existing = groupCharacterRepository.findByGroupRoomId(groupRoomId)
+        if (existing != null) {
+            gearInitializer.ensureDefaults(existing)
+            return existing
+        }
         val groupRoom = groupRoomRepository.findById(groupRoomId)
             .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
         val fresh = groupCharacterRepository.save(GroupCharacter(groupRoom = groupRoom))
+        gearInitializer.ensureDefaults(fresh)
         log.info(
             "action=character_create_via_quiz, groupRoomId={}, characterId={}",
             groupRoomId,

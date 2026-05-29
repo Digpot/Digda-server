@@ -26,9 +26,8 @@ import java.util.UUID
 /**
  * 상점·인벤토리·장착 통합 서비스.
  *
- * 그룹 캐릭터는 첫 진입 시 lazy 생성되고, 그때 default 아이템(코랄 스킨)을 자동
- * 지급/장착해 항상 렌더 가능 상태를 유지한다. SKIN 슬롯의 default 보장 책임은
- * 이 서비스 한 곳에만 둔다 — 다른 도메인은 [GroupCharacterEquipped] 만 보고 그린다.
+ * 그룹 캐릭터는 첫 진입 시 lazy 생성되고, 그때 [CharacterGearInitializer] 가 default
+ * 아이템(코랄 스킨)을 자동 지급/장착해 항상 렌더 가능 상태를 유지한다.
  */
 @Service
 @Transactional(readOnly = true)
@@ -37,6 +36,7 @@ class CharacterShopServiceImpl(
     private val groupCharacterRepository: GroupCharacterRepository,
     private val groupCharacterItemRepository: GroupCharacterItemRepository,
     private val groupCharacterEquippedRepository: GroupCharacterEquippedRepository,
+    private val gearInitializer: CharacterGearInitializer,
     private val groupRoomRepository: GroupRoomRepository,
     private val membershipRepository: MembershipRepository
 ) : CharacterShopService {
@@ -156,6 +156,8 @@ class CharacterShopServiceImpl(
             ensureOwned(groupRoomId, default)
             upsertEquipped(character, default)
         } else {
+            // @Modifying(clearAutomatically=true) 로 1차 캐시까지 비워주므로
+            // 이후 findAllByGroupRoomId 가 stale 엔티티를 반환하지 않는다.
             groupCharacterEquippedRepository.deleteByGroupRoomIdAndItemType(groupRoomId, itemType)
         }
 
@@ -181,47 +183,15 @@ class CharacterShopServiceImpl(
     private fun loadOrInitCharacter(groupRoomId: Long): GroupCharacter {
         val existing = groupCharacterRepository.findByGroupRoomId(groupRoomId)
         if (existing != null) {
-            ensureDefaultEquipped(existing)
+            gearInitializer.ensureDefaults(existing)
             return existing
         }
         val groupRoom = groupRoomRepository.findById(groupRoomId)
             .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
         val fresh = groupCharacterRepository.save(GroupCharacter(groupRoom = groupRoom))
-        ensureDefaultEquipped(fresh)
+        gearInitializer.ensureDefaults(fresh)
         log.info("action=character_create_via_shop, groupRoomId={}, characterId={}", groupRoomId, fresh.id)
         return fresh
-    }
-
-    /** default 아이템을 보유/장착에 추가 (idempotent). 스킨 슬롯이 빈 경우만 자동 적용. */
-    private fun ensureDefaultEquipped(character: GroupCharacter) {
-        val groupRoomId = character.groupRoom.id
-        val defaults = shopItemRepository.findAllByIsDefaultTrue()
-        if (defaults.isEmpty()) return
-
-        defaults.forEach { def ->
-            if (!groupCharacterItemRepository
-                    .existsByGroupRoomIdAndShopItemId(groupRoomId, def.id)
-            ) {
-                groupCharacterItemRepository.save(
-                    GroupCharacterItem(
-                        groupRoom = character.groupRoom,
-                        shopItem = def,
-                        pricePaid = 0
-                    )
-                )
-            }
-            val current =
-                groupCharacterEquippedRepository.findByGroupRoomIdAndItemType(groupRoomId, def.itemType)
-            if (current == null) {
-                groupCharacterEquippedRepository.save(
-                    GroupCharacterEquipped(
-                        groupRoom = character.groupRoom,
-                        itemType = def.itemType,
-                        shopItem = def
-                    )
-                )
-            }
-        }
     }
 
     private fun ensureOwned(groupRoomId: Long, item: ShopItem) {

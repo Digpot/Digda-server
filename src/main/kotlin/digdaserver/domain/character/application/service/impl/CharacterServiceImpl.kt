@@ -3,12 +3,8 @@ package digdaserver.domain.character.application.service.impl
 import digdaserver.domain.character.application.service.CharacterService
 import digdaserver.domain.character.domain.entity.CharacterStage
 import digdaserver.domain.character.domain.entity.GroupCharacter
-import digdaserver.domain.character.domain.entity.GroupCharacterEquipped
-import digdaserver.domain.character.domain.entity.GroupCharacterItem
 import digdaserver.domain.character.domain.repository.GroupCharacterEquippedRepository
-import digdaserver.domain.character.domain.repository.GroupCharacterItemRepository
 import digdaserver.domain.character.domain.repository.GroupCharacterRepository
-import digdaserver.domain.character.domain.repository.ShopItemRepository
 import digdaserver.domain.character.presentation.dto.res.AddExpResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStageInfo
 import digdaserver.domain.character.presentation.dto.res.CharacterStageTreeResponse
@@ -28,9 +24,8 @@ import java.util.UUID
 @Transactional(readOnly = true)
 class CharacterServiceImpl(
     private val groupCharacterRepository: GroupCharacterRepository,
-    private val groupCharacterItemRepository: GroupCharacterItemRepository,
     private val groupCharacterEquippedRepository: GroupCharacterEquippedRepository,
-    private val shopItemRepository: ShopItemRepository,
+    private val gearInitializer: CharacterGearInitializer,
     private val groupRoomRepository: GroupRoomRepository,
     private val membershipRepository: MembershipRepository,
     @Lazy private val notificationService: NotificationService
@@ -124,51 +119,14 @@ class CharacterServiceImpl(
     private fun loadOrCreate(groupRoomId: Long): GroupCharacter {
         val existing = groupCharacterRepository.findByGroupRoomId(groupRoomId)
         if (existing != null) {
-            ensureDefaultEquipped(existing)
+            gearInitializer.ensureDefaults(existing)
             return existing
         }
         val groupRoom = groupRoomRepository.findById(groupRoomId)
             .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
         val fresh = groupCharacterRepository.save(GroupCharacter(groupRoom = groupRoom))
-        ensureDefaultEquipped(fresh)
+        gearInitializer.ensureDefaults(fresh)
         log.info("action=character_create, groupRoomId={}, characterId={}", groupRoomId, fresh.id)
         return fresh
-    }
-
-    /**
-     * 캐릭터가 항상 default 아이템(코랄 스킨 등) 을 소유·장착하도록 보정.
-     *
-     * 신규 그룹뿐 아니라 마이그레이션 직후의 기존 그룹에서도 이 흐름을 타도록
-     * 모든 진입점이 [loadOrCreate] → [ensureDefaultEquipped] 를 거치게 한다.
-     */
-    private fun ensureDefaultEquipped(character: GroupCharacter) {
-        val groupRoomId = character.groupRoom.id
-        val defaults = shopItemRepository.findAllByIsDefaultTrue()
-        if (defaults.isEmpty()) return
-
-        defaults.forEach { def ->
-            if (!groupCharacterItemRepository
-                    .existsByGroupRoomIdAndShopItemId(groupRoomId, def.id)
-            ) {
-                groupCharacterItemRepository.save(
-                    GroupCharacterItem(
-                        groupRoom = character.groupRoom,
-                        shopItem = def,
-                        pricePaid = 0
-                    )
-                )
-            }
-            val current =
-                groupCharacterEquippedRepository.findByGroupRoomIdAndItemType(groupRoomId, def.itemType)
-            if (current == null) {
-                groupCharacterEquippedRepository.save(
-                    GroupCharacterEquipped(
-                        groupRoom = character.groupRoom,
-                        itemType = def.itemType,
-                        shopItem = def
-                    )
-                )
-            }
-        }
     }
 }

@@ -48,6 +48,7 @@ class ShopItemSeeder(
                 )
                 created += 1
             } else {
+                // enabled 는 어드민이 토글할 수 있는 운영 플래그라 시드가 덮어쓰지 않는다.
                 existing.updateMeta(
                     displayName = def.displayName,
                     description = def.description,
@@ -57,7 +58,7 @@ class ShopItemSeeder(
                     layerOrder = def.layerOrder,
                     sortOrder = def.sortOrder,
                     isDefault = def.isDefault,
-                    enabled = true
+                    enabled = existing.enabled
                 )
                 updated += 1
             }

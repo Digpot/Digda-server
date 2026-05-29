@@ -14,7 +14,8 @@ enum class CharacterStage(val requiredLevel: Int, val displayName: String) {
     SPROUT(3, "새싹 모찌"),
     BLOOM(6, "꽃 모찌"),
     BLOSSOM(10, "활짝 모찌"),
-    GLOW(15, "빛나는 모찌");
+    GLOW(15, "빛나는 모찌"),
+    MASTER(20, "마스터 모찌");
 
     companion object {
         /** 주어진 레벨에서 도달 가능한 최고 단계. */

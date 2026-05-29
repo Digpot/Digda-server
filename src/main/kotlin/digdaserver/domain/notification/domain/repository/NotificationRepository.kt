@@ -28,4 +28,32 @@ interface NotificationRepository : JpaRepository<Notification, Long> {
     @Modifying
     @Query("DELETE FROM Notification n WHERE n.user.id = :userId")
     fun deleteAllByUserId(@Param("userId") userId: UUID)
+
+    /**
+     * 어드민 전체 알림 검색.
+     *
+     * - [types]: null/빈 리스트 = 전체. 모찌 관련 알림만 보고 싶을 때 호출 측에서
+     *   `[MOCHI_LEVELUP, DIKO_UNLOCKED, QUIZ_CREATED, QUIZ_ANSWERED]` 같이 전달.
+     * - [groupRoomId]: null = 전체 그룹.
+     * - [keyword]: 제목/본문 LIKE.
+     *
+     * 사용자별로 같은 이벤트가 여러 행으로 저장되는 점은 admin 화면에서 그대로 노출한다
+     * (어드민은 raw 데이터를 봐야 의미가 있음).
+     */
+    @Query(
+        """
+        SELECT n FROM Notification n
+        WHERE (:types IS NULL OR n.type IN :types)
+          AND (:groupRoomId IS NULL OR n.groupRoomId = :groupRoomId)
+          AND (:keyword IS NULL OR :keyword = ''
+              OR LOWER(n.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(n.message) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        """
+    )
+    fun searchForAdmin(
+        @Param("types") types: Collection<NotificationType>?,
+        @Param("groupRoomId") groupRoomId: Long?,
+        @Param("keyword") keyword: String?,
+        pageable: Pageable
+    ): Page<Notification>
 }

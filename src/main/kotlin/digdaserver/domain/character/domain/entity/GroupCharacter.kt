@@ -128,6 +128,43 @@ class GroupCharacter(
         coin -= amount
     }
 
+    /**
+     * 어드민 보정용. 호출자(서비스 계층)가 권한·범위 검증을 끝낸 뒤에만 호출할 것.
+     *
+     * - [newLevel]: 1..MAX_LEVEL 사이로 호출자가 clamp 해 넘겨준다. 본 함수는 추가 검증
+     *   없이 적용하고, [stage] 와 [exp] 를 새 레벨에 맞춰 자동 정합.
+     *   - stage: [CharacterStage.forLevel] 로 갱신
+     *   - exp: 새 레벨의 다음 임계치 미만이면 그대로 유지, 초과/MAX 도달 시 0 으로 clamp
+     * - [DIKO_UNLOCK_LEVEL] 이상으로 올렸다면 [dikoUnlocked] 도 자동으로 true 로 set.
+     *
+     * 일반 게임 플로우에서는 [gainExp] 만 사용하고 이 메서드는 호출하지 말 것.
+     */
+    fun adminSetLevel(newLevel: Int) {
+        require(newLevel in 1..CharacterLevelTable.MAX_LEVEL) {
+            "level out of range: $newLevel"
+        }
+        level = newLevel
+        stage = CharacterStage.forLevel(level)
+        if (level >= CharacterLevelTable.MAX_LEVEL) {
+            exp = 0
+        } else {
+            val nextThreshold = CharacterLevelTable.expForNextLevel(level)
+            if (exp >= nextThreshold) exp = 0
+        }
+        if (level >= DIKO_UNLOCK_LEVEL) dikoUnlocked = true
+    }
+
+    /** 어드민 보정 — 코인 절대값 set. 호출자에서 비음수 검증. */
+    fun adminSetCoin(newCoin: Int) {
+        require(newCoin >= 0) { "coin must be non-negative" }
+        coin = newCoin
+    }
+
+    /** 어드민 보정 — 디코 해금 플래그 강제 set. level<10 인 상태로 true 만들 수도 있음 (테스트용). */
+    fun adminSetDikoUnlocked(unlocked: Boolean) {
+        dikoUnlocked = unlocked
+    }
+
     data class GainResult(
         val levelGained: Int,
         val stageBefore: CharacterStage,

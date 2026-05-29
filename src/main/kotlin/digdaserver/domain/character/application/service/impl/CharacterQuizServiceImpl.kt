@@ -6,6 +6,7 @@ import digdaserver.domain.character.domain.entity.CharacterQuizAttempt
 import digdaserver.domain.character.domain.entity.GroupCharacter
 import digdaserver.domain.character.domain.repository.CharacterQuizAttemptRepository
 import digdaserver.domain.character.domain.repository.CharacterQuizRepository
+import digdaserver.domain.character.domain.repository.GroupCharacterEquippedRepository
 import digdaserver.domain.character.domain.repository.GroupCharacterRepository
 import digdaserver.domain.character.presentation.dto.req.CreateQuizRequest
 import digdaserver.domain.character.presentation.dto.res.CharacterQuizListResponse
@@ -31,6 +32,7 @@ class CharacterQuizServiceImpl(
     private val quizRepository: CharacterQuizRepository,
     private val attemptRepository: CharacterQuizAttemptRepository,
     private val groupCharacterRepository: GroupCharacterRepository,
+    private val groupCharacterEquippedRepository: GroupCharacterEquippedRepository,
     private val groupRoomRepository: GroupRoomRepository,
     private val membershipRepository: MembershipRepository,
     private val userRepository: UserRepository,
@@ -204,6 +206,7 @@ class CharacterQuizServiceImpl(
             )
         }
 
+        val equipped = groupCharacterEquippedRepository.findAllByGroupRoomId(quiz.groupRoom.id)
         return QuizAttemptResultResponse(
             quizId = quiz.id,
             correct = correct,
@@ -211,7 +214,7 @@ class CharacterQuizServiceImpl(
             selectedIndex = selectedIndex,
             earnedExp = earnedExp,
             earnedCoin = earnedCoin,
-            character = CharacterStateResponse.from(character),
+            character = CharacterStateResponse.from(character, equipped),
             levelGained = gain.levelGained,
             stageBefore = gain.stageBefore,
             stageAfter = gain.stageAfter,

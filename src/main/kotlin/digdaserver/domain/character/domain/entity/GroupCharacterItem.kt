@@ -3,8 +3,6 @@ package digdaserver.domain.character.domain.entity
 import digdaserver.domain.group_room.domain.entity.GroupRoom
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
@@ -16,33 +14,35 @@ import jakarta.persistence.UniqueConstraint
 import java.time.LocalDateTime
 
 /**
- * 그룹별 색상 보유. (group_room, color) 유니크. 같은 색을 중복 구매할 수 없다.
+ * 그룹별 보유 아이템.
  *
- * 기본 색상(CORAL) 은 명시적으로 row 를 만들지 않고, 보유 여부 판정 시 항상 true 로
- * 처리한다 ([CharacterColor.isDefault]). 이걸로 빈 신규 그룹에게도 row 0 으로 시작
- * 가능하게 함.
+ * (group_room, shop_item) 유니크 — 같은 아이템 중복 구매는 [ALREADY_OWNED_ITEM] 으로
+ * 거절된다. default 아이템은 그룹 첫 생성 시 자동 보유 처리.
  */
 @Entity
 @Table(
-    name = "group_character_color",
-    uniqueConstraints = [UniqueConstraint(columnNames = ["group_room_id", "color"])]
+    name = "group_character_item",
+    uniqueConstraints = [UniqueConstraint(
+        name = "uq_group_character_item",
+        columnNames = ["group_room_id", "shop_item_id"]
+    )]
 )
-class GroupCharacterColor(
+class GroupCharacterItem(
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "group_character_color_id")
+    @Column(name = "group_character_item_id")
     val id: Long = 0L,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_room_id", nullable = false)
     val groupRoom: GroupRoom,
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 32)
-    val color: CharacterColor,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shop_item_id", nullable = false)
+    val shopItem: ShopItem,
 
-    @Column(nullable = false)
+    @Column(name = "price_paid", nullable = false)
     val pricePaid: Int,
 
     @Column(name = "acquired_at", nullable = false)

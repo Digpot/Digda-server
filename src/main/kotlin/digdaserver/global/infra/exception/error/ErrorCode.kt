@@ -98,8 +98,11 @@ enum class ErrorCode(
     // ── Character ──
     CHARACTER_NOT_FOUND("CHARACTER_NOT_FOUND", "캐릭터 정보를 찾을 수 없습니다.", 404),
     INSUFFICIENT_COIN("INSUFFICIENT_COIN", "코인이 부족합니다.", 400),
-    ALREADY_OWNED_COLOR("ALREADY_OWNED_COLOR", "이미 보유한 색상입니다.", 409),
-    COLOR_NOT_OWNED("COLOR_NOT_OWNED", "보유하지 않은 색상은 적용할 수 없습니다.", 400),
+
+    // ── Character Shop (item-based) ──
+    SHOP_ITEM_NOT_FOUND("SHOP_ITEM_NOT_FOUND", "존재하지 않는 아이템입니다.", 404),
+    ALREADY_OWNED_ITEM("ALREADY_OWNED_ITEM", "이미 보유한 아이템입니다.", 409),
+    ITEM_NOT_OWNED("ITEM_NOT_OWNED", "보유하지 않은 아이템은 장착할 수 없습니다.", 400),
 
     // ── Character Quiz ──
     QUIZ_NOT_FOUND("QUIZ_NOT_FOUND", "존재하지 않는 퀴즈입니다.", 404),

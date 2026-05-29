@@ -24,6 +24,9 @@ import jakarta.persistence.UniqueConstraint
  * 직접 [level], [exp] 를 set 하지 말 것.
  *
  * 그룹원이 퀴즈를 풀어 얻은 EXP/코인은 모두 이 한 행에 누적된다.
+ *
+ * 외형(색·아이템)은 이 엔티티가 직접 갖지 않고 [GroupCharacterEquipped] 에서 카테고리
+ * 슬롯별로 관리한다 (스킨 1 + 모자/안경/머리핀/액세서리/잡화 각 1).
  */
 @Entity
 @Table(
@@ -44,10 +47,6 @@ class GroupCharacter(
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     var stage: CharacterStage = CharacterStage.EGG,
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 32)
-    var color: CharacterColor = CharacterColor.CORAL,
 
     @Column(nullable = false)
     var level: Int = 1,
@@ -97,10 +96,6 @@ class GroupCharacter(
         require(amount >= 0) { "coin spend must be non-negative" }
         require(coin >= amount) { "insufficient coin (have=$coin, need=$amount)" }
         coin -= amount
-    }
-
-    fun applyColor(next: CharacterColor) {
-        this.color = next
     }
 
     data class GainResult(

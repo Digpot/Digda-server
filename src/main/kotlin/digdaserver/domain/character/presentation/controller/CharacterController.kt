@@ -1,11 +1,8 @@
 package digdaserver.domain.character.presentation.controller
 
 import digdaserver.domain.character.application.service.CharacterService
-import digdaserver.domain.character.domain.entity.CharacterColor
 import digdaserver.domain.character.presentation.dto.req.AddExpRequest
-import digdaserver.domain.character.presentation.dto.req.ChangeColorRequest
 import digdaserver.domain.character.presentation.dto.res.AddExpResponse
-import digdaserver.domain.character.presentation.dto.res.CharacterColorShopResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStageTreeResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStateResponse
 import io.swagger.v3.oas.annotations.Operation
@@ -14,9 +11,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -84,63 +79,6 @@ class CharacterController(
         log.info("api=GET /character/stages, userId={}, groupRoomId={}", userId, groupRoomId)
         return ResponseEntity.ok(
             characterService.getStageTree(UUID.fromString(userId), groupRoomId)
-        )
-    }
-
-    @Operation(
-        summary = "색상 상점 조회",
-        description = "구매 가능 색상 + 그룹 보유/현재 여부 + 잔액 코인."
-    )
-    @GetMapping("/shop/colors")
-    fun getColorShop(
-        @AuthenticationPrincipal userId: String,
-        @RequestParam groupRoomId: Long
-    ): ResponseEntity<CharacterColorShopResponse> {
-        log.info("api=GET /character/shop/colors, userId={}, groupRoomId={}", userId, groupRoomId)
-        return ResponseEntity.ok(
-            characterService.getColorShop(UUID.fromString(userId), groupRoomId)
-        )
-    }
-
-    @Operation(
-        summary = "색상 구매",
-        description = "그룹 코인을 차감해 색상을 영구 해금합니다. 그룹원 누구나 호출 가능."
-    )
-    @PostMapping("/shop/colors/{color}/buy")
-    fun buyColor(
-        @AuthenticationPrincipal userId: String,
-        @RequestParam groupRoomId: Long,
-        @PathVariable color: CharacterColor
-    ): ResponseEntity<CharacterColorShopResponse> {
-        log.info(
-            "api=POST /character/shop/colors/{}/buy, userId={}, groupRoomId={}",
-            color,
-            userId,
-            groupRoomId
-        )
-        return ResponseEntity.ok(
-            characterService.buyColor(UUID.fromString(userId), groupRoomId, color)
-        )
-    }
-
-    @Operation(
-        summary = "색상 변경 적용",
-        description = "보유한 색으로 그룹 캐릭터 색을 변경합니다. 그룹원 누구나 호출 가능."
-    )
-    @PutMapping("/color")
-    fun applyColor(
-        @AuthenticationPrincipal userId: String,
-        @RequestParam groupRoomId: Long,
-        @RequestBody request: ChangeColorRequest
-    ): ResponseEntity<CharacterStateResponse> {
-        log.info(
-            "api=PUT /character/color, userId={}, groupRoomId={}, color={}",
-            userId,
-            groupRoomId,
-            request.color
-        )
-        return ResponseEntity.ok(
-            characterService.applyColor(UUID.fromString(userId), groupRoomId, request.color)
         )
     }
 }

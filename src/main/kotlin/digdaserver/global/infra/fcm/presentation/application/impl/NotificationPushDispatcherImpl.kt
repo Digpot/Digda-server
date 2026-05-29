@@ -66,6 +66,9 @@ class NotificationPushDispatcherImpl(
             NotificationType.MEMBER_REMOVED,
             NotificationType.OWNERSHIP_TRANSFERRED,
             NotificationType.GROUP_DELETE_SCHEDULED,
+            NotificationType.QUIZ_CREATED,
+            NotificationType.QUIZ_ANSWERED,
+            NotificationType.MOCHI_LEVELUP,
             NotificationType.ANNOUNCEMENT -> true
         }
     }

@@ -16,6 +16,9 @@ enum class NotificationType {
     MEMBER_REMOVED,
     OWNERSHIP_TRANSFERRED,
     GROUP_DELETE_SCHEDULED,
+    QUIZ_CREATED,
+    QUIZ_ANSWERED,
+    MOCHI_LEVELUP,
     ANNOUNCEMENT;
 
     @JsonValue

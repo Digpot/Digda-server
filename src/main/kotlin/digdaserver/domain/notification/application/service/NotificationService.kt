@@ -71,6 +71,27 @@ interface NotificationService {
 
     fun notifyMemberRemoved(groupRoomId: Long, actorUserId: UUID, removedUserId: UUID)
 
+    fun notifyQuizCreated(
+        groupRoomId: Long,
+        quizId: Long,
+        authorUserId: UUID,
+        question: String
+    )
+
+    fun notifyQuizAnsweredCorrectly(
+        groupRoomId: Long,
+        quizId: Long,
+        solverUserId: UUID
+    )
+
+    fun notifyMochiLevelUp(
+        groupRoomId: Long,
+        actorUserId: UUID,
+        newLevel: Int,
+        stageChanged: Boolean,
+        stageName: String
+    )
+
     fun sendAnnouncement(
         targetUserIds: List<UUID>?,
         title: String,

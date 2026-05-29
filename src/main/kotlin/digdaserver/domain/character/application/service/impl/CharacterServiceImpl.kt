@@ -15,9 +15,11 @@ import digdaserver.domain.character.presentation.dto.res.CharacterStageTreeRespo
 import digdaserver.domain.character.presentation.dto.res.CharacterStateResponse
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.membership.domain.repository.MembershipRepository
+import digdaserver.domain.notification.application.service.NotificationService
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
 import org.slf4j.LoggerFactory
+import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -28,7 +30,8 @@ class CharacterServiceImpl(
     private val groupCharacterRepository: GroupCharacterRepository,
     private val groupCharacterColorRepository: GroupCharacterColorRepository,
     private val groupRoomRepository: GroupRoomRepository,
-    private val membershipRepository: MembershipRepository
+    private val membershipRepository: MembershipRepository,
+    @Lazy private val notificationService: NotificationService
 ) : CharacterService {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -69,6 +72,24 @@ class CharacterServiceImpl(
             userId, groupRoomId, amount, coinDelta, source,
             character.level, character.stage, result.levelGained, result.stageChanged
         )
+
+        if (result.levelGained > 0 || result.stageChanged) {
+            try {
+                notificationService.notifyMochiLevelUp(
+                    groupRoomId = groupRoomId,
+                    actorUserId = userId,
+                    newLevel = character.level,
+                    stageChanged = result.stageChanged,
+                    stageName = result.stageAfter.displayName
+                )
+            } catch (e: Exception) {
+                log.warn(
+                    "action=character_gain_exp_notify_failed, groupRoomId={}, error={}",
+                    groupRoomId, e.message
+                )
+            }
+        }
+
         return AddExpResponse.from(character, result, coinDelta)
     }
 

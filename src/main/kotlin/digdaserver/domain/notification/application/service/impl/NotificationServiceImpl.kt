@@ -392,6 +392,84 @@ class NotificationServiceImpl(
     }
 
     @Transactional
+    override fun notifyQuizCreated(
+        groupRoomId: Long,
+        quizId: Long,
+        authorUserId: UUID,
+        question: String
+    ) {
+        val groupRoom = findGroupRoom(groupRoomId)
+        val author = findUser(authorUserId)
+        val recipients = memberRecipientsExcept(groupRoomId, authorUserId)
+        val shortQuestion = if (question.length > 30) question.take(30) + "…" else question
+
+        notify(
+            recipients,
+            NotificationPayload(
+                type = NotificationType.QUIZ_CREATED,
+                title = "새 퀴즈 등록",
+                message = "${author.name}님이 퀴즈를 등록했어요. \"$shortQuestion\"",
+                groupRoomId = groupRoomId,
+                groupRoomName = groupRoom.name,
+                relatedId = quizId,
+                relatedType = "QUIZ"
+            )
+        )
+    }
+
+    @Transactional
+    override fun notifyQuizAnsweredCorrectly(
+        groupRoomId: Long,
+        quizId: Long,
+        solverUserId: UUID
+    ) {
+        val groupRoom = findGroupRoom(groupRoomId)
+        val solver = findUser(solverUserId)
+        val recipients = memberRecipientsExcept(groupRoomId, solverUserId)
+
+        notify(
+            recipients,
+            NotificationPayload(
+                type = NotificationType.QUIZ_ANSWERED,
+                title = "퀴즈 정답!",
+                message = "${solver.name}님이 퀴즈를 맞혔어요! 모찌가 경험치를 얻었어요. 🎉",
+                groupRoomId = groupRoomId,
+                groupRoomName = groupRoom.name,
+                relatedId = quizId,
+                relatedType = "QUIZ"
+            )
+        )
+    }
+
+    @Transactional
+    override fun notifyMochiLevelUp(
+        groupRoomId: Long,
+        actorUserId: UUID,
+        newLevel: Int,
+        stageChanged: Boolean,
+        stageName: String
+    ) {
+        val groupRoom = findGroupRoom(groupRoomId)
+        val recipients = memberRecipientsExcept(groupRoomId, actorUserId)
+        val (title, message) = if (stageChanged) {
+            "모찌 진화! 🌟" to "모찌가 '$stageName' 단계로 진화했어요!"
+        } else {
+            "모찌 레벨업! 🎉" to "모찌가 Lv.$newLevel 로 레벨업했어요!"
+        }
+
+        notify(
+            recipients,
+            NotificationPayload(
+                type = NotificationType.MOCHI_LEVELUP,
+                title = title,
+                message = message,
+                groupRoomId = groupRoomId,
+                groupRoomName = groupRoom.name
+            )
+        )
+    }
+
+    @Transactional
     override fun sendAnnouncement(
         targetUserIds: List<UUID>?,
         title: String,

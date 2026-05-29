@@ -14,10 +14,12 @@ import digdaserver.domain.character.presentation.dto.res.CharacterStateResponse
 import digdaserver.domain.character.presentation.dto.res.QuizAttemptResultResponse
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.membership.domain.repository.MembershipRepository
+import digdaserver.domain.notification.application.service.NotificationService
 import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
 import org.slf4j.LoggerFactory
+import org.springframework.context.annotation.Lazy
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -31,7 +33,8 @@ class CharacterQuizServiceImpl(
     private val groupCharacterRepository: GroupCharacterRepository,
     private val groupRoomRepository: GroupRoomRepository,
     private val membershipRepository: MembershipRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    @Lazy private val notificationService: NotificationService
 ) : CharacterQuizService {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -82,6 +85,18 @@ class CharacterQuizServiceImpl(
             request.category,
             request.expMultiplier
         )
+
+        try {
+            notificationService.notifyQuizCreated(
+                groupRoomId = request.groupRoomId,
+                quizId = quiz.id,
+                authorUserId = userId,
+                question = quiz.question
+            )
+        } catch (e: Exception) {
+            log.warn("action=character_quiz_create_notify_failed, quizId={}, error={}", quiz.id, e.message)
+        }
+
         return CharacterQuizResponse.from(quiz)
     }
 
@@ -164,6 +179,30 @@ class CharacterQuizServiceImpl(
             userId, quiz.groupRoom.id, quizId, selectedIndex,
             correct, earnedExp, earnedCoin, gain.levelGained, gain.stageChanged
         )
+
+        try {
+            if (correct) {
+                notificationService.notifyQuizAnsweredCorrectly(
+                    groupRoomId = quiz.groupRoom.id,
+                    quizId = quizId,
+                    solverUserId = userId
+                )
+            }
+            if (gain.levelGained > 0 || gain.stageChanged) {
+                notificationService.notifyMochiLevelUp(
+                    groupRoomId = quiz.groupRoom.id,
+                    actorUserId = userId,
+                    newLevel = character.level,
+                    stageChanged = gain.stageChanged,
+                    stageName = gain.stageAfter.displayName
+                )
+            }
+        } catch (e: Exception) {
+            log.warn(
+                "action=character_quiz_attempt_notify_failed, quizId={}, error={}",
+                quizId, e.message
+            )
+        }
 
         return QuizAttemptResultResponse(
             quizId = quiz.id,

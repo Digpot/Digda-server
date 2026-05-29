@@ -104,6 +104,10 @@ enum class ErrorCode(
     ALREADY_OWNED_ITEM("ALREADY_OWNED_ITEM", "이미 보유한 아이템입니다.", 409),
     ITEM_NOT_OWNED("ITEM_NOT_OWNED", "보유하지 않은 아이템은 장착할 수 없습니다.", 400),
 
+    // ── Character Master Game ──
+    NOT_MASTER_CHARACTER("NOT_MASTER_CHARACTER", "마스터 단계 모찌만 보상을 받을 수 있어요.", 400),
+    INVALID_GAME_SCORE("INVALID_GAME_SCORE", "유효하지 않은 게임 점수입니다.", 400),
+
     // ── Character Quiz ──
     QUIZ_NOT_FOUND("QUIZ_NOT_FOUND", "존재하지 않는 퀴즈입니다.", 404),
     QUIZ_ALREADY_ATTEMPTED("QUIZ_ALREADY_ATTEMPTED", "이미 응시한 퀴즈입니다.", 409),

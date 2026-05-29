@@ -3,6 +3,7 @@ package digdaserver.domain.character.application.service
 import digdaserver.domain.character.presentation.dto.res.AddExpResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStageTreeResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStateResponse
+import digdaserver.domain.character.presentation.dto.res.MasterGameRewardResponse
 import java.util.UUID
 
 /**
@@ -30,4 +31,16 @@ interface CharacterService {
 
     /** 진화 트리 + 그룹 캐릭터 도달 현황. */
     fun getStageTree(userId: UUID, groupRoomId: Long): CharacterStageTreeResponse
+
+    /**
+     * 마스터 모찌 미니게임(챔피언 챌린지) 보상.
+     *
+     * 마스터 단계가 아닌 그룹에서 호출 시 [digdaserver.global.infra.exception.error.ErrorCode.NOT_MASTER_CHARACTER].
+     * 점수→코인 매핑은 서버에서 결정 (클라 조작 방지).
+     */
+    fun claimMasterGameReward(
+        userId: UUID,
+        groupRoomId: Long,
+        score: Int
+    ): MasterGameRewardResponse
 }

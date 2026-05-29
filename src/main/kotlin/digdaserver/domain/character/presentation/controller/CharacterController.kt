@@ -2,9 +2,11 @@ package digdaserver.domain.character.presentation.controller
 
 import digdaserver.domain.character.application.service.CharacterService
 import digdaserver.domain.character.presentation.dto.req.AddExpRequest
+import digdaserver.domain.character.presentation.dto.req.MasterGameRewardRequest
 import digdaserver.domain.character.presentation.dto.res.AddExpResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStageTreeResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStateResponse
+import digdaserver.domain.character.presentation.dto.res.MasterGameRewardResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.slf4j.LoggerFactory
@@ -79,6 +81,27 @@ class CharacterController(
         log.info("api=GET /character/stages, userId={}, groupRoomId={}", userId, groupRoomId)
         return ResponseEntity.ok(
             characterService.getStageTree(UUID.fromString(userId), groupRoomId)
+        )
+    }
+
+    @Operation(
+        summary = "마스터 게임 보상",
+        description = "마스터 단계 모찌의 챔피언 챌린지 점수를 제출하고 코인 보상을 받습니다."
+    )
+    @PostMapping("/master-game-reward")
+    fun claimMasterGameReward(
+        @AuthenticationPrincipal userId: String,
+        @RequestParam groupRoomId: Long,
+        @RequestBody request: MasterGameRewardRequest
+    ): ResponseEntity<MasterGameRewardResponse> {
+        log.info(
+            "api=POST /character/master-game-reward, userId={}, groupRoomId={}, score={}",
+            userId, groupRoomId, request.score
+        )
+        return ResponseEntity.ok(
+            characterService.claimMasterGameReward(
+                UUID.fromString(userId), groupRoomId, request.score
+            )
         )
     }
 }

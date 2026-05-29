@@ -9,6 +9,7 @@ import digdaserver.domain.character.presentation.dto.res.AddExpResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStageInfo
 import digdaserver.domain.character.presentation.dto.res.CharacterStageTreeResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStateResponse
+import digdaserver.domain.character.presentation.dto.res.MasterGameRewardResponse
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.domain.notification.application.service.NotificationService
@@ -90,6 +91,57 @@ class CharacterServiceImpl(
     }
 
     @Transactional
+    override fun claimMasterGameReward(
+        userId: UUID,
+        groupRoomId: Long,
+        score: Int
+    ): MasterGameRewardResponse {
+        if (score < 0 || score > MASTER_GAME_MAX_SCORE) {
+            throw DigdaException(ErrorCode.INVALID_GAME_SCORE)
+        }
+        validateGroupMember(groupRoomId, userId)
+        val character = loadOrCreate(groupRoomId)
+
+        if (character.stage != CharacterStage.MASTER) {
+            throw DigdaException(ErrorCode.NOT_MASTER_CHARACTER)
+        }
+
+        val coinReward = rewardForScore(score)
+        val tier = tierForScore(score)
+        if (coinReward > 0) character.addCoin(coinReward)
+
+        log.info(
+            "action=character_master_game_reward, userId={}, groupRoomId={}, score={}, " +
+                "tier={}, coinReward={}, balanceAfter={}",
+            userId, groupRoomId, score, tier, coinReward, character.coin
+        )
+
+        val equipped = groupCharacterEquippedRepository.findAllByGroupRoomId(groupRoomId)
+        return MasterGameRewardResponse(
+            score = score,
+            coinReward = coinReward,
+            tier = tier,
+            character = CharacterStateResponse.from(character, equipped)
+        )
+    }
+
+    private fun rewardForScore(score: Int): Int = when {
+        score >= 16 -> 200
+        score >= 11 -> 100
+        score >= 6 -> 50
+        score >= 1 -> 20
+        else -> 0
+    }
+
+    private fun tierForScore(score: Int): String = when {
+        score >= 16 -> "전설"
+        score >= 11 -> "훌륭"
+        score >= 6 -> "우수"
+        score >= 1 -> "도전"
+        else -> "참여"
+    }
+
+    @Transactional
     override fun getStageTree(userId: UUID, groupRoomId: Long): CharacterStageTreeResponse {
         validateGroupMember(groupRoomId, userId)
         val character = loadOrCreate(groupRoomId)
@@ -114,6 +166,11 @@ class CharacterServiceImpl(
         if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
         membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
             .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
+    }
+
+    companion object {
+        /** 30 초 × 약 0.8 s 등장 주기 + 추가 마진 — 비현실적 점수 차단. */
+        private const val MASTER_GAME_MAX_SCORE = 60
     }
 
     private fun loadOrCreate(groupRoomId: Long): GroupCharacter {

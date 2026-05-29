@@ -85,6 +85,24 @@ class CharacterController(
     }
 
     @Operation(
+        summary = "마스터 게임 시작",
+        description = "입장료 코인을 차감하고 게임 시작 가능 여부를 확정합니다. 잔액 부족 시 400."
+    )
+    @PostMapping("/master-game-start")
+    fun startMasterGame(
+        @AuthenticationPrincipal userId: String,
+        @RequestParam groupRoomId: Long
+    ): ResponseEntity<CharacterStateResponse> {
+        log.info(
+            "api=POST /character/master-game-start, userId={}, groupRoomId={}",
+            userId, groupRoomId
+        )
+        return ResponseEntity.ok(
+            characterService.startMasterGame(UUID.fromString(userId), groupRoomId)
+        )
+    }
+
+    @Operation(
         summary = "마스터 게임 보상",
         description = "마스터 단계 모찌의 챔피언 챌린지 점수를 제출하고 코인 보상을 받습니다."
     )

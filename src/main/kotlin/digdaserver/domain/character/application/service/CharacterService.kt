@@ -33,6 +33,15 @@ interface CharacterService {
     fun getStageTree(userId: UUID, groupRoomId: Long): CharacterStageTreeResponse
 
     /**
+     * 마스터 모찌 미니게임 시작 — 입장료(100 코인) 차감.
+     *
+     * 마스터 단계가 아닐 경우 [digdaserver.global.infra.exception.error.ErrorCode.NOT_MASTER_CHARACTER].
+     * 잔액 부족 시 [digdaserver.global.infra.exception.error.ErrorCode.INSUFFICIENT_COIN].
+     * 차감된 잔액이 반영된 캐릭터 상태를 반환한다.
+     */
+    fun startMasterGame(userId: UUID, groupRoomId: Long): CharacterStateResponse
+
+    /**
      * 마스터 모찌 미니게임(챔피언 챌린지) 보상.
      *
      * 마스터 단계가 아닌 그룹에서 호출 시 [digdaserver.global.infra.exception.error.ErrorCode.NOT_MASTER_CHARACTER].

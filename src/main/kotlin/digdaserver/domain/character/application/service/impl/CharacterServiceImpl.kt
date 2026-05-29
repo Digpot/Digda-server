@@ -91,6 +91,28 @@ class CharacterServiceImpl(
     }
 
     @Transactional
+    override fun startMasterGame(userId: UUID, groupRoomId: Long): CharacterStateResponse {
+        validateGroupMember(groupRoomId, userId)
+        val character = loadOrCreate(groupRoomId)
+
+        if (character.stage != CharacterStage.MASTER) {
+            throw DigdaException(ErrorCode.NOT_MASTER_CHARACTER)
+        }
+        if (character.coin < MASTER_GAME_ENTRY_FEE) {
+            throw DigdaException(ErrorCode.INSUFFICIENT_COIN)
+        }
+        character.deductCoin(MASTER_GAME_ENTRY_FEE)
+
+        log.info(
+            "action=character_master_game_start, userId={}, groupRoomId={}, fee={}, balanceAfter={}",
+            userId, groupRoomId, MASTER_GAME_ENTRY_FEE, character.coin
+        )
+
+        val equipped = groupCharacterEquippedRepository.findAllByGroupRoomId(groupRoomId)
+        return CharacterStateResponse.from(character, equipped)
+    }
+
+    @Transactional
     override fun claimMasterGameReward(
         userId: UUID,
         groupRoomId: Long,
@@ -171,6 +193,9 @@ class CharacterServiceImpl(
     companion object {
         /** 30 초 × 약 0.8 s 등장 주기 + 추가 마진 — 비현실적 점수 차단. */
         private const val MASTER_GAME_MAX_SCORE = 60
+
+        /** 마스터 게임 입장료 (코인). */
+        private const val MASTER_GAME_ENTRY_FEE = 20
     }
 
     private fun loadOrCreate(groupRoomId: Long): GroupCharacter {

@@ -95,7 +95,8 @@ class CharacterController(
     ): ResponseEntity<CharacterStateResponse> {
         log.info(
             "api=POST /character/master-game-start, userId={}, groupRoomId={}",
-            userId, groupRoomId
+            userId,
+            groupRoomId
         )
         return ResponseEntity.ok(
             characterService.startMasterGame(UUID.fromString(userId), groupRoomId)
@@ -114,11 +115,15 @@ class CharacterController(
     ): ResponseEntity<MasterGameRewardResponse> {
         log.info(
             "api=POST /character/master-game-reward, userId={}, groupRoomId={}, score={}",
-            userId, groupRoomId, request.score
+            userId,
+            groupRoomId,
+            request.score
         )
         return ResponseEntity.ok(
             characterService.claimMasterGameReward(
-                UUID.fromString(userId), groupRoomId, request.score
+                UUID.fromString(userId),
+                groupRoomId,
+                request.score
             )
         )
     }

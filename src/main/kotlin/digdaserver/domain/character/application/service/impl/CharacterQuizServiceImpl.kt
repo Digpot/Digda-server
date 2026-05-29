@@ -66,6 +66,7 @@ class CharacterQuizServiceImpl(
         val author = userRepository.findById(userId)
             .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
 
+        val normalizedImageUrl = request.imageUrl?.trim()?.ifEmpty { null }
         val quiz = quizRepository.save(
             CharacterQuiz(
                 groupRoom = groupRoom,
@@ -77,7 +78,8 @@ class CharacterQuizServiceImpl(
                 option3 = request.options[2],
                 option4 = request.options[3],
                 correctIndex = request.correctIndex,
-                expMultiplier = request.expMultiplier
+                expMultiplier = request.expMultiplier,
+                imageUrl = normalizedImageUrl
             )
         )
         log.info(
@@ -200,10 +202,17 @@ class CharacterQuizServiceImpl(
                     stageName = gain.stageAfter.displayName
                 )
             }
+            if (gain.dikoJustUnlocked) {
+                notificationService.notifyDikoUnlocked(
+                    groupRoomId = quiz.groupRoom.id,
+                    actorUserId = userId
+                )
+            }
         } catch (e: Exception) {
             log.warn(
                 "action=character_quiz_attempt_notify_failed, quizId={}, error={}",
-                quizId, e.message
+                quizId,
+                e.message
             )
         }
 
@@ -219,7 +228,8 @@ class CharacterQuizServiceImpl(
             levelGained = gain.levelGained,
             stageBefore = gain.stageBefore,
             stageAfter = gain.stageAfter,
-            stageChanged = gain.stageChanged
+            stageChanged = gain.stageChanged,
+            dikoJustUnlocked = gain.dikoJustUnlocked
         )
     }
 

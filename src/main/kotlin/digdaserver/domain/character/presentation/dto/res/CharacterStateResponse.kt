@@ -20,6 +20,7 @@ data class CharacterStateResponse(
     val expForNextLevel: Int,
     val coin: Int,
     val maxLevelReached: Boolean,
+    val dikoUnlocked: Boolean,
     val equippedItems: List<EquippedItemResponse>
 ) {
     companion object {
@@ -37,6 +38,7 @@ data class CharacterStateResponse(
                 expForNextLevel = if (atMax) 0 else nextThreshold,
                 coin = character.coin,
                 maxLevelReached = atMax,
+                dikoUnlocked = character.dikoUnlocked,
                 equippedItems = equipped
                     .sortedBy { it.shopItem.layerOrder }
                     .map(EquippedItemResponse::from)

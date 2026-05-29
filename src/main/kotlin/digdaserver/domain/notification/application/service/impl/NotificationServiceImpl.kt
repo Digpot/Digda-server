@@ -470,6 +470,24 @@ class NotificationServiceImpl(
     }
 
     @Transactional
+    override fun notifyDikoUnlocked(groupRoomId: Long, actorUserId: UUID) {
+        val groupRoom = findGroupRoom(groupRoomId)
+        // 디코 등장은 그룹 멤버 전원이 보도록 actor 도 포함.
+        val recipients = membershipRepository.findAllByGroupRoomId(groupRoomId).map { it.user }
+
+        notify(
+            recipients,
+            NotificationPayload(
+                type = NotificationType.DIKO_UNLOCKED,
+                title = "디코 등장! ✨",
+                message = "모찌의 새로운 친구 디코가 등장했어요!",
+                groupRoomId = groupRoomId,
+                groupRoomName = groupRoom.name
+            )
+        )
+    }
+
+    @Transactional
     override fun sendAnnouncement(
         targetUserIds: List<UUID>?,
         title: String,

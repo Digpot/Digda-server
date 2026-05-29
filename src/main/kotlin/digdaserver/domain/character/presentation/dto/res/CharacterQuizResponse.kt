@@ -15,7 +15,8 @@ data class CharacterQuizResponse(
     val question: String,
     val options: List<String>,
     val expMultiplier: Int,
-    val authorName: String
+    val authorName: String,
+    val imageUrl: String?
 ) {
     companion object {
         fun from(quiz: CharacterQuiz): CharacterQuizResponse {
@@ -27,7 +28,8 @@ data class CharacterQuizResponse(
                 question = quiz.question,
                 options = quiz.options(),
                 expMultiplier = quiz.expMultiplier,
-                authorName = quiz.author.name
+                authorName = quiz.author.name,
+                imageUrl = quiz.imageUrl
             )
         }
     }

@@ -106,7 +106,11 @@ class CharacterShopServiceImpl(
 
         log.info(
             "action=character_shop_buy_item, userId={}, groupRoomId={}, itemKey={}, cost={}, balanceAfter={}",
-            userId, groupRoomId, itemKey, item.cost, character.coin
+            userId,
+            groupRoomId,
+            itemKey,
+            item.cost,
+            character.coin
         )
 
         return getShop(userId, groupRoomId)
@@ -132,7 +136,10 @@ class CharacterShopServiceImpl(
 
         log.info(
             "action=character_shop_equip, userId={}, groupRoomId={}, itemKey={}, itemType={}",
-            userId, groupRoomId, itemKey, item.itemType
+            userId,
+            groupRoomId,
+            itemKey,
+            item.itemType
         )
 
         val equipped = groupCharacterEquippedRepository.findAllByGroupRoomId(groupRoomId)
@@ -162,7 +169,9 @@ class CharacterShopServiceImpl(
 
         log.info(
             "action=character_shop_unequip, userId={}, groupRoomId={}, itemType={}",
-            userId, groupRoomId, itemType
+            userId,
+            groupRoomId,
+            itemType
         )
 
         val equipped = groupCharacterEquippedRepository.findAllByGroupRoomId(groupRoomId)

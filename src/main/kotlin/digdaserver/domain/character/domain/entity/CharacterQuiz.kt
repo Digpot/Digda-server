@@ -68,6 +68,13 @@ class CharacterQuiz(
     @Column(name = "exp_multiplier", nullable = false)
     val expMultiplier: Int,
 
+    /**
+     * 이미지 퀴즈일 때만 채워지는 S3 URL. NULL 이면 텍스트 전용 퀴즈 (기존 호환).
+     * 길이는 다른 도메인의 image URL 컬럼(2048) 과 맞춤.
+     */
+    @Column(name = "image_url", nullable = true, length = 2048)
+    val imageUrl: String? = null,
+
     @Column(name = "created_at", nullable = false)
     val createdAt: LocalDateTime = LocalDateTime.now()
 ) {

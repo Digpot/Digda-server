@@ -41,7 +41,10 @@ class CharacterServiceImpl(
         val equipped = groupCharacterEquippedRepository.findAllByGroupRoomId(groupRoomId)
         log.info(
             "action=character_get, userId={}, groupRoomId={}, stage={}, level={}",
-            userId, groupRoomId, character.stage, character.level
+            userId,
+            groupRoomId,
+            character.stage,
+            character.level
         )
         return CharacterStateResponse.from(character, equipped)
     }
@@ -81,7 +84,23 @@ class CharacterServiceImpl(
             } catch (e: Exception) {
                 log.warn(
                     "action=character_gain_exp_notify_failed, groupRoomId={}, error={}",
-                    groupRoomId, e.message
+                    groupRoomId,
+                    e.message
+                )
+            }
+        }
+
+        if (result.dikoJustUnlocked) {
+            try {
+                notificationService.notifyDikoUnlocked(
+                    groupRoomId = groupRoomId,
+                    actorUserId = userId
+                )
+            } catch (e: Exception) {
+                log.warn(
+                    "action=character_gain_exp_diko_notify_failed, groupRoomId={}, error={}",
+                    groupRoomId,
+                    e.message
                 )
             }
         }
@@ -105,7 +124,10 @@ class CharacterServiceImpl(
 
         log.info(
             "action=character_master_game_start, userId={}, groupRoomId={}, fee={}, balanceAfter={}",
-            userId, groupRoomId, MASTER_GAME_ENTRY_FEE, character.coin
+            userId,
+            groupRoomId,
+            MASTER_GAME_ENTRY_FEE,
+            character.coin
         )
 
         val equipped = groupCharacterEquippedRepository.findAllByGroupRoomId(groupRoomId)
@@ -135,7 +157,12 @@ class CharacterServiceImpl(
         log.info(
             "action=character_master_game_reward, userId={}, groupRoomId={}, score={}, " +
                 "tier={}, coinReward={}, balanceAfter={}",
-            userId, groupRoomId, score, tier, coinReward, character.coin
+            userId,
+            groupRoomId,
+            score,
+            tier,
+            coinReward,
+            character.coin
         )
 
         val equipped = groupCharacterEquippedRepository.findAllByGroupRoomId(groupRoomId)

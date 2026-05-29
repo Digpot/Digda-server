@@ -56,7 +56,9 @@ class CharacterShopController(
     ): ResponseEntity<CharacterShopResponse> {
         log.info(
             "api=POST /character/shop/items/{}/buy, userId={}, groupRoomId={}",
-            itemKey, userId, groupRoomId
+            itemKey,
+            userId,
+            groupRoomId
         )
         return ResponseEntity.ok(
             shopService.buyItem(UUID.fromString(userId), groupRoomId, itemKey)
@@ -75,7 +77,9 @@ class CharacterShopController(
     ): ResponseEntity<CharacterStateResponse> {
         log.info(
             "api=PUT /character/shop/equip, userId={}, groupRoomId={}, itemKey={}",
-            userId, groupRoomId, request.itemKey
+            userId,
+            groupRoomId,
+            request.itemKey
         )
         return ResponseEntity.ok(
             shopService.equipItem(UUID.fromString(userId), groupRoomId, request.itemKey)
@@ -94,7 +98,9 @@ class CharacterShopController(
     ): ResponseEntity<CharacterStateResponse> {
         log.info(
             "api=DELETE /character/shop/equip/{}, userId={}, groupRoomId={}",
-            itemType, userId, groupRoomId
+            itemType,
+            userId,
+            groupRoomId
         )
         val type = ShopItemType.safeValueOf(itemType.uppercase())
             ?: throw DigdaException(ErrorCode.INVALID_PARAMETER)

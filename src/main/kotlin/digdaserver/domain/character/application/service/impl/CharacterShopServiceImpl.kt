@@ -59,7 +59,7 @@ class CharacterShopServiceImpl(
 
         val sections = allItems
             .groupBy { it.itemType }
-            .toSortedMap(compareBy { it.slotOrder })
+            .toSortedMap(compareBy<ShopItemType> { it.slotOrder })
             .map { (type, items) ->
                 ShopSection(
                     itemType = type,
@@ -214,7 +214,7 @@ class CharacterShopServiceImpl(
                 )
             )
         } else {
-            existing.apply(item)
+            existing.replaceWith(item)
         }
     }
 }

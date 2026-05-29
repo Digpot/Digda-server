@@ -54,7 +54,7 @@ class GroupCharacterEquipped(
     @Column(name = "updated_at", nullable = false)
     var updatedAt: LocalDateTime = LocalDateTime.now()
 ) {
-    fun apply(item: ShopItem) {
+    fun replaceWith(item: ShopItem) {
         require(item.itemType == this.itemType) {
             "item type mismatch: slot=${this.itemType}, item=${item.itemType}"
         }

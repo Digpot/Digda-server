@@ -118,6 +118,7 @@ enum class ErrorCode(
     QUIZ_QUESTION_INVALID("QUIZ_QUESTION_INVALID", "문제는 1자 이상 200자 이하여야 합니다.", 400),
     QUIZ_INVALID_CORRECT_INDEX("QUIZ_INVALID_CORRECT_INDEX", "정답 번호는 1-4 사이여야 합니다.", 400),
     QUIZ_INVALID_MULTIPLIER("QUIZ_INVALID_MULTIPLIER", "EXP 배수는 1-3 사이여야 합니다.", 400),
+    QUIZ_IMAGE_REQUIRES_DIKO("QUIZ_IMAGE_REQUIRES_DIKO", "사진 퀴즈는 디코가 등장한 그룹에서만 사용할 수 있어요.", 400),
 
     // ── Rate Limit ──
     RATE_LIMIT_EXCEEDED("RATE_LIMIT_EXCEEDED", "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.", 429),

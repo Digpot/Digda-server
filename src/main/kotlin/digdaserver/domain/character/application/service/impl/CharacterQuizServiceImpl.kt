@@ -67,6 +67,14 @@ class CharacterQuizServiceImpl(
             .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
 
         val normalizedImageUrl = request.imageUrl?.trim()?.ifEmpty { null }
+        // 사진 퀴즈는 디코가 등장한 그룹에서만 등록할 수 있다. 디코는 모찌의 사진 퀴즈
+        // 메이트 컨셉이라, 디코 없는 그룹은 텍스트 퀴즈만 운영하도록 게이트.
+        if (normalizedImageUrl != null) {
+            val character = groupCharacterRepository.findByGroupRoomId(request.groupRoomId)
+            if (character == null || !character.dikoUnlocked) {
+                throw DigdaException(ErrorCode.QUIZ_IMAGE_REQUIRES_DIKO)
+            }
+        }
         val quiz = quizRepository.save(
             CharacterQuiz(
                 groupRoom = groupRoom,
@@ -128,12 +136,25 @@ class CharacterQuizServiceImpl(
     @Transactional
     override fun pickRandom(userId: UUID, groupRoomId: Long): CharacterQuizResponse {
         validateGroupMember(groupRoomId, userId)
-        val candidates = quizRepository.findAvailableForUser(groupRoomId, userId)
+        // 디코가 없는 그룹은 사진 퀴즈를 후보에서 제외 — 사용자에게 풀 수 없는 문제를
+        // 띄우면 안 되므로 repository 레벨에서 차단.
+        val excludeImage = !isDikoUnlocked(groupRoomId)
+        val candidates = quizRepository.findAvailableForUser(groupRoomId, userId, excludeImage)
         if (candidates.isEmpty()) throw DigdaException(ErrorCode.QUIZ_NO_AVAILABLE)
         // DB 종속 RAND() 회피 — JPQL 로 후보 가져온 뒤 Kotlin random.
         val picked = candidates.random()
-        log.info("action=character_quiz_pick, userId={}, quizId={}, groupRoomId={}", userId, picked.id, groupRoomId)
+        log.info(
+            "action=character_quiz_pick, userId={}, quizId={}, groupRoomId={}, excludeImage={}",
+            userId,
+            picked.id,
+            groupRoomId,
+            excludeImage
+        )
         return CharacterQuizResponse.from(picked)
+    }
+
+    private fun isDikoUnlocked(groupRoomId: Long): Boolean {
+        return groupCharacterRepository.findByGroupRoomId(groupRoomId)?.dikoUnlocked == true
     }
 
     @Transactional
@@ -151,6 +172,11 @@ class CharacterQuizServiceImpl(
 
         if (quiz.author.id == userId) throw DigdaException(ErrorCode.QUIZ_CANNOT_ATTEMPT_OWN)
         validateGroupMember(quiz.groupRoom.id, userId)
+
+        // 사진 퀴즈는 디코가 풀린 그룹에서만 응시 가능. URL 우회 방어용.
+        if (quiz.imageUrl != null && !isDikoUnlocked(quiz.groupRoom.id)) {
+            throw DigdaException(ErrorCode.QUIZ_IMAGE_REQUIRES_DIKO)
+        }
 
         if (attemptRepository.existsByQuizIdAndUserId(quizId, userId)) {
             throw DigdaException(ErrorCode.QUIZ_ALREADY_ATTEMPTED)

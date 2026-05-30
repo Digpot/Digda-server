@@ -19,6 +19,8 @@ interface UserRepository : JpaRepository<User, UUID> {
 
     fun countByRole(role: Role): Long
 
+    fun findAllByRole(role: Role): List<User>
+
     @Query("SELECT u.id FROM User u")
     fun findAllIds(): List<UUID>
 

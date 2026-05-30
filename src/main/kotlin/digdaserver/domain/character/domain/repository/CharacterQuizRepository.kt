@@ -36,7 +36,7 @@ interface CharacterQuizRepository : JpaRepository<CharacterQuiz, Long> {
         """
         SELECT q FROM CharacterQuiz q
         WHERE q.groupRoom.id = :groupRoomId
-          AND q.author.id <> :userId
+          AND (q.author IS NULL OR q.author.id <> :userId)
           AND (:excludeImageQuiz = false OR q.imageUrl IS NULL)
           AND NOT EXISTS (
             SELECT 1 FROM CharacterQuizAttempt a

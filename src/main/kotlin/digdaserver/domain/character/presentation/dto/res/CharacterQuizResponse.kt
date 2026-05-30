@@ -36,7 +36,7 @@ data class CharacterQuizResponse(
                 question = quiz.question,
                 options = quiz.options(),
                 expMultiplier = quiz.expMultiplier,
-                authorName = quiz.author.name,
+                authorName = quiz.author?.name ?: "탈퇴자",
                 imageUrl = quiz.imageUrl,
                 createdAt = quiz.createdAt,
                 remainingCount = remainingCount

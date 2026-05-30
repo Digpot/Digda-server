@@ -9,6 +9,8 @@ import jakarta.validation.constraints.Min
  *
  * - [level]: 1..MAX(20). 변경 시 서버가 stage·exp 를 자동으로 정합 상태로 맞춘다
  *   (stage=CharacterStage.forLevel, exp 는 새 임계치 미만이면 그대로 두고 초과면 0).
+ * - [exp]: 0.. 현재 레벨 내 경험치(포인트) 절대값. [level] 과 함께 보내면 level 적용 후
+ *   해당 레벨 구간 안으로 clamp 된다. 자동 레벨업은 일으키지 않음.
  * - [coin]: 0.. 절대값. (delta 가 아닌 절대값 set 으로 단순화 — 어드민 수동 보정 용도.)
  * - [dikoUnlocked]: 디코 해금 강제 토글. null 이면 변경 없음. 단, level>=10 이면 항상
  *   자동으로 true 가 유지되므로, false 로 내려도 다음 레벨업 시 자동 복구.
@@ -20,6 +22,10 @@ data class AdminUpdateCharacterRequest(
     @field:Max(20)
     @Schema(description = "변경할 레벨(1-20). 미전송 시 변경 없음.", example = "10")
     val level: Int? = null,
+
+    @field:Min(0)
+    @Schema(description = "변경할 EXP(포인트, 현재 레벨 내 절대값). 미전송 시 변경 없음.", example = "50")
+    val exp: Int? = null,
 
     @field:Min(0)
     @Schema(description = "변경할 코인 잔액 (절대값). 미전송 시 변경 없음.", example = "100")

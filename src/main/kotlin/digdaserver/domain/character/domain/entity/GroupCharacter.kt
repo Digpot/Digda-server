@@ -61,9 +61,47 @@ class GroupCharacter(
     var coin: Int = 0,
 
     @Column(name = "diko_unlocked", nullable = false)
-    var dikoUnlocked: Boolean = false
+    var dikoUnlocked: Boolean = false,
+
+    /**
+     * 마스터 진화 시험(챔피언 챌린지) 통과 여부.
+     *
+     * 레벨 20(MAX) 에 도달해도 이 플래그가 false 면 단계는 [CharacterStage.GLOW] 에 머문다.
+     * 챔피언 챌린지에서 "훌륭" 이상 등급을 받았을 때만 [evolveToMaster] 로 true 가 되고
+     * 그 시점에 비로소 [CharacterStage.MASTER] 로 진화한다.
+     */
+    @Column(name = "master_unlocked", nullable = false)
+    var masterUnlocked: Boolean = false
 
 ) : BaseTimeEntity() {
+
+    /**
+     * 현재 레벨/마스터해금 상태에서 도달 가능한 단계.
+     * 레벨상 MASTER 이지만 아직 진화 시험을 통과하지 않았으면 GLOW 로 묶어둔다.
+     */
+    private fun resolveStage(): CharacterStage {
+        val natural = CharacterStage.forLevel(level)
+        return if (natural == CharacterStage.MASTER && !masterUnlocked) {
+            CharacterStage.GLOW
+        } else {
+            natural
+        }
+    }
+
+    /** 레벨상 최고 단계(20)에 도달했는지 — 챔피언 챌린지(진화 시험) 응시 가능 여부. */
+    fun isMaxLevel(): Boolean = level >= CharacterLevelTable.MAX_LEVEL
+
+    /**
+     * 챔피언 챌린지 "훌륭" 이상 통과 시 호출 — 마스터로 진화시킨다.
+     * 레벨 20 미만이거나 이미 마스터면 아무 일도 하지 않고 false 를 반환한다.
+     */
+    fun evolveToMaster(): Boolean {
+        if (level < CharacterLevelTable.MAX_LEVEL) return false
+        if (masterUnlocked) return false
+        masterUnlocked = true
+        stage = CharacterStage.MASTER
+        return true
+    }
 
     /**
      * 경험치 가산 후 레벨/스테이지를 갱신. 한 번의 호출로 여러 레벨 점프가 가능하다
@@ -99,7 +137,9 @@ class GroupCharacter(
             }
         }
         exp = remaining
-        stage = CharacterStage.forLevel(level)
+        // 레벨 20 도달만으로는 MASTER 로 진화하지 않는다 — 진화 시험(evolveToMaster) 전까지
+        // GLOW 에 머문다.
+        stage = resolveStage()
 
         val dikoJustUnlocked = if (!dikoWasUnlocked && level >= DIKO_UNLOCK_LEVEL) {
             dikoUnlocked = true
@@ -144,7 +184,9 @@ class GroupCharacter(
             "level out of range: $newLevel"
         }
         level = newLevel
-        stage = CharacterStage.forLevel(level)
+        // 어드민이 MAX 로 올리는 것은 진화 시험 통과로 간주해 마스터까지 풀어준다(운영 보정 편의).
+        if (level >= CharacterLevelTable.MAX_LEVEL) masterUnlocked = true
+        stage = resolveStage()
         if (level >= CharacterLevelTable.MAX_LEVEL) {
             exp = 0
         } else {

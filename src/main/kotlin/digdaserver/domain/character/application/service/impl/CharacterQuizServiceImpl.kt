@@ -144,13 +144,15 @@ class CharacterQuizServiceImpl(
         // DB 종속 RAND() 회피 — JPQL 로 후보 가져온 뒤 Kotlin random.
         val picked = candidates.random()
         log.info(
-            "action=character_quiz_pick, userId={}, quizId={}, groupRoomId={}, excludeImage={}",
+            "action=character_quiz_pick, userId={}, quizId={}, groupRoomId={}, excludeImage={}, remaining={}",
             userId,
             picked.id,
             groupRoomId,
-            excludeImage
+            excludeImage,
+            candidates.size
         )
-        return CharacterQuizResponse.from(picked)
+        // 현재 문제를 포함해 지금 풀 수 있는 남은 퀴즈 수.
+        return CharacterQuizResponse.from(picked, remainingCount = candidates.size)
     }
 
     private fun isDikoUnlocked(groupRoomId: Long): Boolean {

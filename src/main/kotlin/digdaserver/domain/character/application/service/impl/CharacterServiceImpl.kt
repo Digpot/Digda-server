@@ -114,7 +114,9 @@ class CharacterServiceImpl(
         validateGroupMember(groupRoomId, userId)
         val character = loadOrCreate(groupRoomId)
 
-        if (character.stage != CharacterStage.MASTER) {
+        // 레벨 20(MAX) 부터 챔피언 챌린지를 응시할 수 있다. 마스터 진화 전(GLOW)에는
+        // 이 게임이 "진화 시험" 으로, 진화 후(MASTER)에는 코인 파밍 콘텐츠로 동작한다.
+        if (!character.isMaxLevel()) {
             throw DigdaException(ErrorCode.NOT_MASTER_CHARACTER)
         }
         if (character.coin < MASTER_GAME_ENTRY_FEE) {
@@ -146,7 +148,7 @@ class CharacterServiceImpl(
         validateGroupMember(groupRoomId, userId)
         val character = loadOrCreate(groupRoomId)
 
-        if (character.stage != CharacterStage.MASTER) {
+        if (!character.isMaxLevel()) {
             throw DigdaException(ErrorCode.NOT_MASTER_CHARACTER)
         }
 
@@ -154,22 +156,51 @@ class CharacterServiceImpl(
         val tier = tierForScore(score)
         if (coinReward > 0) character.addCoin(coinReward)
 
+        // 진화 시험: 아직 마스터가 아니고 "훌륭" 이상(score>=MASTER_EVOLVE_MIN_SCORE) 이면
+        // 이번 도전으로 마스터 진화. 이미 마스터면 코인만 적립.
+        val evolvedToMaster =
+            if (!character.masterUnlocked && score >= MASTER_EVOLVE_MIN_SCORE) {
+                character.evolveToMaster()
+            } else {
+                false
+            }
+
         log.info(
             "action=character_master_game_reward, userId={}, groupRoomId={}, score={}, " +
-                "tier={}, coinReward={}, balanceAfter={}",
+                "tier={}, coinReward={}, evolvedToMaster={}, balanceAfter={}",
             userId,
             groupRoomId,
             score,
             tier,
             coinReward,
+            evolvedToMaster,
             character.coin
         )
+
+        if (evolvedToMaster) {
+            try {
+                notificationService.notifyMochiLevelUp(
+                    groupRoomId = groupRoomId,
+                    actorUserId = userId,
+                    newLevel = character.level,
+                    stageChanged = true,
+                    stageName = CharacterStage.MASTER.displayName
+                )
+            } catch (e: Exception) {
+                log.warn(
+                    "action=character_master_evolve_notify_failed, groupRoomId={}, error={}",
+                    groupRoomId,
+                    e.message
+                )
+            }
+        }
 
         val equipped = groupCharacterEquippedRepository.findAllByGroupRoomId(groupRoomId)
         return MasterGameRewardResponse(
             score = score,
             coinReward = coinReward,
             tier = tier,
+            evolvedToMaster = evolvedToMaster,
             character = CharacterStateResponse.from(character, equipped)
         )
     }
@@ -223,6 +254,9 @@ class CharacterServiceImpl(
 
         /** 마스터 게임 입장료 (코인). */
         private const val MASTER_GAME_ENTRY_FEE = 20
+
+        /** 마스터 진화 시험 통과 최소 점수 — "훌륭"(11점) 이상. */
+        private const val MASTER_EVOLVE_MIN_SCORE = 11
     }
 
     private fun loadOrCreate(groupRoomId: Long): GroupCharacter {

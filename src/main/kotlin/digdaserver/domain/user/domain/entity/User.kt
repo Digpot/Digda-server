@@ -105,4 +105,9 @@ class User(
     fun initPrivacySetting(setting: UserPrivacySetting) {
         this.privacySetting = setting
     }
+
+    /** 자격증명 없는 유령 ADMIN 정리용 — 역할만 USER 로 강등(데이터 삭제 아님). */
+    fun demoteToUser() {
+        this.role = Role.USER
+    }
 }

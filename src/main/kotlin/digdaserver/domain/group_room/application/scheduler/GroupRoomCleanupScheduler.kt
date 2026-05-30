@@ -65,7 +65,7 @@ class GroupRoomCleanupScheduler(
 @Component
 class GroupRoomPurgeExecutor(
     private val groupRoomRepository: GroupRoomRepository,
-    private val em: EntityManager
+    private val childPurger: GroupRoomChildPurger
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -88,21 +88,32 @@ class GroupRoomPurgeExecutor(
             room.deleteScheduledAt
         )
         // GroupRoom cascade(ALL) 가 덮지 못하는 그룹 범위 자식부터 명시 삭제한 뒤 본체 삭제.
-        purgeGroupScopedChildren(groupRoomId)
+        childPurger.purgeChildren(groupRoomId)
         groupRoomRepository.delete(room)
     }
+}
 
-    /**
-     * GroupRoom 의 cascade(membership·invite·schedule→participant·diary→image·todo) 가
-     * 닿지 못하는 그룹 범위 자식 데이터를 FK 의존 순서로 직접 제거한다.
-     *
-     * - 캐릭터(모찌) 데이터는 **그룹별 소유물**이라 함께 삭제. 단 전역 마스터인
-     *   `shop_item` 카탈로그는 절대 건드리지 않는다.
-     * - diary_like/diary_reaction/comment 는 Diary 가 cascade 하지 않으므로, diary 가
-     *   cascade 로 지워지기 전에 먼저 제거해야 FK 위반(=purge 실패)을 막는다.
-     * - comment 는 polymorphic(target_type+target_id) 이라 FK 가 없어 직접 정리해야 한다.
-     */
-    private fun purgeGroupScopedChildren(groupRoomId: Long) {
+/**
+ * 그룹 범위 자식 데이터 정리 — 그룹 영구삭제(스케줄러)와 회원탈퇴 시 빈 그룹 삭제에서 공용.
+ *
+ * GroupRoom 의 cascade(membership·invite·schedule→participant·diary→image·todo) 가
+ * 닿지 못하는 그룹 범위 자식 데이터를 FK 의존 순서로 직접 제거한다.
+ *
+ * - 캐릭터(모찌) 데이터는 **그룹별 소유물**이라 함께 삭제. 단 전역 마스터인
+ *   `shop_item` 카탈로그는 절대 건드리지 않는다.
+ * - diary_like/diary_reaction/comment 는 Diary 가 cascade 하지 않으므로, diary 가
+ *   cascade 로 지워지기 전에 먼저 제거해야 FK 위반(=삭제 실패)을 막는다.
+ * - comment 는 polymorphic(target_type+target_id) 이라 FK 가 없어 직접 정리해야 한다.
+ *
+ * 자체 @Transactional 을 두지 않고 호출자의 트랜잭션에 합류한다.
+ */
+@Component
+class GroupRoomChildPurger(
+    private val em: EntityManager
+) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
+    fun purgeChildren(groupRoomId: Long) {
         fun run(jpql: String, vararg params: Pair<String, Any>): Int {
             val q = em.createQuery(jpql)
             params.forEach { (k, v) -> q.setParameter(k, v) }

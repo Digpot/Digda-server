@@ -1,10 +1,12 @@
 package digdaserver.domain.oauth2.application.service.impl.auth
 
+import digdaserver.domain.comment.domain.entity.CommentTargetType
 import digdaserver.domain.comment.domain.repository.CommentRepository
 import digdaserver.domain.device.domain.repository.DeviceRepository
 import digdaserver.domain.diary.domain.repository.DiaryLikeRepository
 import digdaserver.domain.diary.domain.repository.DiaryReactionRepository
 import digdaserver.domain.diary.domain.repository.DiaryRepository
+import digdaserver.domain.group_room.application.scheduler.GroupRoomChildPurger
 import digdaserver.domain.group_room.domain.entity.GroupRoomRole
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.membership.domain.repository.MembershipRepository
@@ -19,6 +21,7 @@ import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
 import digdaserver.global.jwt.domain.repository.JsonWebTokenRepository
 import digdaserver.global.jwt.domain.repository.SocialTokenRepository
+import jakarta.persistence.EntityManager
 import jakarta.transaction.Transactional
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -41,7 +44,9 @@ class AccountServiceImpl(
     private val todoRepository: TodoRepository,
     private val notificationRepository: NotificationRepository,
     private val deviceRepository: DeviceRepository,
-    private val uploadedImageRepository: UploadedImageRepository
+    private val uploadedImageRepository: UploadedImageRepository,
+    private val childPurger: GroupRoomChildPurger,
+    private val em: EntityManager
 ) : AccountService {
 
     private val log = LoggerFactory.getLogger(AccountServiceImpl::class.java)
@@ -70,6 +75,50 @@ class AccountServiceImpl(
         scheduleParticipantRepository.deleteAllByUserId(userId)
         scheduleParticipantRepository.deleteAllByScheduleCreatedById(userId)
 
+        // bulk JPQL delete 는 JPA cascade/orphanRemoval 을 타지 않으므로, 부모(일기·일정·유저)를
+        // 지우기 전에 FK 자식부터 직접 제거한다. (기존 삭제는 그대로 두고 자식 정리만 보강)
+        fun run(jpql: String, vararg params: Pair<String, Any>): Int {
+            val q = em.createQuery(jpql)
+            params.forEach { (k, v) -> q.setParameter(k, v) }
+            return q.executeUpdate()
+        }
+
+        // 캐릭터 퀴즈/응시 — character_quiz.author_id, character_quiz_attempt.user_id 가 유저 FK
+        // 라 정리하지 않으면 유저 행 삭제가 FK 위반으로 실패(=탈퇴 안 됨)한다.
+        run("DELETE FROM CharacterQuizAttempt a WHERE a.user.id = :uid", "uid" to userId)
+        run("DELETE FROM CharacterQuizAttempt a WHERE a.quiz.author.id = :uid", "uid" to userId)
+        run("DELETE FROM CharacterQuiz q WHERE q.author.id = :uid", "uid" to userId)
+
+        // 내가 쓴 일기에 달린 이미지/좋아요/리액션/댓글 — 일기 bulk 삭제 전에 먼저 (FK)
+        run(
+            "DELETE FROM DiaryImage di " +
+                "WHERE di.diary.id IN (SELECT d.id FROM Diary d WHERE d.createdBy.id = :uid)",
+            "uid" to userId
+        )
+        run(
+            "DELETE FROM DiaryLike dl " +
+                "WHERE dl.diary.id IN (SELECT d.id FROM Diary d WHERE d.createdBy.id = :uid)",
+            "uid" to userId
+        )
+        run(
+            "DELETE FROM DiaryReaction dr " +
+                "WHERE dr.diary.id IN (SELECT d.id FROM Diary d WHERE d.createdBy.id = :uid)",
+            "uid" to userId
+        )
+        run(
+            "DELETE FROM Comment c WHERE c.targetType = :t " +
+                "AND c.targetId IN (SELECT d.id FROM Diary d WHERE d.createdBy.id = :uid)",
+            "t" to CommentTargetType.DIARY,
+            "uid" to userId
+        )
+        // 내가 만든 일정에 달린 댓글 (참여자는 위에서 이미 정리됨)
+        run(
+            "DELETE FROM Comment c WHERE c.targetType = :t " +
+                "AND c.targetId IN (SELECT s.id FROM Schedule s WHERE s.createdBy.id = :uid)",
+            "t" to CommentTargetType.SCHEDULE,
+            "uid" to userId
+        )
+
         // 내가 만든 컨텐츠 삭제 (다른 사람 일기에 단 좋아요·리액션은 cascade 가 아닌 직접 정리)
         diaryLikeRepository.deleteAllByUserId(userId)
         diaryReactionRepository.deleteAllByUserId(userId)
@@ -83,6 +132,8 @@ class AccountServiceImpl(
         deviceRepository.deleteAllByUserId(userId)
         uploadedImageRepository.deleteAllByUserId(userId)
 
+        em.flush()
+
         // 멤버십 삭제 및 빈 그룹 정리
         val groupRoomIds = memberships.map { it.groupRoom.id!! }
         memberships.forEach { membership ->
@@ -90,9 +141,11 @@ class AccountServiceImpl(
         }
         membershipRepository.flush()
 
-        // 남은 멤버가 0명인 그룹 삭제 (cascade로 일기, 일정, 할일 등 모두 삭제)
+        // 남은 멤버가 0명인 그룹은 영구 삭제. cascade 가 닿지 못하는 자식(캐릭터·좋아요·리액션·
+        // 댓글·알림)까지 GroupRoomChildPurger 로 정리한 뒤 본체 삭제(나머지는 cascade).
         groupRoomIds.forEach { groupRoomId ->
             if (membershipRepository.countByGroupRoomId(groupRoomId) == 0) {
+                childPurger.purgeChildren(groupRoomId)
                 groupRoomRepository.deleteById(groupRoomId)
                 log.info("빈 그룹방 삭제: groupRoomId={}", groupRoomId)
             }

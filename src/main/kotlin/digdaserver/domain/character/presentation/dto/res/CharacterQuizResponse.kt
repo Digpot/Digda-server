@@ -9,6 +9,9 @@ import java.time.LocalDateTime
  * 정답 확인은 응시 결과 응답([QuizAttemptResultResponse]) 에서만 노출.
  *
  * [createdAt] 은 클라이언트가 퀴즈 목록을 날짜별로 그룹화할 수 있도록 함께 내려준다.
+ *
+ * [remainingCount] 는 퀴즈 풀기 화면(pickRandom) 에서만 채워지는 "지금 풀 수 있는 남은
+ * 퀴즈 수"(현재 문제 포함). 목록/생성 응답에서는 null.
  */
 data class CharacterQuizResponse(
     val id: Long,
@@ -20,10 +23,11 @@ data class CharacterQuizResponse(
     val expMultiplier: Int,
     val authorName: String,
     val imageUrl: String?,
-    val createdAt: LocalDateTime
+    val createdAt: LocalDateTime,
+    val remainingCount: Int? = null
 ) {
     companion object {
-        fun from(quiz: CharacterQuiz): CharacterQuizResponse {
+        fun from(quiz: CharacterQuiz, remainingCount: Int? = null): CharacterQuizResponse {
             return CharacterQuizResponse(
                 id = quiz.id,
                 groupRoomId = quiz.groupRoom.id,
@@ -34,7 +38,8 @@ data class CharacterQuizResponse(
                 expMultiplier = quiz.expMultiplier,
                 authorName = quiz.author.name,
                 imageUrl = quiz.imageUrl,
-                createdAt = quiz.createdAt
+                createdAt = quiz.createdAt,
+                remainingCount = remainingCount
             )
         }
     }

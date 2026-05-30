@@ -68,6 +68,17 @@ class SchemaAutoMigration(
             table = "character_quiz",
             column = "image_url",
             addSql = "ALTER TABLE character_quiz ADD COLUMN image_url VARCHAR(2048) NULL"
+        ),
+        // 마스터 진화 시험 통과 여부. 기존에 이미 레벨 20 에 도달해 MASTER 로 보이던 그룹은
+        // 컬럼 추가 시 false 로 들어가 GLOW 로 후퇴하는 회귀가 생기므로, level>=20 인 행은
+        // 곧바로 true 로 backfill 해 마스터 상태를 보존한다.
+        MissingColumn(
+            table = "group_character",
+            column = "master_unlocked",
+            addSql = "ALTER TABLE group_character ADD COLUMN master_unlocked BIT(1) NOT NULL DEFAULT b'0'",
+            postSql = listOf(
+                "UPDATE group_character SET master_unlocked = b'1' WHERE level >= 20"
+            )
         )
     )
 

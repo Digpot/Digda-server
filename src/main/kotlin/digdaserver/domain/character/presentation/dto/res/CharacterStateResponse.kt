@@ -21,6 +21,10 @@ data class CharacterStateResponse(
     val coin: Int,
     val maxLevelReached: Boolean,
     val dikoUnlocked: Boolean,
+    /** 마스터 진화 시험(챔피언 챌린지) 통과 여부. true 면 stage 가 MASTER. */
+    val masterUnlocked: Boolean,
+    /** 레벨 20 도달 — 챔피언 챌린지(진화 시험/코인 파밍) 응시 가능 여부. */
+    val canChallengeMaster: Boolean,
     val equippedItems: List<EquippedItemResponse>
 ) {
     companion object {
@@ -39,6 +43,8 @@ data class CharacterStateResponse(
                 coin = character.coin,
                 maxLevelReached = atMax,
                 dikoUnlocked = character.dikoUnlocked,
+                masterUnlocked = character.masterUnlocked,
+                canChallengeMaster = atMax,
                 equippedItems = equipped
                     .sortedBy { it.shopItem.layerOrder }
                     .map(EquippedItemResponse::from)

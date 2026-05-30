@@ -1,5 +1,6 @@
 package digdaserver.domain.diary.application.service.impl
 
+import digdaserver.domain.character.application.service.CharacterService
 import digdaserver.domain.comment.domain.entity.CommentTargetType
 import digdaserver.domain.comment.domain.repository.CommentRepository
 import digdaserver.domain.diary.application.service.DiaryService
@@ -32,12 +33,14 @@ import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
 import org.slf4j.LoggerFactory
+import org.springframework.context.annotation.Lazy
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.ZoneId
 import java.util.UUID
 
 @Service
@@ -52,14 +55,27 @@ class DiaryServiceImpl(
     private val userActionLogService: UserActionLogService,
     private val uploadedImageRepository: UploadedImageRepository,
     private val diaryLikeRepository: DiaryLikeRepository,
-    private val diaryReactionRepository: DiaryReactionRepository
+    private val diaryReactionRepository: DiaryReactionRepository,
+    @Lazy private val characterService: CharacterService
 ) : DiaryService {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
     companion object {
         private const val MAX_IMAGES_PER_DIARY = 10
+
+        /**
+         * 날짜 판정 기준 타임존. 서버 기본 TZ 가 UTC 이면 KST 00~09 시 사이에 한국 사용자의
+         * "오늘" 이 서버의 UTC "오늘" 보다 하루 앞서 미래로 오판될 수 있어, 한국 기준으로 고정한다.
+         */
+        private val KST: ZoneId = ZoneId.of("Asia/Seoul")
+
+        /** 일기 1건 작성 시 모찌에게 지급하는 경험치. */
+        private const val DIARY_WRITE_EXP = 20
     }
+
+    /** 날짜 미래 여부 판정에 쓰는 "오늘"(한국 기준). */
+    private fun todayKst(): LocalDate = LocalDate.now(KST)
 
     override fun getDiaries(
         userId: UUID,
@@ -153,7 +169,7 @@ class DiaryServiceImpl(
         membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
             .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
 
-        if (request.date.isAfter(LocalDate.now())) throw DigdaException(ErrorCode.FUTURE_DATE_NOT_ALLOWED)
+        if (request.date.isAfter(todayKst())) throw DigdaException(ErrorCode.FUTURE_DATE_NOT_ALLOWED)
         validateWeather(request.weather)
         validateMood(request.mood)
         validateImageCount(request.imageIds.size)
@@ -188,6 +204,16 @@ class DiaryServiceImpl(
             detail = "groupRoomId=$groupRoomId, title=${saved.title}, images=${resolvedUrls.size}"
         )
 
+        // 일기 작성 보상 — 모찌 경험치 지급. 그룹 공용 캐릭터에 누적되며, 같은 트랜잭션으로
+        // 원자 처리한다(레벨업/진화 알림은 gainExp 내부에서 best-effort 로 처리됨).
+        characterService.gainExp(
+            userId = userId,
+            groupRoomId = groupRoomId,
+            amount = DIARY_WRITE_EXP,
+            coinDelta = 0,
+            source = "diary_write"
+        )
+
         return DiaryResponse.from(saved, likeCount = 0L, likedByMe = false, reactions = emptyList())
     }
 
@@ -214,7 +240,7 @@ class DiaryServiceImpl(
         }
 
         request.date?.let {
-            if (it.isAfter(LocalDate.now())) throw DigdaException(ErrorCode.FUTURE_DATE_NOT_ALLOWED)
+            if (it.isAfter(todayKst())) throw DigdaException(ErrorCode.FUTURE_DATE_NOT_ALLOWED)
         }
         request.weather?.let { validateWeather(it) }
         request.mood?.let { validateMood(it) }

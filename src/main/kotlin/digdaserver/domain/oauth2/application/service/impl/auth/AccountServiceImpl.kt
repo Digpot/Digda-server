@@ -83,11 +83,12 @@ class AccountServiceImpl(
             return q.executeUpdate()
         }
 
-        // 캐릭터 퀴즈/응시 — character_quiz.author_id, character_quiz_attempt.user_id 가 유저 FK
-        // 라 정리하지 않으면 유저 행 삭제가 FK 위반으로 실패(=탈퇴 안 됨)한다.
+        // 캐릭터 퀴즈/응시 정리.
+        // - 내가 출제한 퀴즈는 삭제하지 않고 author 만 NULL 로 비워 보존 → 표시는 "탈퇴자".
+        //   (그룹원들이 계속 풀 수 있게. character_quiz.author_id 는 nullable 로 변경됨)
+        // - 내 응시기록(character_quiz_attempt.user_id 가 유저 FK)은 본인 기록이라 삭제.
+        run("UPDATE CharacterQuiz q SET q.author = null WHERE q.author.id = :uid", "uid" to userId)
         run("DELETE FROM CharacterQuizAttempt a WHERE a.user.id = :uid", "uid" to userId)
-        run("DELETE FROM CharacterQuizAttempt a WHERE a.quiz.author.id = :uid", "uid" to userId)
-        run("DELETE FROM CharacterQuiz q WHERE q.author.id = :uid", "uid" to userId)
 
         // 내가 쓴 일기에 달린 이미지/좋아요/리액션/댓글 — 일기 bulk 삭제 전에 먼저 (FK)
         run(

@@ -39,9 +39,10 @@ class CharacterQuiz(
     @JoinColumn(name = "group_room_id", nullable = false)
     val groupRoom: GroupRoom,
 
+    // 작성자. 작성자가 회원탈퇴하면 NULL 로 비워 퀴즈는 보존하고 표시만 "탈퇴자"로 한다.
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "author_id", nullable = false)
-    val author: User,
+    @JoinColumn(name = "author_id", nullable = true)
+    val author: User?,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)

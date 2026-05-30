@@ -44,6 +44,16 @@ class SchemaAutoMigration(
             expectedMaxLength = 64,
             nullable = false,
             alterSql = "ALTER TABLE notification MODIFY COLUMN type VARCHAR(64) NOT NULL"
+        ),
+        // 작성자 회원탈퇴 시 퀴즈를 보존(author=NULL)하려면 author_id 가 NULL 허용이어야 한다.
+        // 기존 prod 컬럼은 BINARY(16) NOT NULL 이라 nullable 로 완화. FK 제약은 그대로 유지된다.
+        RequiredColumn(
+            table = "character_quiz",
+            column = "author_id",
+            expectedDataType = "binary",
+            expectedMaxLength = 16,
+            nullable = true,
+            alterSql = "ALTER TABLE character_quiz MODIFY COLUMN author_id BINARY(16) NULL"
         )
     )
 

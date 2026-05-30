@@ -71,7 +71,7 @@ class DiaryServiceImpl(
         private val KST: ZoneId = ZoneId.of("Asia/Seoul")
 
         /** 일기 1건 작성 시 모찌에게 지급하는 경험치. */
-        private const val DIARY_WRITE_EXP = 20
+        private const val DIARY_WRITE_EXP = 10
     }
 
     /** 날짜 미래 여부 판정에 쓰는 "오늘"(한국 기준). */

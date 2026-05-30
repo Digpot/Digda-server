@@ -202,6 +202,20 @@ class GroupCharacter(
         coin = newCoin
     }
 
+    /**
+     * 어드민 보정 — 현재 레벨 내 EXP(포인트) 절대값 set. 자동 레벨업은 일으키지 않고
+     * 현재 레벨 구간 [0, nextThreshold) 안으로 clamp 한다. MAX 레벨이면 항상 0.
+     * 레벨과 함께 보정할 때는 호출자가 [adminSetLevel] 을 먼저 적용한 뒤 호출해야 한다.
+     */
+    fun adminSetExp(newExp: Int) {
+        require(newExp >= 0) { "exp must be non-negative" }
+        exp = if (level >= CharacterLevelTable.MAX_LEVEL) {
+            0
+        } else {
+            newExp.coerceIn(0, CharacterLevelTable.expForNextLevel(level) - 1)
+        }
+    }
+
     /** 어드민 보정 — 디코 해금 플래그 강제 set. level<10 인 상태로 true 만들 수도 있음 (테스트용). */
     fun adminSetDikoUnlocked(unlocked: Boolean) {
         dikoUnlocked = unlocked

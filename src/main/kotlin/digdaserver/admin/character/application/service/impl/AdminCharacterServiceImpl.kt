@@ -62,6 +62,10 @@ class AdminCharacterServiceImpl(
             val clamped = newLevel.coerceIn(1, CharacterLevelTable.MAX_LEVEL)
             character.adminSetLevel(clamped)
         }
+        // EXP 는 레벨 적용 이후에 덮어쓴다 (adminSetLevel 이 exp 를 정합시키므로 순서 중요).
+        request.exp?.let { newExp ->
+            character.adminSetExp(newExp.coerceAtLeast(0))
+        }
         request.coin?.let { newCoin ->
             val safe = newCoin.coerceAtLeast(0)
             character.adminSetCoin(safe)
@@ -71,10 +75,11 @@ class AdminCharacterServiceImpl(
         }
 
         log.info(
-            "action=admin_character_update, groupRoomId={}, level={}, coin={}, " +
+            "action=admin_character_update, groupRoomId={}, level={}, exp={}, coin={}, " +
                 "stage={}, dikoUnlocked={}",
             groupRoomId,
             character.level,
+            character.exp,
             character.coin,
             character.stage,
             character.dikoUnlocked

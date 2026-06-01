@@ -22,6 +22,21 @@ interface DiaryRepository : JpaRepository<Diary, Long> {
     @Query("SELECT DISTINCT d.date FROM Diary d WHERE d.groupRoom.id = :groupRoomId AND d.date BETWEEN :startDate AND :endDate")
     fun findDistinctDatesByGroupRoomIdAndMonth(groupRoomId: Long, startDate: LocalDate, endDate: LocalDate): List<LocalDate>
 
+    /**
+     * 기간 내 모든 일기를 이미지까지 fetch join 으로 한 번에 로드한다.
+     * 캘린더 그리드(날짜별 썸네일/기분)와 통계 계산용. 날짜 오름차순, 같은 날은 최신 작성 우선.
+     */
+    @Query(
+        "SELECT DISTINCT d FROM Diary d LEFT JOIN FETCH d.images " +
+            "WHERE d.groupRoom.id = :groupRoomId AND d.date BETWEEN :startDate AND :endDate " +
+            "ORDER BY d.date ASC, d.createdAt DESC"
+    )
+    fun findAllWithImagesByGroupRoomIdAndDateBetween(
+        groupRoomId: Long,
+        startDate: LocalDate,
+        endDate: LocalDate
+    ): List<Diary>
+
     @Query(
         """
         SELECT d FROM Diary d

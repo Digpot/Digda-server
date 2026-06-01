@@ -2,6 +2,36 @@ package digdaserver.domain.diary.presentation.dto.res
 
 import java.time.LocalDate
 
+/**
+ * 일기 캘린더 응답.
+ *
+ * - [dates] : 일기가 존재하는 날짜 목록(하위호환 — 기존 dot marker 용).
+ * - [entries] : 날짜별 대표 일기 요약(사진 그리드용 썸네일/기분/편수).
+ * - [stats] : 이번 달 통계 스트립(편수·연속 기록·최다 기분).
+ */
 data class DiaryCalendarResponse(
-    val dates: List<LocalDate>
+    val dates: List<LocalDate>,
+    val entries: List<DiaryCalendarEntry> = emptyList(),
+    val stats: DiaryCalendarStats = DiaryCalendarStats()
+)
+
+/** 캘린더 한 칸(날짜)에 대응하는 대표 일기. 하루 여러 편이면 [count] 로 표시하고 대표 1건을 노출. */
+data class DiaryCalendarEntry(
+    val date: LocalDate,
+    val diaryId: Long,
+    val thumbnailUrl: String?,
+    val mood: Int,
+    val count: Int
+)
+
+/**
+ * 통계 스트립 값.
+ * - [count] : 해당 월 작성된 일기 편수.
+ * - [streak] : 오늘(KST) 기준 연속으로 일기를 쓴 일수. 오늘 미작성이면 어제까지의 연속 일수.
+ * - [topMood] : 해당 월 가장 많이 기록된 기분(0~4). 일기가 없으면 null.
+ */
+data class DiaryCalendarStats(
+    val count: Int = 0,
+    val streak: Int = 0,
+    val topMood: Int? = null
 )

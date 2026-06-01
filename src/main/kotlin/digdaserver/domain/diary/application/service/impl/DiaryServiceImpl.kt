@@ -14,7 +14,9 @@ import digdaserver.domain.diary.domain.repository.DiaryRepository
 import digdaserver.domain.diary.presentation.dto.req.CreateDiaryRequest
 import digdaserver.domain.diary.presentation.dto.req.ToggleDiaryReactionRequest
 import digdaserver.domain.diary.presentation.dto.req.UpdateDiaryRequest
+import digdaserver.domain.diary.presentation.dto.res.DiaryCalendarEntry
 import digdaserver.domain.diary.presentation.dto.res.DiaryCalendarResponse
+import digdaserver.domain.diary.presentation.dto.res.DiaryCalendarStats
 import digdaserver.domain.diary.presentation.dto.res.DiaryCommentResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryDetailResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryLikeResponse
@@ -72,6 +74,9 @@ class DiaryServiceImpl(
 
         /** 일기 1건 작성 시 모찌에게 지급하는 경험치. */
         private const val DIARY_WRITE_EXP = 10
+
+        /** 연속 기록(streak) 계산 시 거슬러 올라가 조회할 최근 일 수. */
+        private const val STREAK_WINDOW_DAYS = 400L
     }
 
     /** 날짜 미래 여부 판정에 쓰는 "오늘"(한국 기준). */
@@ -136,8 +141,63 @@ class DiaryServiceImpl(
         ensureMember(userId, groupRoomId)
         val startDate = month.atDay(1)
         val endDate = month.atEndOfMonth()
-        val dates = diaryRepository.findDistinctDatesByGroupRoomIdAndMonth(groupRoomId, startDate, endDate)
-        return DiaryCalendarResponse(dates = dates)
+
+        // 사진 그리드용: 해당 월의 모든 일기를 이미지까지 한 번에 로드.
+        val monthDiaries = diaryRepository.findAllWithImagesByGroupRoomIdAndDateBetween(groupRoomId, startDate, endDate)
+
+        // 날짜별 그룹핑. 같은 날 여러 편이면 최신(createdAt DESC, 쿼리에서 이미 정렬)을 대표로 사용.
+        val byDate = monthDiaries.groupBy { it.date }
+        val entries = byDate.entries
+            .sortedBy { it.key }
+            .map { (date, diaries) ->
+                val representative = diaries.first()
+                DiaryCalendarEntry(
+                    date = date,
+                    diaryId = representative.id,
+                    thumbnailUrl = representative.images.minByOrNull { it.sortOrder }?.url,
+                    mood = representative.mood,
+                    count = diaries.size
+                )
+            }
+        val dates = entries.map { it.date }
+
+        // 통계: 편수 / 최다 기분 / 연속 기록.
+        val count = monthDiaries.size
+        val topMood = monthDiaries
+            .groupingBy { it.mood }
+            .eachCount()
+            .maxWithOrNull(compareBy({ it.value }, { -it.key }))
+            ?.key
+        val streak = computeStreak(groupRoomId)
+
+        return DiaryCalendarResponse(
+            dates = dates,
+            entries = entries,
+            stats = DiaryCalendarStats(count = count, streak = streak, topMood = topMood)
+        )
+    }
+
+    /**
+     * 오늘(KST) 기준 연속으로 일기를 쓴 일수를 계산한다.
+     * 오늘 작성했으면 오늘부터, 아니면 어제부터 거슬러 올라가며 빈 날을 만나면 중단.
+     * 월 경계를 넘을 수 있어 최근 [STREAK_WINDOW_DAYS] 일 범위의 작성 날짜 집합으로 판정한다.
+     */
+    private fun computeStreak(groupRoomId: Long): Int {
+        val today = todayKst()
+        val windowStart = today.minusDays(STREAK_WINDOW_DAYS)
+        val writtenDays = diaryRepository
+            .findDistinctDatesByGroupRoomIdAndMonth(groupRoomId, windowStart, today)
+            .toHashSet()
+        if (writtenDays.isEmpty()) return 0
+
+        // 오늘 미작성이면 어제부터 시작(오늘은 아직 쓸 수 있으므로 streak 을 깨지 않음).
+        var cursor = if (writtenDays.contains(today)) today else today.minusDays(1)
+        var streak = 0
+        while (writtenDays.contains(cursor)) {
+            streak++
+            cursor = cursor.minusDays(1)
+        }
+        return streak
     }
 
     override fun getDiaryDetail(userId: UUID, groupRoomId: Long, diaryId: Long): DiaryDetailResponse {

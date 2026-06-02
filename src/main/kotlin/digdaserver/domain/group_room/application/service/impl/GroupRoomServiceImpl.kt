@@ -1,18 +1,23 @@
 package digdaserver.domain.group_room.application.service.impl
 
+import digdaserver.domain.diary.domain.repository.DiaryRepository
 import digdaserver.domain.group_room.application.service.GroupRoomService
 import digdaserver.domain.group_room.domain.entity.GroupRoom
 import digdaserver.domain.group_room.domain.entity.GroupRoomRole
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.group_room.presentation.dto.req.CreateGroupRoomRequest
 import digdaserver.domain.group_room.presentation.dto.req.UpdateGroupRoomRequest
+import digdaserver.domain.group_room.presentation.dto.res.ActiveGroupResponse
 import digdaserver.domain.group_room.presentation.dto.res.CreateGroupRoomResponse
+import digdaserver.domain.group_room.presentation.dto.res.GroupHomeResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDeleteResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDetailResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomListItem
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomListResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomResponse
 import digdaserver.domain.group_room.presentation.dto.res.MembershipSummary
+import digdaserver.domain.group_room.presentation.dto.res.NextEventResponse
+import digdaserver.domain.group_room.presentation.dto.res.TodaySummaryResponse
 import digdaserver.domain.invite.domain.entity.InviteCode
 import digdaserver.domain.invite.domain.repository.InviteCodeRepository
 import digdaserver.domain.log.application.service.UserActionLogService
@@ -20,14 +25,19 @@ import digdaserver.domain.log.domain.entity.UserAction
 import digdaserver.domain.membership.domain.entity.Membership
 import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.domain.notification.application.service.NotificationService
+import digdaserver.domain.schedule.domain.repository.ScheduleRepository
 import digdaserver.domain.upload.domain.repository.UploadedImageRepository
 import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
 import java.util.UUID
 
 @Service
@@ -39,7 +49,9 @@ class GroupRoomServiceImpl(
     private val inviteCodeRepository: InviteCodeRepository,
     private val notificationService: NotificationService,
     private val userActionLogService: UserActionLogService,
-    private val uploadedImageRepository: UploadedImageRepository
+    private val uploadedImageRepository: UploadedImageRepository,
+    private val scheduleRepository: ScheduleRepository,
+    private val diaryRepository: DiaryRepository
 ) : GroupRoomService {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -157,6 +169,57 @@ class GroupRoomServiceImpl(
             groupRoom = GroupRoomResponse.from(groupRoom, memberCount),
             memberships = memberships.map { MembershipSummary.from(it) },
             myRole = membership.role.name.lowercase()
+        )
+    }
+
+    override fun getGroupHome(userId: UUID, groupRoomId: Long): GroupHomeResponse {
+        log.info("userId={}, action=그룹 홈 조회, groupRoomId={}", userId, groupRoomId)
+
+        val groupRoom = groupRoomRepository.findById(groupRoomId)
+            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
+
+        if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
+
+        // 구성원만 접근 가능 (상세 조회와 동일 정책).
+        val membership = membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+            .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
+
+        val user = userRepository.findById(userId)
+            .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
+
+        val memberships = membershipRepository.findAllByGroupRoomId(groupRoomId)
+        val today = LocalDate.now(KST)
+
+        // 오늘 요약: 오늘에 걸치는 일정 수 / 오늘 작성된 일기 수 / 안읽음 알림 수(집계값).
+        val scheduleCount =
+            scheduleRepository.findAllByGroupRoomIdAndDateRange(groupRoomId, today, today).size
+        val newDiaryCount = diaryRepository
+            .findAllByGroupRoomIdAndDateBetween(groupRoomId, today, today, PageRequest.of(0, 1))
+            .totalElements.toInt()
+        val unreadCount = notificationService.getNotifications(userId, 1, 0).unreadCount
+
+        // 다가오는 일정: 오늘 이후 1년 범위에서 시작일·시작시각이 가장 이른 1건.
+        val nextEvent = scheduleRepository
+            .findAllByGroupRoomIdAndDateRange(groupRoomId, today, today.plusYears(1))
+            .sortedWith(compareBy({ it.startDate }, { it.startTime ?: LocalTime.MIN }))
+            .firstOrNull()
+
+        return GroupHomeResponse(
+            userName = user.name,
+            today = TodaySummaryResponse(
+                scheduleCount = scheduleCount,
+                newDiaryCount = newDiaryCount,
+                unreadCount = unreadCount
+            ),
+            activeGroup = ActiveGroupResponse(
+                id = groupRoom.id,
+                name = groupRoom.name,
+                thumbnailImage = groupRoom.thumbnailImage,
+                memberCount = memberships.size,
+                myRole = membership.role.name.lowercase(),
+                members = memberships.map { MembershipSummary.from(it) },
+                nextEvent = nextEvent?.let { NextEventResponse.from(it) }
+            )
         )
     }
 
@@ -293,5 +356,9 @@ class GroupRoomServiceImpl(
     private fun generateRandomColor(): String {
         val colors = listOf("#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8")
         return colors.random()
+    }
+
+    companion object {
+        private val KST: ZoneId = ZoneId.of("Asia/Seoul")
     }
 }

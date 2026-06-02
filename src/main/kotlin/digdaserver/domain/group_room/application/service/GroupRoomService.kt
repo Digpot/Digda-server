@@ -4,6 +4,7 @@ import digdaserver.domain.group_room.presentation.dto.req.CreateGroupRoomRequest
 import digdaserver.domain.group_room.presentation.dto.req.UpdateGroupRoomRequest
 import digdaserver.domain.group_room.presentation.dto.res.CreateGroupRoomResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDeleteResponse
+import digdaserver.domain.group_room.presentation.dto.res.GroupHomeResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDetailResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomListResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomResponse
@@ -16,6 +17,8 @@ interface GroupRoomService {
     fun getMyGroupRooms(userId: UUID): GroupRoomListResponse
 
     fun getGroupRoomDetail(userId: UUID, groupRoomId: Long): GroupRoomDetailResponse
+
+    fun getGroupHome(userId: UUID, groupRoomId: Long): GroupHomeResponse
 
     fun updateGroupRoom(userId: UUID, groupRoomId: Long, request: UpdateGroupRoomRequest): GroupRoomResponse
 

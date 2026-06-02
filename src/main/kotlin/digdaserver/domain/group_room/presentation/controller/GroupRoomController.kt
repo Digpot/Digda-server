@@ -4,6 +4,7 @@ import digdaserver.domain.group_room.application.service.GroupRoomService
 import digdaserver.domain.group_room.presentation.dto.req.CreateGroupRoomRequest
 import digdaserver.domain.group_room.presentation.dto.req.UpdateGroupRoomRequest
 import digdaserver.domain.group_room.presentation.dto.res.CreateGroupRoomResponse
+import digdaserver.domain.group_room.presentation.dto.res.GroupHomeResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDeleteResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDetailResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomListResponse
@@ -56,6 +57,19 @@ class GroupRoomController(
         @PathVariable groupRoomId: Long
     ): ResponseEntity<GroupRoomDetailResponse> {
         val response = groupRoomService.getGroupRoomDetail(UUID.fromString(userId), groupRoomId)
+        return ResponseEntity.ok(response)
+    }
+
+    @Operation(
+        summary = "그룹 홈 대시보드",
+        description = "그룹 홈 화면용 집계 — 오늘 요약(오늘 일정/새 일기/안읽음) + 활성 그룹(멤버·다가오는 일정)을 1회로 조회합니다. 구성원만 접근 가능합니다."
+    )
+    @GetMapping("/{groupRoomId}/home")
+    fun getGroupHome(
+        @AuthenticationPrincipal userId: String,
+        @PathVariable groupRoomId: Long
+    ): ResponseEntity<GroupHomeResponse> {
+        val response = groupRoomService.getGroupHome(UUID.fromString(userId), groupRoomId)
         return ResponseEntity.ok(response)
     }
 

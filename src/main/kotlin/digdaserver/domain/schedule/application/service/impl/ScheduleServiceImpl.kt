@@ -149,15 +149,12 @@ class ScheduleServiceImpl(
 
         if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
 
-        val membership = membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+        // 일정은 그룹 멤버 누구나 수정 가능 (작성자/방장 제한 없음 — 일기와 반대).
+        membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
             .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
 
         val schedule = scheduleRepository.findById(scheduleId)
             .orElseThrow { DigdaException(ErrorCode.SCHEDULE_NOT_FOUND) }
-
-        if (schedule.createdBy.id != userId && !membership.isOwner) {
-            throw DigdaException(ErrorCode.FORBIDDEN)
-        }
 
         val newStartDate = request.startDate ?: schedule.startDate
         val newEndDate = request.endDate ?: schedule.endDate
@@ -217,15 +214,12 @@ class ScheduleServiceImpl(
 
         if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
 
-        val membership = membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+        // 일정은 그룹 멤버 누구나 삭제 가능 (작성자/방장 제한 없음 — 일기와 반대).
+        membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
             .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
 
         val schedule = scheduleRepository.findById(scheduleId)
             .orElseThrow { DigdaException(ErrorCode.SCHEDULE_NOT_FOUND) }
-
-        if (schedule.createdBy.id != userId && !membership.isOwner) {
-            throw DigdaException(ErrorCode.FORBIDDEN)
-        }
 
         val title = schedule.title
         scheduleRepository.delete(schedule)

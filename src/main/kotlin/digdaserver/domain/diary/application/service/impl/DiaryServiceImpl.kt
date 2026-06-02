@@ -289,13 +289,14 @@ class DiaryServiceImpl(
 
         if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
 
-        val membership = membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+        membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
             .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
 
         val diary = diaryRepository.findById(diaryId)
             .orElseThrow { DigdaException(ErrorCode.DIARY_NOT_FOUND) }
 
-        if (diary.createdBy.id != userId && !membership.isOwner) {
+        // 일기는 작성자 본인만 수정 가능 (방장도 불가 — 일정과 반대).
+        if (diary.createdBy.id != userId) {
             throw DigdaException(ErrorCode.FORBIDDEN)
         }
 
@@ -334,13 +335,14 @@ class DiaryServiceImpl(
 
         if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
 
-        val membership = membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+        membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
             .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
 
         val diary = diaryRepository.findById(diaryId)
             .orElseThrow { DigdaException(ErrorCode.DIARY_NOT_FOUND) }
 
-        if (diary.createdBy.id != userId && !membership.isOwner) {
+        // 일기는 작성자 본인만 삭제 가능 (방장도 불가 — 일정과 반대).
+        if (diary.createdBy.id != userId) {
             throw DigdaException(ErrorCode.FORBIDDEN)
         }
 

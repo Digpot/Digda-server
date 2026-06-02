@@ -3,8 +3,8 @@ package digdaserver.domain.group_room.application.service
 import digdaserver.domain.group_room.presentation.dto.req.CreateGroupRoomRequest
 import digdaserver.domain.group_room.presentation.dto.req.UpdateGroupRoomRequest
 import digdaserver.domain.group_room.presentation.dto.res.CreateGroupRoomResponse
-import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDeleteResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupHomeResponse
+import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDeleteResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomDetailResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomListResponse
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomResponse

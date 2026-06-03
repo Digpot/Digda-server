@@ -8,7 +8,7 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F?logo=springboot&logoColor=white)](https://spring.io)
 [![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com)
 [![Redis](https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white)](https://redis.io)
-[![Deploy](https://img.shields.io/badge/Deploy-Docker%20%E2%86%92%20NCP-2496ED?logo=docker&logoColor=white)](#-배포-아키텍처)
+[![Deploy](https://img.shields.io/badge/Deploy-Docker%20%E2%86%92%20AWS%20EC2-FF9900?logo=amazonaws&logoColor=white)](#-배포-아키텍처)
 
 운영사 **태리팟(Taeripot)** · 앱 [Digda-app](https://github.com/DateDiary/Digda-app) · 관리자 [digda-admin](https://github.com/DateDiary/digda-admin)
 
@@ -37,55 +37,15 @@
 | 배치·스케줄 | Spring Batch · `@Scheduled`(리마인더·정리) |
 | 문서화 | springdoc-openapi (Swagger UI) |
 | 빌드·품질 | Gradle(Kotlin DSL) · ktlint · spotless |
-| 배포 | Docker · GitHub Actions → NCP |
+| 배포 | Docker · GitHub Actions → AWS (EC2 · RDS · S3) |
 
 ---
 
 ## 🏗️ 시스템 구성도
 
-```mermaid
-flowchart LR
-    subgraph CLIENT["클라이언트"]
-        APP["📱 Digda-app<br/>Flutter"]
-        ADMIN["🖥️ digda-admin<br/>Vue 3"]
-    end
-
-    subgraph SERVER["🍙 Digda-server · Spring Boot"]
-        direction TB
-        SEC["Security · JWT 필터"]
-        CTRL["Controller (REST)"]
-        SVC["Service (도메인 로직)"]
-        REPO["Repository (JPA)"]
-        SCHED["Scheduler · Batch"]
-        SEC --> CTRL --> SVC --> REPO
-        SCHED --> SVC
-    end
-
-    subgraph DATA["데이터"]
-        DB[("MySQL")]
-        REDIS[("Redis")]
-    end
-    subgraph EXT["외부 서비스"]
-        OAUTH["카카오·네이버·Apple"]
-        FCM[("Firebase FCM")]
-        S3[("AWS S3")]
-    end
-
-    APP & ADMIN -->|HTTPS REST| SEC
-    REPO --> DB
-    SVC -->|토큰·캐시| REDIS
-    SVC -->|소셜 검증| OAUTH
-    SVC -->|이미지| S3
-    SVC -->|푸시| FCM
-    FCM -.알림.-> APP
-
-    classDef client fill:#FFE2E2,stroke:#FF6B6B,stroke-width:1.5px,color:#7A1F1F;
-    classDef server fill:#E6F4EA,stroke:#34A853,stroke-width:1.5px,color:#114B22;
-    classDef data fill:#E8F0FE,stroke:#4285F4,stroke-width:1.5px,color:#0B3D91;
-    classDef ext fill:#FFF4E5,stroke:#F9A825,stroke-width:1.5px,color:#7A4F00;
-    class APP,ADMIN client; class SEC,CTRL,SVC,REPO,SCHED server;
-    class DB,REDIS data; class OAUTH,FCM,S3 ext;
-```
+<div align="center">
+  <img src="docs/architecture.svg" width="100%" alt="디그팟 시스템 아키텍처" />
+</div>
 
 ## 🔐 인증 흐름 (소셜 로그인 → JWT)
 
@@ -164,18 +124,19 @@ flowchart TB
 
 ## ⚙️ 배포 아키텍처
 
-`dev` 머지 시 GitHub Actions 가 CI(ktlint·build) → Docker 이미지 빌드/푸시 → **NCP 인스턴스** 배포를 수행합니다.
+`dev` 머지 시 GitHub Actions 가 CI(ktlint·build) → Docker 이미지(Docker Hub) 빌드/푸시 → **AWS EC2** 에 SSH 접속해 `docker compose` 로 배포합니다. DB 는 **AWS RDS(MySQL)**, 이미지 저장은 **AWS S3** 를 사용합니다.
 운영 DB 는 `ddl-auto=none` — 스키마 변경은 `SchemaAutoMigration` 에 ALTER 정의를 추가해 반영합니다.
 
 ```mermaid
 flowchart LR
     PR["PR → dev 머지"] --> CI["GitHub Actions<br/>ktlint · build · test"]
     CI --> IMG["Docker 이미지<br/>빌드 · 푸시"]
-    IMG --> NCP["NCP 인스턴스<br/>docker compose up"]
-    NCP --> RUN[("app + redis 기동")]
-    classDef s fill:#E6F4EA,stroke:#34A853,color:#114B22;
+    IMG --> EC2["AWS EC2<br/>docker compose up"]
+    EC2 --> RUN[("app + redis 기동")]
+    EC2 -.-> RDS[("AWS RDS · MySQL")]
+    classDef s fill:#FFF4E5,stroke:#F9A825,color:#7A4F00;
     classDef d fill:#E8F0FE,stroke:#4285F4,color:#0B3D91;
-    class PR,CI,IMG,NCP s; class RUN d;
+    class PR,CI,IMG,EC2 s; class RUN,RDS d;
 ```
 
 ---

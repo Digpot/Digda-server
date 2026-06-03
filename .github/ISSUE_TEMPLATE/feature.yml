@@ -2,6 +2,7 @@ name: "🔔 새로운 기능"
 description: "새로운 기능을 만들어주세요"
 title: "[✨ Feature] "
 labels: "✨ Feature"
+assignees: ["chltmdgh522"]
 body:
   - type: input
     attributes:

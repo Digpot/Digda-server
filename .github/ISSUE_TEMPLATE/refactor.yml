@@ -2,6 +2,7 @@ name: "🙌 개선하기"
 description: "이 기능을 개선해주세요"
 title: "[🔨 Refactor] "
 labels: "🔨 Refactor"
+assignees: ["chltmdgh522"]
 body:
   - type: textarea
     attributes:

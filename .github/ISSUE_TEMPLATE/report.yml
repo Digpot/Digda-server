@@ -2,6 +2,7 @@ name: "🚨 버그 리포트"
 description: "버그가 발생했어요"
 title: "[🐞 Bug] "
 labels: "🐞 Bug"
+assignees: ["chltmdgh522"]
 body:
   - type: textarea
     attributes:

@@ -74,6 +74,7 @@ class UploadServiceImpl(
             "group_thumbnail" -> ImagePurpose.GROUP_THUMBNAIL
             "diary" -> ImagePurpose.DIARY
             "quiz" -> ImagePurpose.QUIZ
+            "exhibit" -> ImagePurpose.EXHIBIT
             else -> throw DigdaException(ErrorCode.INVALID_PARAMETER)
         }
     }

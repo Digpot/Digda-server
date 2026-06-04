@@ -120,6 +120,10 @@ enum class ErrorCode(
     QUIZ_INVALID_MULTIPLIER("QUIZ_INVALID_MULTIPLIER", "EXP 배수는 1-3 사이여야 합니다.", 400),
     QUIZ_IMAGE_REQUIRES_DIKO("QUIZ_IMAGE_REQUIRES_DIKO", "사진 퀴즈는 디코가 등장한 그룹에서만 사용할 수 있어요.", 400),
 
+    // ── Nickname Exhibit (역대 별명 전시관) ──
+    EXHIBIT_NOT_FOUND("EXHIBIT_NOT_FOUND", "존재하지 않는 전시관 카드입니다.", 404),
+    EXHIBIT_ACCESS_DENIED("EXHIBIT_ACCESS_DENIED", "전시관 접근 권한이 없습니다.", 403),
+
     // ── Rate Limit ──
     RATE_LIMIT_EXCEEDED("RATE_LIMIT_EXCEEDED", "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.", 429),
 

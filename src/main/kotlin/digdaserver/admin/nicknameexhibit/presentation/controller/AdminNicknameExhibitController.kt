@@ -29,7 +29,7 @@ import java.util.UUID
  * - 별명 카드(콘텐츠) CRUD
  * - 접근 허용 사용자 등록/조회/해제
  *
- * `/api/admin/**` 는 SecurityConfig 에서 ROLE_ADMIN 으로 보호된다.
+ * 관리자 전용 경로(`/api/admin` 하위)는 SecurityConfig 에서 ROLE_ADMIN 으로 보호된다.
  */
 @RestController
 @RequestMapping("/api/admin/nickname-exhibits")
@@ -56,7 +56,8 @@ class AdminNicknameExhibitController(
     @Operation(summary = "별명 카드 등록")
     @PostMapping
     fun create(
-        @Valid @RequestBody request: CreateNicknameExhibitRequest
+        @Valid @RequestBody
+        request: CreateNicknameExhibitRequest
     ): ResponseEntity<AdminNicknameExhibitResponse> {
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(adminNicknameExhibitService.create(request))
@@ -66,7 +67,8 @@ class AdminNicknameExhibitController(
     @PatchMapping("/{id}")
     fun update(
         @PathVariable id: Long,
-        @Valid @RequestBody request: UpdateNicknameExhibitRequest
+        @Valid @RequestBody
+        request: UpdateNicknameExhibitRequest
     ): ResponseEntity<AdminNicknameExhibitResponse> {
         return ResponseEntity.ok(adminNicknameExhibitService.update(id, request))
     }
@@ -93,7 +95,8 @@ class AdminNicknameExhibitController(
     @Operation(summary = "접근 허용 추가", description = "이미 허용된 사용자면 멱등 처리")
     @PostMapping("/access")
     fun addAccess(
-        @Valid @RequestBody request: AddExhibitAccessRequest
+        @Valid @RequestBody
+        request: AddExhibitAccessRequest
     ): ResponseEntity<AdminExhibitAccessResponse> {
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(adminNicknameExhibitService.addAccess(request.userId))

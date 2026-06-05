@@ -23,6 +23,8 @@ import digdaserver.domain.diary.presentation.dto.res.DiaryLikeResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryListResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryReactionSummary
 import digdaserver.domain.diary.presentation.dto.res.DiaryReactionToggleResponse
+import digdaserver.domain.diary.presentation.dto.res.DiaryRegionCount
+import digdaserver.domain.diary.presentation.dto.res.DiaryRegionMapResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryResponse
 import digdaserver.domain.diary.presentation.dto.res.DiarySummaryResponse
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
@@ -101,6 +103,38 @@ class DiaryServiceImpl(
             diaryRepository.findAllByGroupRoomId(groupRoomId, pageable)
         }
 
+        return buildListResponse(page, userId)
+    }
+
+    override fun getDiaryRegionMap(userId: UUID, groupRoomId: Long): DiaryRegionMapResponse {
+        ensureMember(userId, groupRoomId)
+        val rows = diaryRepository.countByRegionKey(groupRoomId)
+        val regions = rows.map { row ->
+            DiaryRegionCount(regionKey = row[0] as String, count = row[1] as Long)
+        }
+        val total = regions.sumOf { it.count }
+        log.info("action=일기 지역지도 집계, groupRoomId={}, regions={}, total={}", groupRoomId, regions.size, total)
+        return DiaryRegionMapResponse(regions = regions, total = total)
+    }
+
+    override fun getDiariesByRegion(
+        userId: UUID,
+        groupRoomId: Long,
+        regionKey: String,
+        limit: Int,
+        offset: Int
+    ): DiaryListResponse {
+        ensureMember(userId, groupRoomId)
+        val pageable = PageRequest.of(offset / limit, limit)
+        val page = diaryRepository.findAllByGroupRoomIdAndRegionKey(groupRoomId, regionKey, pageable)
+        return buildListResponse(page, userId)
+    }
+
+    /** Page<Diary> → 댓글·좋아요 수를 채운 DiaryListResponse 로 변환(목록 응답 공통). */
+    private fun buildListResponse(
+        page: org.springframework.data.domain.Page<Diary>,
+        userId: UUID
+    ): DiaryListResponse {
         val diaries = page.content
         val diaryIds = diaries.map { it.id }
 
@@ -247,6 +281,9 @@ class DiaryServiceImpl(
             weather = request.weather,
             mood = request.mood,
             location = request.location?.takeIf { it.isNotBlank() },
+            regionKey = request.regionKey?.takeIf { it.isNotBlank() },
+            regionSido = request.regionSido?.takeIf { it.isNotBlank() },
+            regionSigungu = request.regionSigungu?.takeIf { it.isNotBlank() },
             createdBy = user
         )
         diary.replaceImages(resolvedUrls)
@@ -313,7 +350,10 @@ class DiaryServiceImpl(
             date = request.date,
             weather = request.weather,
             mood = request.mood,
-            location = request.location?.takeIf { it.isNotBlank() }
+            location = request.location?.takeIf { it.isNotBlank() },
+            regionKey = request.regionKey?.takeIf { it.isNotBlank() },
+            regionSido = request.regionSido?.takeIf { it.isNotBlank() },
+            regionSigungu = request.regionSigungu?.takeIf { it.isNotBlank() }
         )
         request.imageIds?.let { ids ->
             diary.replaceImages(resolveImageUrls(ids))

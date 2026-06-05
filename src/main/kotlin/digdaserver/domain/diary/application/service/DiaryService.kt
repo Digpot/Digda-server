@@ -8,6 +8,7 @@ import digdaserver.domain.diary.presentation.dto.res.DiaryDetailResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryLikeResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryListResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryReactionToggleResponse
+import digdaserver.domain.diary.presentation.dto.res.DiaryRegionMapResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryResponse
 import java.time.YearMonth
 import java.util.UUID
@@ -15,6 +16,18 @@ import java.util.UUID
 interface DiaryService {
 
     fun getDiaries(userId: UUID, groupRoomId: Long, month: YearMonth?, limit: Int, offset: Int): DiaryListResponse
+
+    /** 시그니처 지도 — 그룹의 지역별 일기 수 집계. */
+    fun getDiaryRegionMap(userId: UUID, groupRoomId: Long): DiaryRegionMapResponse
+
+    /** 시그니처 지도 — 특정 지역(regionKey)의 그룹 일기 목록. */
+    fun getDiariesByRegion(
+        userId: UUID,
+        groupRoomId: Long,
+        regionKey: String,
+        limit: Int,
+        offset: Int
+    ): DiaryListResponse
 
     fun getDiaryCalendar(userId: UUID, groupRoomId: Long, month: YearMonth): DiaryCalendarResponse
 

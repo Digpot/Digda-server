@@ -90,6 +90,23 @@ class SchemaAutoMigration(
             column = "image_url",
             addSql = "ALTER TABLE character_quiz ADD COLUMN image_url VARCHAR(2048) NULL"
         ),
+        // 시그니처 지도 — 일기 지역 색칠용. 앱이 산출한 정규 지역 키/표시명을 저장.
+        // 기존 일기는 NULL(지도 미반영). NULL 허용이라 추가만으로 충분.
+        MissingColumn(
+            table = "diary",
+            column = "region_key",
+            addSql = "ALTER TABLE diary ADD COLUMN region_key VARCHAR(40) NULL"
+        ),
+        MissingColumn(
+            table = "diary",
+            column = "region_sido",
+            addSql = "ALTER TABLE diary ADD COLUMN region_sido VARCHAR(30) NULL"
+        ),
+        MissingColumn(
+            table = "diary",
+            column = "region_sigungu",
+            addSql = "ALTER TABLE diary ADD COLUMN region_sigungu VARCHAR(60) NULL"
+        ),
         // 마스터 진화 시험 통과 여부. 기존에 이미 레벨 20 에 도달해 MASTER 로 보이던 그룹은
         // 컬럼 추가 시 false 로 들어가 GLOW 로 후퇴하는 회귀가 생기므로, level>=20 인 행은
         // 곧바로 true 로 backfill 해 마스터 상태를 보존한다.

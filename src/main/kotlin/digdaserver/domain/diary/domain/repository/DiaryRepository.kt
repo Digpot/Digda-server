@@ -53,4 +53,23 @@ interface DiaryRepository : JpaRepository<Diary, Long> {
     @Modifying
     @Query("DELETE FROM Diary d WHERE d.createdBy.id = :userId")
     fun deleteAllByCreatedById(@Param("userId") userId: UUID)
+
+    /**
+     * 시그니처 지도 — 그룹의 region_key 별 일기 수 집계. region_key 가 있는 일기만 대상.
+     * 각 row = [regionKey(String), count(Long)].
+     */
+    @Query(
+        "SELECT d.regionKey, COUNT(d) FROM Diary d " +
+            "WHERE d.groupRoom.id = :groupRoomId AND d.regionKey IS NOT NULL " +
+            "GROUP BY d.regionKey"
+    )
+    fun countByRegionKey(@Param("groupRoomId") groupRoomId: Long): List<Array<Any>>
+
+    /** 시그니처 지도 — 특정 region_key 의 그룹 일기 목록(최신순). */
+    @Query("SELECT d FROM Diary d WHERE d.groupRoom.id = :groupRoomId AND d.regionKey = :regionKey ORDER BY d.date DESC, d.createdAt DESC")
+    fun findAllByGroupRoomIdAndRegionKey(
+        @Param("groupRoomId") groupRoomId: Long,
+        @Param("regionKey") regionKey: String,
+        pageable: Pageable
+    ): Page<Diary>
 }

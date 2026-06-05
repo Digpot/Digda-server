@@ -9,6 +9,7 @@ import digdaserver.domain.diary.presentation.dto.res.DiaryDetailResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryLikeResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryListResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryReactionToggleResponse
+import digdaserver.domain.diary.presentation.dto.res.DiaryRegionMapResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -53,6 +54,32 @@ class DiaryController(
         @RequestParam month: YearMonth
     ): ResponseEntity<DiaryCalendarResponse> {
         val response = diaryService.getDiaryCalendar(UUID.fromString(userId), groupRoomId, month)
+        return ResponseEntity.ok(response)
+    }
+
+    @Operation(
+        summary = "일기 지역지도 집계",
+        description = "시그니처 지도용. 그룹의 region_key 별 일기 수를 집계해 반환합니다. 색칠 임계값 판정은 앱이 수행."
+    )
+    @GetMapping("/group-rooms/{groupRoomId}/diaries/region-map")
+    fun getDiaryRegionMap(
+        @AuthenticationPrincipal userId: String,
+        @PathVariable groupRoomId: Long
+    ): ResponseEntity<DiaryRegionMapResponse> {
+        val response = diaryService.getDiaryRegionMap(UUID.fromString(userId), groupRoomId)
+        return ResponseEntity.ok(response)
+    }
+
+    @Operation(summary = "지역별 일기 목록", description = "시그니처 지도에서 특정 지역(regionKey)을 선택했을 때의 일기 목록.")
+    @GetMapping("/group-rooms/{groupRoomId}/diaries/by-region")
+    fun getDiariesByRegion(
+        @AuthenticationPrincipal userId: String,
+        @PathVariable groupRoomId: Long,
+        @RequestParam regionKey: String,
+        @RequestParam(defaultValue = "20") limit: Int,
+        @RequestParam(defaultValue = "0") offset: Int
+    ): ResponseEntity<DiaryListResponse> {
+        val response = diaryService.getDiariesByRegion(UUID.fromString(userId), groupRoomId, regionKey, limit, offset)
         return ResponseEntity.ok(response)
     }
 

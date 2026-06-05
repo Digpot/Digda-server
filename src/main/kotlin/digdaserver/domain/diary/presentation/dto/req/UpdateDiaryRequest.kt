@@ -15,6 +15,10 @@ data class UpdateDiaryRequest(
     val weather: Int? = null,
     val mood: Int? = null,
     val location: String? = null,
+    /** 시그니처 지도 색칠용 정규 지역 키(앱 산출). location 과 함께 항상 덮어쓴다. */
+    val regionKey: String? = null,
+    val regionSido: String? = null,
+    val regionSigungu: String? = null,
     /** null = 이미지 변경 없음. 빈 리스트 = 이미지 전부 제거. 값 있으면 그 순서대로 교체. */
     val imageIds: List<String>? = null
 )

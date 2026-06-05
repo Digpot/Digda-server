@@ -35,6 +35,9 @@ class SchemaAutoMigration(
      * - `notification.type`: 초기 MySQL ENUM(8) 으로 생성됐는데 이후 [NotificationType]
      *    에 값이 추가되면서 insert 가 "Data truncated" 로 실패. 새 enum 값 추가 시마다
      *    SQL 을 손대지 않도록 VARCHAR(64) 로 일반화.
+     * - `uploaded_image.purpose`: 초기 MySQL ENUM 으로 생성됐는데 별명전시관 도입으로
+     *    [ImagePurpose] 에 EXHIBIT 가 추가되면서 purpose=exhibit 업로드가 "Data truncated"
+     *    로 500. notification.type 과 동일하게 VARCHAR(64) 로 일반화.
      */
     private val requiredColumns: List<RequiredColumn> = listOf(
         RequiredColumn(
@@ -44,6 +47,14 @@ class SchemaAutoMigration(
             expectedMaxLength = 64,
             nullable = false,
             alterSql = "ALTER TABLE notification MODIFY COLUMN type VARCHAR(64) NOT NULL"
+        ),
+        RequiredColumn(
+            table = "uploaded_image",
+            column = "purpose",
+            expectedDataType = "varchar",
+            expectedMaxLength = 64,
+            nullable = false,
+            alterSql = "ALTER TABLE uploaded_image MODIFY COLUMN purpose VARCHAR(64) NOT NULL"
         ),
         // 작성자 회원탈퇴 시 퀴즈를 보존(author=NULL)하려면 author_id 가 NULL 허용이어야 한다.
         // 기존 prod 컬럼은 BINARY(16) NOT NULL 이라 nullable 로 완화. FK 제약은 그대로 유지된다.

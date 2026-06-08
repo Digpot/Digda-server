@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Repository
@@ -18,8 +19,16 @@ interface NotificationRepository : JpaRepository<Notification, Long> {
 
     fun countByUserIdAndIsReadFalse(userId: UUID): Int
 
-    /** 특정 일정(relatedId)에 대해 해당 종류의 알림이 이미 발송되었는지 확인 — 리마인더 중복 발송 방지. */
-    fun existsByTypeAndRelatedId(type: NotificationType, relatedId: Long): Boolean
+    /**
+     * 특정 일정에 대해 해당 종류의 리마인더가 [after] 이후에 발송됐는지 확인.
+     * 멀티데이 당일 리마인더를 '날마다 1회'로 보내기 위해, 전역 1회가 아니라 시간창(예: 12h)
+     * 안에서만 중복으로 본다 — 같은 날 여러 슬롯(09/12/18시)은 막고, 다음 날엔 다시 보낸다.
+     */
+    fun existsByTypeAndRelatedIdAndCreatedAtAfter(
+        type: NotificationType,
+        relatedId: Long,
+        after: LocalDateTime
+    ): Boolean
 
     @Modifying
     @Query("UPDATE Notification n SET n.isRead = true WHERE n.user.id = :userId AND n.isRead = false")

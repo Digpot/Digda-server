@@ -30,6 +30,19 @@ interface ScheduleRepository : JpaRepository<Schedule, Long> {
     )
     fun findAllForReminder(@Param("date") date: LocalDate): List<Schedule>
 
+    /**
+     * [date] 에 진행 중인(시작일 ≤ date ≤ 종료일) 삭제되지 않은 그룹방의 일정 — 당일 리마인더 대상.
+     * 멀티데이 일정은 중간 날에도 잡혀, 6~8일 일정이면 7·8일에도 당일 알림이 간다.
+     */
+    @Query(
+        """
+        SELECT DISTINCT s FROM Schedule s
+        LEFT JOIN FETCH s.participants
+        WHERE s.startDate <= :date AND s.endDate >= :date AND s.groupRoom.deletedAt IS NULL
+        """
+    )
+    fun findAllActiveOnDate(@Param("date") date: LocalDate): List<Schedule>
+
     @Query(
         """
         SELECT s FROM Schedule s

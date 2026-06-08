@@ -28,6 +28,8 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
         format_sql: true
+        # 목록 응답에서 LAZY images·createdBy 를 IN(...) 으로 일괄 로드해 N+1 제거.
+        default_batch_fetch_size: 100
     open-in-view: false
 
   redis:

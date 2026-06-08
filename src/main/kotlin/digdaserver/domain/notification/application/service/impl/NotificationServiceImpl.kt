@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Service
@@ -280,8 +281,14 @@ class NotificationServiceImpl(
         val uniqueRecipientIds = recipientUserIds.distinct()
         if (uniqueRecipientIds.isEmpty()) return
 
-        // 동일 일정에 같은 종류의 리마인더가 이미 발송된 경우 중복 발송하지 않는다.
-        if (notificationRepository.existsByTypeAndRelatedId(type, scheduleId)) return
+        // 동일 일정·동일 종류의 리마인더가 '최근 시간창 안'에 이미 발송됐으면 건너뛴다.
+        // 전역 1회가 아니라 시간창으로 봐야, 멀티데이 일정의 당일 알림이 날마다 1번씩 간다
+        // (같은 날 09/12/18 슬롯 중복은 막고, 다음 날엔 다시 발송).
+        if (notificationRepository.existsByTypeAndRelatedIdAndCreatedAtAfter(
+                type, scheduleId, LocalDateTime.now().minusHours(REMINDER_DEDUP_WINDOW_HOURS))
+        ) {
+            return
+        }
 
         val groupRoom = findGroupRoom(groupRoomId)
         val recipients = userRepository.findAllById(uniqueRecipientIds).toList()
@@ -564,5 +571,9 @@ class NotificationServiceImpl(
 
     companion object {
         private const val ANNOUNCEMENT_BATCH_SIZE = 500
+
+        // 일정 리마인더 중복 판정 시간창(시간). 같은 날 슬롯(09/12/18시) 사이는 막고,
+        // 다음 날 첫 슬롯(전날 마지막 18시→09시=15h)은 통과하도록 12h 로 둔다.
+        private const val REMINDER_DEDUP_WINDOW_HOURS = 12L
     }
 }

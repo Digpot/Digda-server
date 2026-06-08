@@ -93,7 +93,9 @@ class DiaryServiceImpl(
     ): DiaryListResponse {
         ensureMember(userId, groupRoomId)
 
-        val pageable = PageRequest.of(offset / limit, limit, Sort.by(Sort.Direction.DESC, "createdAt"))
+        // limit=0 같은 값이 와도 0-나눗셈/IllegalArgument 로 500 나지 않도록 하한 보정.
+        val safeLimit = limit.coerceAtLeast(1)
+        val pageable = PageRequest.of(offset / safeLimit, safeLimit, Sort.by(Sort.Direction.DESC, "createdAt"))
 
         val page = if (month != null) {
             val startDate = month.atDay(1)
@@ -125,7 +127,8 @@ class DiaryServiceImpl(
         offset: Int
     ): DiaryListResponse {
         ensureMember(userId, groupRoomId)
-        val pageable = PageRequest.of(offset / limit, limit)
+        val safeLimit = limit.coerceAtLeast(1)
+        val pageable = PageRequest.of(offset / safeLimit, safeLimit)
         val page = diaryRepository.findAllByGroupRoomIdAndRegionKey(groupRoomId, regionKey, pageable)
         return buildListResponse(page, userId)
     }

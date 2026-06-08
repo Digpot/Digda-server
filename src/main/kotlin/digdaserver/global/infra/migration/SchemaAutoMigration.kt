@@ -103,11 +103,27 @@ class SchemaAutoMigration(
         )
     )
 
+    /**
+     * 누락 인덱스 보강용 — 엔티티에는 있지만 prod 테이블에 아직 없는 인덱스를 멱등하게 CREATE.
+     * MySQL 은 `CREATE INDEX IF NOT EXISTS` 를 지원하지 않으므로 STATISTICS 로 존재 확인 후 생성.
+     *
+     * - `idx_diary_group_region`: 시그니처 지도 집계(GROUP BY region_key)·지역별 일기 목록이
+     *    그룹 단위로 풀스캔되지 않도록. data 가 쌓일수록 region-map 조회가 느려지던 원인.
+     */
+    private val missingIndexes: List<MissingIndex> = listOf(
+        MissingIndex(
+            table = "diary",
+            indexName = "idx_diary_group_region",
+            createSql = "CREATE INDEX idx_diary_group_region ON diary (group_room_id, region_key)"
+        )
+    )
+
     override fun run(args: ApplicationArguments?) {
         log.info(
-            "action=startup schema auto-migration 시작, modify={}건, addIfMissing={}건",
+            "action=startup schema auto-migration 시작, modify={}건, addIfMissing={}건, addIndex={}건",
             requiredColumns.size,
-            missingColumns.size
+            missingColumns.size,
+            missingIndexes.size
         )
         for (rc in requiredColumns) {
             try {
@@ -136,7 +152,62 @@ class SchemaAutoMigration(
                 )
             }
         }
+        for (mi in missingIndexes) {
+            try {
+                addIndexIfMissing(mi)
+            } catch (e: Exception) {
+                log.error(
+                    "action=startup schema auto-migration INDEX 실패, table={}, index={}, error={}",
+                    mi.table,
+                    mi.indexName,
+                    e.message,
+                    e
+                )
+            }
+        }
         log.info("action=startup schema auto-migration 완료")
+    }
+
+    private fun addIndexIfMissing(mi: MissingIndex) {
+        val exists = try {
+            val count = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM information_schema.STATISTICS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = ?
+                  AND INDEX_NAME = ?
+                """.trimIndent(),
+                Int::class.java,
+                mi.table,
+                mi.indexName
+            ) ?: 0
+            count > 0
+        } catch (e: DataAccessException) {
+            log.warn(
+                "action=startup schema auto-migration 인덱스 메타 조회 실패, table={}, index={}, error={}",
+                mi.table,
+                mi.indexName,
+                e.message
+            )
+            // 메타 조회 실패 시 중복 생성 위험을 피해 스킵.
+            return
+        }
+        if (exists) {
+            log.info(
+                "action=startup schema auto-migration INDEX 스킵(이미 있음), table={}, index={}",
+                mi.table,
+                mi.indexName
+            )
+            return
+        }
+        log.warn(
+            "action=startup schema auto-migration INDEX 생성, table={}, index={}, sql={}",
+            mi.table,
+            mi.indexName,
+            mi.createSql
+        )
+        jdbcTemplate.execute(mi.createSql)
     }
 
     private fun addIfMissing(mc: MissingColumn) {
@@ -275,5 +346,11 @@ class SchemaAutoMigration(
         val column: String,
         val addSql: String,
         val postSql: List<String> = emptyList()
+    )
+
+    private data class MissingIndex(
+        val table: String,
+        val indexName: String,
+        val createSql: String
     )
 }

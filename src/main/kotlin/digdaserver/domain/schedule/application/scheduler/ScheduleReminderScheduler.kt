@@ -18,11 +18,12 @@ import java.util.UUID
  *
  * - KST 09:00 / 12:00 / 18:00 세 슬롯에서만 실행. 9시 이후 등록된 일정이라도
  *   같은 날 안에 다음 슬롯이 따라잡아 발송한다. 중복 방지는 [NotificationService] 가 담당.
- * - 시작일이 "내일"인 일정 → 하루 전 리마인더(SCHEDULE_DAY_BEFORE).
- * - 시작일이 "오늘"인 일정 → 당일 리마인더(SCHEDULE_TODAY).
+ * - 시작일이 "내일"인 일정 → 하루 전 리마인더(SCHEDULE_DAY_BEFORE), 시작 하루 전 1회.
+ * - "오늘" 진행 중인(시작일 ≤ 오늘 ≤ 종료일) 일정 → 당일 리마인더(SCHEDULE_TODAY).
+ *   멀티데이 일정은 중간 날에도 당일 알림이 간다(예: 6~8일 일정이면 6·7·8일 모두).
  * - 발송 대상: 일정 참가자 전원 + 일정을 생성한 사람(중복은 제거).
- * - 중복 발송 방지는 [NotificationService] 내부에서 처리한다. 동일 일정·동일 종류의
- *   리마인더가 이미 존재하면 건너뛰므로, 잡이 다른 슬롯에서 다시 돌아도 같은 알림이 두 번 가지 않는다.
+ * - 중복 발송 방지는 [NotificationService] 가 시간창(12h) 멱등으로 처리한다. 같은 날
+ *   여러 슬롯의 중복은 막고, 멀티데이의 다음 날 당일 알림은 통과시킨다.
  * - row 단위 격리: 한 일정의 처리가 실패해도 나머지 일정은 계속 처리한다.
  */
 @Component
@@ -42,7 +43,7 @@ class ScheduleReminderScheduler(
      * 부팅 직후 catch-up. cron 슬롯은 09/12/18시 정각에만 발사되므로
      * 그 사이에 재배포/재시작이 끼면 그날치 리마인더가 유실될 수 있다.
      * 첫 슬롯(09:00) 이전엔 너무 이른 발송이라 건너뛰고, 그 외엔 catch-up 실행.
-     * 멱등 가드(`existsByTypeAndRelatedId`)가 있어 cron 이 이미 보냈으면 중복 발송되지 않는다.
+     * 시간창(12h) 멱등 가드가 있어 cron 이 이미 보냈으면 중복 발송되지 않는다.
      */
     @EventListener(ApplicationReadyEvent::class)
     fun catchUpOnStartup() {
@@ -69,7 +70,13 @@ class ScheduleReminderScheduler(
 
     private fun dispatch(targetDate: LocalDate, isToday: Boolean) {
         val label = if (isToday) "당일" else "하루 전"
-        val schedules = scheduleRepository.findAllForReminder(targetDate)
+        // 당일 리마인더는 그날 '진행 중'인 일정 전체(멀티데이 중간 날 포함)를 대상으로 한다.
+        // 하루 전 리마인더는 '시작일이 내일'인 일정만(시작 하루 전 1회).
+        val schedules = if (isToday) {
+            scheduleRepository.findAllActiveOnDate(targetDate)
+        } else {
+            scheduleRepository.findAllForReminder(targetDate)
+        }
         if (schedules.isEmpty()) {
             // 0건도 항상 로그 — 스케줄러가 살아 있는지 / 쿼리 결과가 비는 건지 구분 가능하게.
             log.info(

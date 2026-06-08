@@ -10,6 +10,7 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.Index
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
@@ -18,7 +19,14 @@ import jakarta.persistence.Table
 import java.time.LocalDate
 
 @Entity
-@Table(name = "diary")
+@Table(
+    name = "diary",
+    // 시그니처 지도 집계(GROUP BY region_key)·지역별 일기 목록(WHERE region_key)이
+    // 그룹 단위로 풀스캔되지 않도록 복합 인덱스. prod 는 SchemaAutoMigration 에서 동일 인덱스를 멱등 생성.
+    indexes = [
+        Index(name = "idx_diary_group_region", columnList = "group_room_id, region_key")
+    ]
+)
 class Diary(
 
     @Id

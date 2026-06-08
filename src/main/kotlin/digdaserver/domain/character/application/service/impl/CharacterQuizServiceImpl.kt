@@ -163,7 +163,8 @@ class CharacterQuizServiceImpl(
     override fun submitAttempt(
         userId: UUID,
         quizId: Long,
-        selectedIndex: Int
+        selectedIndex: Int,
+        practice: Boolean
     ): QuizAttemptResultResponse {
         if (selectedIndex !in 1..OPTION_COUNT) {
             throw DigdaException(ErrorCode.QUIZ_INVALID_CORRECT_INDEX)
@@ -172,14 +173,37 @@ class CharacterQuizServiceImpl(
         val quiz = quizRepository.findById(quizId)
             .orElseThrow { DigdaException(ErrorCode.QUIZ_NOT_FOUND) }
 
-        // 작성자 탈퇴(author=null)면 본인 출제 제한 대상이 아니므로 누구나 응시 가능.
-        if (quiz.author?.id == userId) throw DigdaException(ErrorCode.QUIZ_CANNOT_ATTEMPT_OWN)
         validateGroupMember(quiz.groupRoom.id, userId)
 
         // 사진 퀴즈는 디코가 풀린 그룹에서만 응시 가능. URL 우회 방어용.
         if (quiz.imageUrl != null && !isDikoUnlocked(quiz.groupRoom.id)) {
             throw DigdaException(ErrorCode.QUIZ_IMAGE_REQUIRES_DIKO)
         }
+
+        // 연습(재풀이) 모드: 본인 출제·이미 푼 문제 제한 없이 정답만 채점하고
+        // 보상/기록/알림 없이 현재 캐릭터 상태를 그대로 돌려준다.
+        if (practice) {
+            val correctPractice = selectedIndex == quiz.correctIndex
+            val character = loadOrCreateGroupCharacter(quiz.groupRoom.id)
+            val equipped = groupCharacterEquippedRepository.findAllByGroupRoomId(quiz.groupRoom.id)
+            return QuizAttemptResultResponse(
+                quizId = quiz.id,
+                correct = correctPractice,
+                correctIndex = quiz.correctIndex,
+                selectedIndex = selectedIndex,
+                earnedExp = 0,
+                earnedCoin = 0,
+                character = CharacterStateResponse.from(character, equipped),
+                levelGained = 0,
+                stageBefore = character.stage,
+                stageAfter = character.stage,
+                stageChanged = false,
+                dikoJustUnlocked = false
+            )
+        }
+
+        // 작성자 탈퇴(author=null)면 본인 출제 제한 대상이 아니므로 누구나 응시 가능.
+        if (quiz.author?.id == userId) throw DigdaException(ErrorCode.QUIZ_CANNOT_ATTEMPT_OWN)
 
         if (attemptRepository.existsByQuizIdAndUserId(quizId, userId)) {
             throw DigdaException(ErrorCode.QUIZ_ALREADY_ATTEMPTED)

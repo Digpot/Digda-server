@@ -89,7 +89,8 @@ class CharacterQuizController(
             characterQuizService.submitAttempt(
                 UUID.fromString(userId),
                 quizId,
-                request.selectedIndex
+                request.selectedIndex,
+                request.practice
             )
         )
     }

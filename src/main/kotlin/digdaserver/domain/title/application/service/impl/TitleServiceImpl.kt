@@ -48,6 +48,8 @@ class TitleServiceImpl(
         for (item in items) {
             val code = item.code.trim()
             if (!codeFormat.matches(code)) continue
+            // 카탈로그에 없는(임의 조작) 코드는 무시 — 알 수 없는 칭호 자가발급 방지.
+            if (!titleCatalogRepository.existsByCode(code)) continue
             if (userTitleRepository.existsByUserIdAndCode(userId, code)) continue
 
             val groupId = item.groupRoomId

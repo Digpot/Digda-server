@@ -129,7 +129,11 @@ class DiaryServiceImpl(
         val regions = counts.map { DiaryRegionCount(regionKey = it.key, count = it.value) }
         val total = regions.sumOf { it.count }
         log.info("action=일기 지역지도 집계, groupRoomId={}, regions={}, total={}", groupRoomId, regions.size, total)
-        return DiaryRegionMapResponse(regions = regions, total = total)
+        return DiaryRegionMapResponse(
+            regions = regions,
+            total = total,
+            adminFilledKeys = filled.map { it.regionKey }
+        )
     }
 
     override fun getDiariesByRegion(

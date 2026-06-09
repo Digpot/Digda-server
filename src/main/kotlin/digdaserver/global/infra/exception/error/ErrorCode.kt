@@ -124,6 +124,9 @@ enum class ErrorCode(
     EXHIBIT_NOT_FOUND("EXHIBIT_NOT_FOUND", "존재하지 않는 전시관 카드입니다.", 404),
     EXHIBIT_ACCESS_DENIED("EXHIBIT_ACCESS_DENIED", "전시관 접근 권한이 없습니다.", 403),
 
+    // ── Title (칭호) ──
+    TITLE_NOT_OWNED("TITLE_NOT_OWNED", "획득하지 않은 칭호는 장착할 수 없습니다.", 400),
+
     // ── Rate Limit ──
     RATE_LIMIT_EXCEEDED("RATE_LIMIT_EXCEEDED", "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.", 429),
 

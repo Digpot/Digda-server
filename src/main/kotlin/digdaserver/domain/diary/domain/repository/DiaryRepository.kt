@@ -54,6 +54,10 @@ interface DiaryRepository : JpaRepository<Diary, Long> {
     @Query("DELETE FROM Diary d WHERE d.createdBy.id = :userId")
     fun deleteAllByCreatedById(@Param("userId") userId: UUID)
 
+    /** 칭호(작성 일기 수) — 사용자가 작성한 전체 일기 수(그룹 무관). */
+    @Query("SELECT COUNT(d) FROM Diary d WHERE d.createdBy.id = :userId")
+    fun countByCreatedById(@Param("userId") userId: UUID): Long
+
     /**
      * 시그니처 지도 — 그룹의 region_key 별 일기 수 집계. region_key 가 있는 일기만 대상.
      * 각 row = [regionKey(String), count(Long)].

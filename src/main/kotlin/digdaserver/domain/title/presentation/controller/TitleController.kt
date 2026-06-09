@@ -4,6 +4,7 @@ import digdaserver.domain.title.application.service.TitleService
 import digdaserver.domain.title.presentation.dto.req.ClaimTitlesRequest
 import digdaserver.domain.title.presentation.dto.req.EquipTitleRequest
 import digdaserver.domain.title.presentation.dto.res.EquippedTitleResponse
+import digdaserver.domain.title.presentation.dto.res.TitleCatalogResponse
 import digdaserver.domain.title.presentation.dto.res.TitleResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -27,6 +28,17 @@ class TitleController(
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
+
+    @Operation(
+        summary = "칭호 카탈로그 조회",
+        description = "전체 칭호 정의(이름/색/아이콘/조건). 앱이 code 로 매핑해 렌더한다."
+    )
+    @GetMapping("/catalog")
+    fun catalog(
+        @AuthenticationPrincipal userId: String
+    ): ResponseEntity<List<TitleCatalogResponse>> {
+        return ResponseEntity.ok(titleService.catalog())
+    }
 
     @Operation(
         summary = "내 칭호 목록 조회",

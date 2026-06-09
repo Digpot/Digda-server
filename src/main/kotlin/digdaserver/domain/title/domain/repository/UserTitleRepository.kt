@@ -12,4 +12,7 @@ interface UserTitleRepository : JpaRepository<UserTitle, Long> {
     fun findAllByUserIdOrderByEarnedAtDesc(userId: UUID): List<UserTitle>
 
     fun existsByUserIdAndCode(userId: UUID, code: String): Boolean
+
+    /** 어드민 회수용. */
+    fun deleteByUserIdAndCode(userId: UUID, code: String)
 }

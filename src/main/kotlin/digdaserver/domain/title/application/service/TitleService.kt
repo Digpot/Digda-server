@@ -2,10 +2,14 @@ package digdaserver.domain.title.application.service
 
 import digdaserver.domain.title.presentation.dto.req.ClaimTitleItem
 import digdaserver.domain.title.presentation.dto.res.EquippedTitleResponse
+import digdaserver.domain.title.presentation.dto.res.TitleCatalogResponse
 import digdaserver.domain.title.presentation.dto.res.TitleResponse
 import java.util.UUID
 
 interface TitleService {
+
+    /** 칭호 카탈로그 전체(앱 렌더·획득 판정 메타). */
+    fun catalog(): List<TitleCatalogResponse>
 
     /**
      * 사용자가 획득한 칭호 전체를 반환한다.

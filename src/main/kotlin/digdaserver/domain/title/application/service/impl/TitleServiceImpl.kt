@@ -7,9 +7,11 @@ import digdaserver.domain.title.application.service.TitleService
 import digdaserver.domain.title.domain.entity.GroupEquippedTitle
 import digdaserver.domain.title.domain.entity.UserTitle
 import digdaserver.domain.title.domain.repository.GroupEquippedTitleRepository
+import digdaserver.domain.title.domain.repository.TitleCatalogRepository
 import digdaserver.domain.title.domain.repository.UserTitleRepository
 import digdaserver.domain.title.presentation.dto.req.ClaimTitleItem
 import digdaserver.domain.title.presentation.dto.res.EquippedTitleResponse
+import digdaserver.domain.title.presentation.dto.res.TitleCatalogResponse
 import digdaserver.domain.title.presentation.dto.res.TitleResponse
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
@@ -22,6 +24,7 @@ import java.util.UUID
 class TitleServiceImpl(
     private val userTitleRepository: UserTitleRepository,
     private val groupEquippedTitleRepository: GroupEquippedTitleRepository,
+    private val titleCatalogRepository: TitleCatalogRepository,
     private val diaryRepository: DiaryRepository,
     private val membershipRepository: MembershipRepository,
     private val groupRoomRepository: GroupRoomRepository
@@ -29,8 +32,9 @@ class TitleServiceImpl(
 
     private val codeFormat = Regex("^[a-z0-9_]{1,40}$")
 
-    /** 작성 일기 수 누적 칭호 임계값 — 앱 카탈로그의 diary_* 코드와 짝이 맞아야 한다. */
-    private val diaryMilestones = listOf(1, 10, 30, 50, 100)
+    override fun catalog(): List<TitleCatalogResponse> =
+        titleCatalogRepository.findAllByOrderBySortOrderAscIdAsc()
+            .map(TitleCatalogResponse::from)
 
     @Transactional
     override fun list(userId: UUID): List<TitleResponse> {
@@ -107,14 +111,19 @@ class TitleServiceImpl(
         return EquippedTitleResponse.from(saved)
     }
 
-    /** 서버가 직접 셀 수 있는 전역 칭호(작성 일기 수)를 멱등 적재. 그룹 맥락 없음(null). */
+    /**
+     * 서버가 직접 셀 수 있는 전역 칭호(작성 일기 수)를 멱등 적재. 그룹 맥락 없음(null).
+     * 임계값은 카탈로그(conditionType=diary 의 conditionValue)에서 읽어 단일 소스로 둔다.
+     */
     private fun grantDiaryCountTitles(userId: UUID) {
+        val diaryDefs = titleCatalogRepository.findAllByConditionType("diary")
+        if (diaryDefs.isEmpty()) return
         val count = diaryRepository.countByCreatedById(userId)
-        for (m in diaryMilestones) {
-            if (count < m) break
-            val code = "diary_$m"
-            if (!userTitleRepository.existsByUserIdAndCode(userId, code)) {
-                userTitleRepository.save(UserTitle(userId = userId, code = code))
+        for (def in diaryDefs) {
+            val threshold = def.conditionValue?.toIntOrNull() ?: continue
+            if (count < threshold) continue
+            if (!userTitleRepository.existsByUserIdAndCode(userId, def.code)) {
+                userTitleRepository.save(UserTitle(userId = userId, code = def.code))
             }
         }
     }

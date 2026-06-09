@@ -87,7 +87,9 @@ class TitleController(
     ): ResponseEntity<EquippedTitleResponse> {
         log.info(
             "api=PUT /titles/equip, userId={}, groupRoomId={}, code={}",
-            userId, request.groupRoomId, request.code
+            userId,
+            request.groupRoomId,
+            request.code
         )
         return ResponseEntity.ok(
             titleService.equipTitle(UUID.fromString(userId), request.groupRoomId, request.code)

@@ -285,7 +285,10 @@ class NotificationServiceImpl(
         // 전역 1회가 아니라 시간창으로 봐야, 멀티데이 일정의 당일 알림이 날마다 1번씩 간다
         // (같은 날 09/12/18 슬롯 중복은 막고, 다음 날엔 다시 발송).
         if (notificationRepository.existsByTypeAndRelatedIdAndCreatedAtAfter(
-                type, scheduleId, LocalDateTime.now().minusHours(REMINDER_DEDUP_WINDOW_HOURS))
+                type,
+                scheduleId,
+                LocalDateTime.now().minusHours(REMINDER_DEDUP_WINDOW_HOURS)
+            )
         ) {
             return
         }

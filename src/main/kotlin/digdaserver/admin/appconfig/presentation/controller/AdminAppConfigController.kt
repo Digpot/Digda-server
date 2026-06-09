@@ -38,7 +38,8 @@ class AdminAppConfigController(
     ): ResponseEntity<AppConfigResponse> {
         log.info(
             "api=PUT /api/admin/app-config, notice={}, feedback={}",
-            request.noticeEnabled, request.feedbackEnabled
+            request.noticeEnabled,
+            request.feedbackEnabled
         )
         return ResponseEntity.ok(appConfigService.update(request))
     }

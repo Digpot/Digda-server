@@ -44,7 +44,8 @@ class AdminTitleController(
     @Operation(summary = "칭호 부여", description = "대상 사용자에게 칭호 지급(멱등). 부여 후 보유 목록 반환.")
     @PostMapping("/grant")
     fun grant(
-        @Valid @RequestBody request: GrantTitleRequest
+        @Valid @RequestBody
+        request: GrantTitleRequest
     ): ResponseEntity<List<AdminUserTitleResponse>> {
         log.info("api=POST /api/admin/titles/grant, userId={}, code={}", request.userId, request.code)
         return ResponseEntity.ok(adminTitleService.grant(request.userId, request.code))

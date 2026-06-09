@@ -11,6 +11,7 @@ import digdaserver.domain.diary.domain.entity.DiaryReactionType
 import digdaserver.domain.diary.domain.repository.DiaryLikeRepository
 import digdaserver.domain.diary.domain.repository.DiaryReactionRepository
 import digdaserver.domain.diary.domain.repository.DiaryRepository
+import digdaserver.domain.diary.domain.repository.GroupRegionFillRepository
 import digdaserver.domain.diary.presentation.dto.req.CreateDiaryRequest
 import digdaserver.domain.diary.presentation.dto.req.ToggleDiaryReactionRequest
 import digdaserver.domain.diary.presentation.dto.req.UpdateDiaryRequest
@@ -60,6 +61,7 @@ class DiaryServiceImpl(
     private val uploadedImageRepository: UploadedImageRepository,
     private val diaryLikeRepository: DiaryLikeRepository,
     private val diaryReactionRepository: DiaryReactionRepository,
+    private val groupRegionFillRepository: GroupRegionFillRepository,
     @Lazy private val characterService: CharacterService
 ) : DiaryService {
 
@@ -67,6 +69,9 @@ class DiaryServiceImpl(
 
     companion object {
         private const val MAX_IMAGES_PER_DIARY = 10
+
+        /** 어드민이 임의로 채운 지역의 합성 일기 수 — 최대 색칠 임계(광역시 10) 이상이면 무조건 색칠된다. */
+        private const val ADMIN_FILL_COUNT = 10L
 
         /**
          * 날짜 판정 기준 타임존. 서버 기본 TZ 가 UTC 이면 KST 00~09 시 사이에 한국 사용자의
@@ -111,12 +116,24 @@ class DiaryServiceImpl(
     override fun getDiaryRegionMap(userId: UUID, groupRoomId: Long): DiaryRegionMapResponse {
         ensureMember(userId, groupRoomId)
         val rows = diaryRepository.countByRegionKey(groupRoomId)
-        val regions = rows.map { row ->
-            DiaryRegionCount(regionKey = row[0] as String, count = row[1] as Long)
+        val counts = LinkedHashMap<String, Long>()
+        for (row in rows) {
+            counts[row[0] as String] = row[1] as Long
         }
+        // 어드민이 임의로 채운 지역을 병합 — 색칠 임계(최대 10) 이상으로 끌어올린다.
+        val filled = groupRegionFillRepository.findAllByGroupRoomId(groupRoomId)
+        for (f in filled) {
+            val cur = counts[f.regionKey] ?: 0L
+            if (cur < ADMIN_FILL_COUNT) counts[f.regionKey] = ADMIN_FILL_COUNT
+        }
+        val regions = counts.map { DiaryRegionCount(regionKey = it.key, count = it.value) }
         val total = regions.sumOf { it.count }
         log.info("action=일기 지역지도 집계, groupRoomId={}, regions={}, total={}", groupRoomId, regions.size, total)
-        return DiaryRegionMapResponse(regions = regions, total = total)
+        return DiaryRegionMapResponse(
+            regions = regions,
+            total = total,
+            adminFilledKeys = filled.map { it.regionKey }
+        )
     }
 
     override fun getDiariesByRegion(

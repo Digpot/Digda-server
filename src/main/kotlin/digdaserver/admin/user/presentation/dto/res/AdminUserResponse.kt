@@ -16,9 +16,6 @@ data class AdminUserResponse(
     @Schema(description = "이름")
     val name: String,
 
-    @Schema(description = "상태 메시지")
-    val statusMessage: String?,
-
     @Schema(description = "프로필 이미지 URL")
     val profileImage: String?,
 
@@ -39,7 +36,6 @@ data class AdminUserResponse(
             userId = user.id.toString(),
             email = user.email,
             name = user.name,
-            statusMessage = user.statusMessage,
             profileImage = user.profileImage,
             socialProvider = user.socialProvider.name,
             role = user.role.name,

@@ -9,7 +9,9 @@ package digdaserver.domain.diary.presentation.dto.res
 data class DiaryRegionMapResponse(
     val regions: List<DiaryRegionCount>,
     /** region_key 가 지정된 전체 일기 수(분류된 기록 총합). */
-    val total: Long
+    val total: Long,
+    /** 어드민이 임의로 채운 region_key 목록(실제 일기 아님). 앱이 "관리자 채움"으로 구분 표기. */
+    val adminFilledKeys: List<String> = emptyList()
 )
 
 data class DiaryRegionCount(

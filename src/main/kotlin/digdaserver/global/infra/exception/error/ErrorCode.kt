@@ -38,7 +38,6 @@ enum class ErrorCode(
     DUPLICATE_EMAIL("DUPLICATE_EMAIL", "이미 사용 중인 이메일입니다.", 409),
     NAME_TOO_SHORT("NAME_TOO_SHORT", "닉네임은 2자 이상이어야 합니다.", 400),
     NAME_TOO_LONG("NAME_TOO_LONG", "닉네임은 20자 이하여야 합니다.", 400),
-    STATUS_MESSAGE_TOO_LONG("STATUS_MESSAGE_TOO_LONG", "상태 메시지는 100자 이하여야 합니다.", 400),
     INVALID_ROLE("INVALID_ROLE", "유효하지 않은 역할입니다.", 400),
 
     // ── GroupRoom ──
@@ -123,6 +122,9 @@ enum class ErrorCode(
     // ── Nickname Exhibit (역대 별명 전시관) ──
     EXHIBIT_NOT_FOUND("EXHIBIT_NOT_FOUND", "존재하지 않는 전시관 카드입니다.", 404),
     EXHIBIT_ACCESS_DENIED("EXHIBIT_ACCESS_DENIED", "전시관 접근 권한이 없습니다.", 403),
+
+    // ── Title (칭호) ──
+    TITLE_NOT_OWNED("TITLE_NOT_OWNED", "획득하지 않은 칭호는 장착할 수 없습니다.", 400),
 
     // ── Rate Limit ──
     RATE_LIMIT_EXCEEDED("RATE_LIMIT_EXCEEDED", "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.", 429),

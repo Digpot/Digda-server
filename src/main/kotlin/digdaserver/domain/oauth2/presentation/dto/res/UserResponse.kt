@@ -18,9 +18,6 @@ data class UserResponse(
     @Schema(description = "프로필 이미지 URL")
     val profileImage: String?,
 
-    @Schema(description = "상태 메시지")
-    val statusMessage: String?,
-
     @Schema(description = "소셜 프로바이더", example = "kakao")
     val provider: String,
 
@@ -34,7 +31,6 @@ data class UserResponse(
                 name = user.name,
                 email = user.email,
                 profileImage = user.profileImage,
-                statusMessage = user.statusMessage,
                 provider = user.socialProvider.value,
                 createdAt = user.createdAt.toString()
             )

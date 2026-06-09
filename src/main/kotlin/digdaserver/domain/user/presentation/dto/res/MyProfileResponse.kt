@@ -8,7 +8,6 @@ data class MyProfileResponse(
     val name: String,
     val email: String?,
     val profileImage: String?,
-    val statusMessage: String?,
     val provider: String,
     val createdAt: LocalDateTime
 ) {
@@ -18,7 +17,6 @@ data class MyProfileResponse(
             name = user.name,
             email = user.email,
             profileImage = user.profileImage,
-            statusMessage = user.statusMessage,
             provider = user.socialProvider.name.lowercase(),
             createdAt = user.createdAt
         )

@@ -40,9 +40,6 @@ class User(
     @Column(name = "profile_image")
     var profileImage: String? = null,
 
-    @Column(name = "status_message", length = 100)
-    var statusMessage: String? = null,
-
     @Enumerated(EnumType.STRING)
     @Column(name = "social_provider", nullable = false)
     val socialProvider: SocialProvider,
@@ -80,18 +77,13 @@ class User(
     var privacySetting: UserPrivacySetting? = null
         protected set
 
-    fun updateProfile(name: String?, statusMessage: String?, profileImage: String?) {
+    fun updateProfile(name: String?, profileImage: String?) {
         name?.let { this.name = it }
-        statusMessage?.let { this.statusMessage = it }
         profileImage?.let { this.profileImage = it }
     }
 
     fun resetProfileImage() {
         this.profileImage = null
-    }
-
-    fun clearStatusMessage() {
-        this.statusMessage = null
     }
 
     fun agreeToTerms(terms: UserTerms) {

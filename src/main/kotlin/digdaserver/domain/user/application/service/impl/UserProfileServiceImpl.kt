@@ -47,10 +47,9 @@ class UserProfileServiceImpl(
     @Transactional
     override fun updateProfile(userId: UUID, request: UpdateProfileRequest): MyProfileResponse {
         log.info(
-            "userId={}, action=프로필 수정 요청, fields=[name={}, statusMessage={}, profileImageId={}]",
+            "userId={}, action=프로필 수정 요청, fields=[name={}, profileImageId={}]",
             userId,
             request.name,
-            request.statusMessage,
             request.profileImageId
         )
 
@@ -61,15 +60,6 @@ class UserProfileServiceImpl(
             if (name.length < 2) throw DigdaException(ErrorCode.NAME_TOO_SHORT)
             if (name.length > 20) throw DigdaException(ErrorCode.NAME_TOO_LONG)
             user.name = name
-        }
-
-        request.statusMessage?.let { msg ->
-            if (msg.isEmpty()) {
-                user.clearStatusMessage()
-            } else {
-                if (msg.length > 100) throw DigdaException(ErrorCode.STATUS_MESSAGE_TOO_LONG)
-                user.statusMessage = msg
-            }
         }
 
         // profileImageId: null(미전송)=변경없음, Optional.empty=초기화, Optional(값)=변경.

@@ -38,7 +38,6 @@ enum class ErrorCode(
     DUPLICATE_EMAIL("DUPLICATE_EMAIL", "이미 사용 중인 이메일입니다.", 409),
     NAME_TOO_SHORT("NAME_TOO_SHORT", "닉네임은 2자 이상이어야 합니다.", 400),
     NAME_TOO_LONG("NAME_TOO_LONG", "닉네임은 20자 이하여야 합니다.", 400),
-    STATUS_MESSAGE_TOO_LONG("STATUS_MESSAGE_TOO_LONG", "상태 메시지는 100자 이하여야 합니다.", 400),
     INVALID_ROLE("INVALID_ROLE", "유효하지 않은 역할입니다.", 400),
 
     // ── GroupRoom ──

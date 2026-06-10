@@ -64,9 +64,10 @@ class DiaryController(
     @GetMapping("/group-rooms/{groupRoomId}/diaries/region-map")
     fun getDiaryRegionMap(
         @AuthenticationPrincipal userId: String,
-        @PathVariable groupRoomId: Long
+        @PathVariable groupRoomId: Long,
+        @RequestParam(required = false) scope: String?
     ): ResponseEntity<DiaryRegionMapResponse> {
-        val response = diaryService.getDiaryRegionMap(UUID.fromString(userId), groupRoomId)
+        val response = diaryService.getDiaryRegionMap(UUID.fromString(userId), groupRoomId, scope)
         return ResponseEntity.ok(response)
     }
 

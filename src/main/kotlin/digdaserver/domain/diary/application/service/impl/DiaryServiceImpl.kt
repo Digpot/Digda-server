@@ -84,10 +84,16 @@ class DiaryServiceImpl(
 
         /** 연속 기록(streak) 계산 시 거슬러 올라가 조회할 최근 일 수. */
         private const val STREAK_WINDOW_DAYS = 400L
+
+        /** 일기 작성·수정·삭제가 가능한 기간(개월). 앱(diary_window.dart)과 같은 값으로 맞춘다. */
+        private const val EDITABLE_MONTHS = 3L
     }
 
     /** 날짜 미래 여부 판정에 쓰는 "오늘"(한국 기준). */
     private fun todayKst(): LocalDate = LocalDate.now(KST)
+
+    /** 편집 가능한 가장 이른 날짜 — 오늘(KST)에서 [EDITABLE_MONTHS] 개월 전. */
+    private fun editableFrom(): LocalDate = todayKst().minusMonths(EDITABLE_MONTHS)
 
     override fun getDiaries(
         userId: UUID,
@@ -113,8 +119,27 @@ class DiaryServiceImpl(
         return buildListResponse(page, userId)
     }
 
-    override fun getDiaryRegionMap(userId: UUID, groupRoomId: Long): DiaryRegionMapResponse {
+    override fun getDiaryRegionMap(userId: UUID, groupRoomId: Long, scope: String?): DiaryRegionMapResponse {
         ensureMember(userId, groupRoomId)
+
+        // 정복 칭호 판정용(claim): 가입 이후 작성분만 + 어드민 채움 제외 → 소급 칭호 차단.
+        if (scope == "claim") {
+            val membership = membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+                .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
+            val rows = diaryRepository.countByRegionKeySince(groupRoomId, membership.joinedAt)
+            val counts = LinkedHashMap<String, Long>()
+            for (row in rows) counts[row[0] as String] = row[1] as Long
+            val regions = counts.map { DiaryRegionCount(regionKey = it.key, count = it.value) }
+            log.info(
+                "action=일기 지역지도 집계(claim), groupRoomId={}, userId={}, since={}, regions={}",
+                groupRoomId,
+                userId,
+                membership.joinedAt,
+                regions.size
+            )
+            return DiaryRegionMapResponse(regions = regions, total = regions.sumOf { it.count }, adminFilledKeys = emptyList())
+        }
+
         val rows = diaryRepository.countByRegionKey(groupRoomId)
         val counts = LinkedHashMap<String, Long>()
         for (row in rows) {
@@ -284,6 +309,10 @@ class DiaryServiceImpl(
             .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
 
         if (request.date.isAfter(todayKst())) throw DigdaException(ErrorCode.FUTURE_DATE_NOT_ALLOWED)
+        if (request.date.isBefore(editableFrom())) {
+            log.info("action=일기 작성 거부(3개월 초과), userId={}, groupRoomId={}, date={}", userId, groupRoomId, request.date)
+            throw DigdaException(ErrorCode.DIARY_DATE_TOO_OLD)
+        }
         validateWeather(request.weather)
         validateMood(request.mood)
         validateImageCount(request.imageIds.size)
@@ -357,8 +386,15 @@ class DiaryServiceImpl(
             throw DigdaException(ErrorCode.FORBIDDEN)
         }
 
+        // 3개월이 지난 일기는 잠금 — 기존 날짜가 창을 벗어났거나 그 이전으로 바꾸려 하면 거부.
+        if (diary.date.isBefore(editableFrom())) {
+            log.info("action=일기 수정 거부(3개월 초과), userId={}, diaryId={}, date={}", userId, diaryId, diary.date)
+            throw DigdaException(ErrorCode.DIARY_EDIT_WINDOW_EXPIRED)
+        }
+
         request.date?.let {
             if (it.isAfter(todayKst())) throw DigdaException(ErrorCode.FUTURE_DATE_NOT_ALLOWED)
+            if (it.isBefore(editableFrom())) throw DigdaException(ErrorCode.DIARY_DATE_TOO_OLD)
         }
         request.weather?.let { validateWeather(it) }
         request.mood?.let { validateMood(it) }
@@ -404,6 +440,12 @@ class DiaryServiceImpl(
         // 일기는 작성자 본인만 삭제 가능 (방장도 불가 — 일정과 반대).
         if (diary.createdBy.id != userId) {
             throw DigdaException(ErrorCode.FORBIDDEN)
+        }
+
+        // 3개월이 지난 일기는 삭제도 잠근다(수정과 동일 정책).
+        if (diary.date.isBefore(editableFrom())) {
+            log.info("action=일기 삭제 거부(3개월 초과), userId={}, diaryId={}, date={}", userId, diaryId, diary.date)
+            throw DigdaException(ErrorCode.DIARY_EDIT_WINDOW_EXPIRED)
         }
 
         val title = diary.title

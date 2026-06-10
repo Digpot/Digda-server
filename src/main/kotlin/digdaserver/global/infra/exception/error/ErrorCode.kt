@@ -71,6 +71,8 @@ enum class ErrorCode(
     // ── Diary ──
     DIARY_NOT_FOUND("DIARY_NOT_FOUND", "존재하지 않는 일기입니다.", 404),
     FUTURE_DATE_NOT_ALLOWED("FUTURE_DATE_NOT_ALLOWED", "미래 날짜에는 일기를 작성할 수 없습니다.", 400),
+    DIARY_DATE_TOO_OLD("DIARY_DATE_TOO_OLD", "3개월 이전 날짜에는 일기를 작성할 수 없습니다.", 400),
+    DIARY_EDIT_WINDOW_EXPIRED("DIARY_EDIT_WINDOW_EXPIRED", "작성한 지 3개월이 지난 일기는 수정하거나 삭제할 수 없습니다.", 400),
     INVALID_WEATHER_VALUE("INVALID_WEATHER_VALUE", "날씨 값은 0~3 범위여야 합니다.", 400),
     INVALID_MOOD_VALUE("INVALID_MOOD_VALUE", "기분 값은 0~3 범위여야 합니다.", 400),
 

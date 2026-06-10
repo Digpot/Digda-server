@@ -74,18 +74,29 @@ class TitleCatalogSeeder(
 
     object SeedCatalog {
         val all: List<Def> = listOf(
-            // ─── 지역 정복(region) — conditionValue = 지도 버킷명 ───
-            Def("region_metro", "광역시 정복자", "전국 광역시를 모두 채웠어요", "region", "#FF8A5B", "location_city", "region", "광역시", 10),
-            Def("region_gyeonggi_north", "경기북부 정복자", "경기 북부의 모든 시·군을 채웠어요", "region", "#FF6B6B", "flag", "region", "경기북부", 20),
-            Def("region_gyeonggi_south", "경기남부 정복자", "경기 남부의 모든 시·군을 채웠어요", "region", "#E8553D", "flag", "region", "경기남부", 30),
-            Def("region_gangwon", "강원 정복자", "강원의 모든 시·군을 채웠어요", "region", "#5B9BF0", "flag", "region", "강원", 40),
-            Def("region_chungbuk", "충북 정복자", "충청북도의 모든 시·군을 채웠어요", "region", "#F4B53C", "flag", "region", "충북", 50),
-            Def("region_chungnam", "충남 정복자", "충청남도의 모든 시·군을 채웠어요", "region", "#E0962B", "flag", "region", "충남", 60),
-            Def("region_jeonbuk", "전북 정복자", "전라북도의 모든 시·군을 채웠어요", "region", "#33C08A", "flag", "region", "전북", 70),
-            Def("region_jeonnam", "전남 정복자", "전라남도의 모든 시·군을 채웠어요", "region", "#1FA876", "flag", "region", "전남", 80),
-            Def("region_gyeongbuk", "경북 정복자", "경상북도의 모든 시·군을 채웠어요", "region", "#A98BF0", "flag", "region", "경북", 90),
-            Def("region_gyeongnam", "경남 정복자", "경상남도의 모든 시·군을 채웠어요", "region", "#8B6BE0", "flag", "region", "경남", 100),
-            Def("region_jeju", "제주 정복자", "제주의 모든 시·군을 채웠어요", "region", "#F47BB4", "flag", "region", "제주", 110),
+            // ─── 지역 정복(region) — conditionValue = 지도 색칠 키/버킷명 ───
+            // 광역시·특별시·특별자치시 — 도시별 '시장' 칭호(해당 도시 임계 채움).
+            Def("region_seoul", "서울특별시장", "서울을 일기로 가득 채웠어요", "region", "#FF8A5B", "location_city", "region", "서울", 10),
+            Def("region_busan", "부산광역시장", "부산을 일기로 가득 채웠어요", "region", "#4FA8E0", "location_city", "region", "부산", 11),
+            Def("region_daegu", "대구광역시장", "대구를 일기로 가득 채웠어요", "region", "#F47B6A", "location_city", "region", "대구", 12),
+            Def("region_incheon", "인천광역시장", "인천을 일기로 가득 채웠어요", "region", "#5BC0BE", "location_city", "region", "인천", 13),
+            Def("region_gwangju", "광주광역시장", "광주를 일기로 가득 채웠어요", "region", "#9B7EDE", "location_city", "region", "광주", 14),
+            Def("region_daejeon", "대전광역시장", "대전을 일기로 가득 채웠어요", "region", "#4DB6AC", "location_city", "region", "대전", 15),
+            Def("region_ulsan", "울산광역시장", "울산을 일기로 가득 채웠어요", "region", "#E08A4F", "location_city", "region", "울산", 16),
+            Def("region_sejong", "세종특별자치시장", "세종을 일기로 가득 채웠어요", "region", "#7C9CD0", "location_city", "region", "세종", 17),
+            // 전국 대도시 석권 — 그랜드 칭호(모든 광역시·특별시 채움).
+            Def("region_metro", "대도시 정복자", "전국 대도시를 모두 채웠어요", "region", "#FF6B6B", "location_city", "region", "광역시", 18),
+            // 도(道) — '도지사' 칭호(권역 전체 시·군 채움).
+            Def("region_gyeonggi_north", "경기북부 도지사", "경기 북부의 모든 시·군을 채웠어요", "region", "#FF6B6B", "flag", "region", "경기북부", 20),
+            Def("region_gyeonggi_south", "경기남부 도지사", "경기 남부의 모든 시·군을 채웠어요", "region", "#E8553D", "flag", "region", "경기남부", 30),
+            Def("region_gangwon", "강원도지사", "강원의 모든 시·군을 채웠어요", "region", "#5B9BF0", "flag", "region", "강원", 40),
+            Def("region_chungbuk", "충청북도지사", "충청북도의 모든 시·군을 채웠어요", "region", "#F4B53C", "flag", "region", "충북", 50),
+            Def("region_chungnam", "충청남도지사", "충청남도의 모든 시·군을 채웠어요", "region", "#E0962B", "flag", "region", "충남", 60),
+            Def("region_jeonbuk", "전라북도지사", "전라북도의 모든 시·군을 채웠어요", "region", "#33C08A", "flag", "region", "전북", 70),
+            Def("region_jeonnam", "전라남도지사", "전라남도의 모든 시·군을 채웠어요", "region", "#1FA876", "flag", "region", "전남", 80),
+            Def("region_gyeongbuk", "경상북도지사", "경상북도의 모든 시·군을 채웠어요", "region", "#A98BF0", "flag", "region", "경북", 90),
+            Def("region_gyeongnam", "경상남도지사", "경상남도의 모든 시·군을 채웠어요", "region", "#8B6BE0", "flag", "region", "경남", 100),
+            Def("region_jeju", "제주도지사", "제주의 모든 시·군을 채웠어요", "region", "#F47BB4", "flag", "region", "제주", 110),
             // ─── 기록(diary) — conditionValue = 작성 일기 임계값 ───
             Def("diary_1", "첫 발자국", "첫 일기를 남겼어요", "diary", "#7DC4A5", "edit_note", "diary", "1", 200),
             Def("diary_10", "기록의 시작", "일기 10개를 작성했어요", "diary", "#54B98A", "menu_book", "diary", "10", 210),

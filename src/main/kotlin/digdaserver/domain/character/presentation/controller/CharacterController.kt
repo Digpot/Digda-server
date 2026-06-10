@@ -4,6 +4,7 @@ import digdaserver.domain.character.application.service.CharacterService
 import digdaserver.domain.character.presentation.dto.req.AddExpRequest
 import digdaserver.domain.character.presentation.dto.req.MasterGameRewardRequest
 import digdaserver.domain.character.presentation.dto.res.AddExpResponse
+import digdaserver.domain.character.presentation.dto.res.AdRewardResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStageTreeResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStateResponse
 import digdaserver.domain.character.presentation.dto.res.MasterGameRewardResponse
@@ -125,6 +126,21 @@ class CharacterController(
                 groupRoomId,
                 request.score
             )
+        )
+    }
+
+    @Operation(
+        summary = "광고 보상 코인",
+        description = "광고 시청 완료 후 코인을 적립합니다. 적립량은 서버가 결정하며, 하루 한도 초과 시 429."
+    )
+    @PostMapping("/ad-reward")
+    fun claimAdReward(
+        @AuthenticationPrincipal userId: String,
+        @RequestParam groupRoomId: Long
+    ): ResponseEntity<AdRewardResponse> {
+        log.info("api=POST /character/ad-reward, userId={}, groupRoomId={}", userId, groupRoomId)
+        return ResponseEntity.ok(
+            characterService.claimAdReward(UUID.fromString(userId), groupRoomId)
         )
     }
 }

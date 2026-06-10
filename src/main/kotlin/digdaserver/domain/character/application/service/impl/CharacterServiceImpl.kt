@@ -6,6 +6,7 @@ import digdaserver.domain.character.domain.entity.GroupCharacter
 import digdaserver.domain.character.domain.repository.GroupCharacterEquippedRepository
 import digdaserver.domain.character.domain.repository.GroupCharacterRepository
 import digdaserver.domain.character.presentation.dto.res.AddExpResponse
+import digdaserver.domain.character.presentation.dto.res.AdRewardResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStageInfo
 import digdaserver.domain.character.presentation.dto.res.CharacterStageTreeResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStateResponse
@@ -205,6 +206,32 @@ class CharacterServiceImpl(
         )
     }
 
+    @Transactional
+    override fun claimAdReward(userId: UUID, groupRoomId: Long): AdRewardResponse {
+        validateGroupMember(groupRoomId, userId)
+        val character = loadOrCreate(groupRoomId)
+
+        val granted = character.claimAdReward(
+            rewardCoin = AD_REWARD_COIN,
+            dailyCap = AD_REWARD_DAILY_CAP,
+            today = java.time.LocalDate.now()
+        )
+        if (!granted) throw DigdaException(ErrorCode.AD_REWARD_LIMIT_EXCEEDED)
+
+        val remaining = (AD_REWARD_DAILY_CAP - character.adRewardCount).coerceAtLeast(0)
+        log.info(
+            "action=character_ad_reward, userId={}, groupRoomId={}, coin={}, remaining={}, balanceAfter={}",
+            userId, groupRoomId, AD_REWARD_COIN, remaining, character.coin
+        )
+
+        val equipped = groupCharacterEquippedRepository.findAllByGroupRoomId(groupRoomId)
+        return AdRewardResponse(
+            coinReward = AD_REWARD_COIN,
+            dailyRemaining = remaining,
+            character = CharacterStateResponse.from(character, equipped)
+        )
+    }
+
     private fun rewardForScore(score: Int): Int = when {
         score >= 16 -> 200
         score >= 11 -> 100
@@ -257,6 +284,12 @@ class CharacterServiceImpl(
 
         /** 마스터 진화 시험 통과 최소 점수 — "훌륭"(11점) 이상. */
         private const val MASTER_EVOLVE_MIN_SCORE = 11
+
+        /** 광고 1회 시청당 적립 코인. */
+        private const val AD_REWARD_COIN = 20
+
+        /** 광고 보상 하루 한도(그룹 캐릭터 기준). */
+        private const val AD_REWARD_DAILY_CAP = 5
     }
 
     private fun loadOrCreate(groupRoomId: Long): GroupCharacter {

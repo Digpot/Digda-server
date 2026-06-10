@@ -1,6 +1,7 @@
 package digdaserver.domain.character.application.service
 
 import digdaserver.domain.character.presentation.dto.res.AddExpResponse
+import digdaserver.domain.character.presentation.dto.res.AdRewardResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStageTreeResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStateResponse
 import digdaserver.domain.character.presentation.dto.res.MasterGameRewardResponse
@@ -52,4 +53,10 @@ interface CharacterService {
         groupRoomId: Long,
         score: Int
     ): MasterGameRewardResponse
+
+    /**
+     * 광고 시청 보상 코인 적립. 적립량은 서버가 결정하고, 하루 한도를 초과하면
+     * [digdaserver.global.infra.exception.error.ErrorCode.AD_REWARD_LIMIT_EXCEEDED].
+     */
+    fun claimAdReward(userId: UUID, groupRoomId: Long): AdRewardResponse
 }

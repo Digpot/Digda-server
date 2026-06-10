@@ -5,8 +5,8 @@ import digdaserver.domain.character.domain.entity.CharacterStage
 import digdaserver.domain.character.domain.entity.GroupCharacter
 import digdaserver.domain.character.domain.repository.GroupCharacterEquippedRepository
 import digdaserver.domain.character.domain.repository.GroupCharacterRepository
-import digdaserver.domain.character.presentation.dto.res.AddExpResponse
 import digdaserver.domain.character.presentation.dto.res.AdRewardResponse
+import digdaserver.domain.character.presentation.dto.res.AddExpResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStageInfo
 import digdaserver.domain.character.presentation.dto.res.CharacterStageTreeResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStateResponse
@@ -221,7 +221,11 @@ class CharacterServiceImpl(
         val remaining = (AD_REWARD_DAILY_CAP - character.adRewardCount).coerceAtLeast(0)
         log.info(
             "action=character_ad_reward, userId={}, groupRoomId={}, coin={}, remaining={}, balanceAfter={}",
-            userId, groupRoomId, AD_REWARD_COIN, remaining, character.coin
+            userId,
+            groupRoomId,
+            AD_REWARD_COIN,
+            remaining,
+            character.coin
         )
 
         val equipped = groupCharacterEquippedRepository.findAllByGroupRoomId(groupRoomId)

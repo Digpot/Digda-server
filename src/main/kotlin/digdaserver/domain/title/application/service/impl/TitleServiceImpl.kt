@@ -15,6 +15,7 @@ import digdaserver.domain.title.presentation.dto.res.TitleCatalogResponse
 import digdaserver.domain.title.presentation.dto.res.TitleResponse
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -29,6 +30,8 @@ class TitleServiceImpl(
     private val membershipRepository: MembershipRepository,
     private val groupRoomRepository: GroupRoomRepository
 ) : TitleService {
+
+    private val log = LoggerFactory.getLogger(javaClass)
 
     private val codeFormat = Regex("^[a-z0-9_]{1,40}$")
 
@@ -49,14 +52,30 @@ class TitleServiceImpl(
             val code = item.code.trim()
             if (!codeFormat.matches(code)) continue
             // 카탈로그에 없는(임의 조작) 코드는 무시 — 알 수 없는 칭호 자가발급 방지.
-            if (!titleCatalogRepository.existsByCode(code)) continue
+            val def = titleCatalogRepository.findByCode(code) ?: continue
             if (userTitleRepository.existsByUserIdAndCode(userId, code)) continue
 
             val groupId = item.groupRoomId
             var groupName: String? = null
             if (groupId != null) {
                 // 멤버가 아닌 그룹으로의 적재는 무시(앱 버그/조작 방지).
-                if (!membershipRepository.existsByGroupRoomIdAndUserId(groupId, userId)) continue
+                val membership = membershipRepository.findByGroupRoomIdAndUserId(groupId, userId).orElse(null)
+                    ?: continue
+                // 지역 정복 칭호는 '가입 이후' 그룹이 색칠한 지역이 하나라도 있어야 적재한다.
+                // 중간 합류한 그룹원이 가입 전 그룹 성과를 소급해서 칭호로 가져가는 것을 막는 백스톱
+                // (앱도 scope=claim 집계로 가입 이후 정복만 청구하지만, 서버에서 한 번 더 검증).
+                if (def.conditionType == "region" &&
+                    !diaryRepository.existsRegionDiarySince(groupId, membership.joinedAt)
+                ) {
+                    log.info(
+                        "action=지역 칭호 소급 차단, userId={}, groupRoomId={}, code={}, joinedAt={}",
+                        userId,
+                        groupId,
+                        code,
+                        membership.joinedAt
+                    )
+                    continue
+                }
                 groupName = groupRoomRepository.findById(groupId).orElse(null)?.name
             }
             userTitleRepository.save(

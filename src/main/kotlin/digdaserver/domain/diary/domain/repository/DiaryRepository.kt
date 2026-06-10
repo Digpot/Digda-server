@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Repository
@@ -68,6 +69,30 @@ interface DiaryRepository : JpaRepository<Diary, Long> {
             "GROUP BY d.regionKey"
     )
     fun countByRegionKey(@Param("groupRoomId") groupRoomId: Long): List<Array<Any>>
+
+    /**
+     * 시그니처 지도(정복 칭호 판정용) — 특정 시점([since]) 이후 작성된 일기만 region_key 별 집계.
+     * 중간 합류한 그룹원이 가입 전 색칠을 소급해서 칭호로 가져가지 못하게 가입 시각으로 거른다.
+     */
+    @Query(
+        "SELECT d.regionKey, COUNT(d) FROM Diary d " +
+            "WHERE d.groupRoom.id = :groupRoomId AND d.regionKey IS NOT NULL AND d.createdAt >= :since " +
+            "GROUP BY d.regionKey"
+    )
+    fun countByRegionKeySince(
+        @Param("groupRoomId") groupRoomId: Long,
+        @Param("since") since: LocalDateTime
+    ): List<Array<Any>>
+
+    /** 칭호 백스톱 — [since] 이후 그룹에 region_key 가 있는 일기가 하나라도 있는지. */
+    @Query(
+        "SELECT COUNT(d) > 0 FROM Diary d " +
+            "WHERE d.groupRoom.id = :groupRoomId AND d.regionKey IS NOT NULL AND d.createdAt >= :since"
+    )
+    fun existsRegionDiarySince(
+        @Param("groupRoomId") groupRoomId: Long,
+        @Param("since") since: LocalDateTime
+    ): Boolean
 
     /** 시그니처 지도 — 특정 region_key 의 그룹 일기 목록(최신순). */
     @Query("SELECT d FROM Diary d WHERE d.groupRoom.id = :groupRoomId AND d.regionKey = :regionKey ORDER BY d.date DESC, d.createdAt DESC")

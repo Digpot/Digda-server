@@ -71,6 +71,8 @@ enum class ErrorCode(
     // ── Diary ──
     DIARY_NOT_FOUND("DIARY_NOT_FOUND", "존재하지 않는 일기입니다.", 404),
     FUTURE_DATE_NOT_ALLOWED("FUTURE_DATE_NOT_ALLOWED", "미래 날짜에는 일기를 작성할 수 없습니다.", 400),
+    DIARY_DATE_TOO_OLD("DIARY_DATE_TOO_OLD", "3개월 이전 날짜에는 일기를 작성할 수 없습니다.", 400),
+    DIARY_EDIT_WINDOW_EXPIRED("DIARY_EDIT_WINDOW_EXPIRED", "작성한 지 3개월이 지난 일기는 수정하거나 삭제할 수 없습니다.", 400),
     INVALID_WEATHER_VALUE("INVALID_WEATHER_VALUE", "날씨 값은 0~3 범위여야 합니다.", 400),
     INVALID_MOOD_VALUE("INVALID_MOOD_VALUE", "기분 값은 0~3 범위여야 합니다.", 400),
 
@@ -106,6 +108,9 @@ enum class ErrorCode(
     // ── Character Master Game ──
     NOT_MASTER_CHARACTER("NOT_MASTER_CHARACTER", "마스터 단계 모찌만 보상을 받을 수 있어요.", 400),
     INVALID_GAME_SCORE("INVALID_GAME_SCORE", "유효하지 않은 게임 점수입니다.", 400),
+
+    // ── Character Ad Reward ──
+    AD_REWARD_LIMIT_EXCEEDED("AD_REWARD_LIMIT_EXCEEDED", "오늘 받을 수 있는 광고 보상을 모두 받았어요.", 429),
 
     // ── Character Quiz ──
     QUIZ_NOT_FOUND("QUIZ_NOT_FOUND", "존재하지 않는 퀴즈입니다.", 404),

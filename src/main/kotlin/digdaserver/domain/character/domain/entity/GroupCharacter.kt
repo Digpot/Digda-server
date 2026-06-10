@@ -71,7 +71,15 @@ class GroupCharacter(
      * 그 시점에 비로소 [CharacterStage.MASTER] 로 진화한다.
      */
     @Column(name = "master_unlocked", nullable = false)
-    var masterUnlocked: Boolean = false
+    var masterUnlocked: Boolean = false,
+
+    /** 광고 보상 마지막 적립 날짜 — 하루 한도 카운트를 이 날짜 기준으로 리셋. */
+    @Column(name = "ad_reward_date")
+    var adRewardDate: java.time.LocalDate? = null,
+
+    /** [adRewardDate] 당일에 적립한 광고 보상 횟수. */
+    @Column(name = "ad_reward_count", nullable = false)
+    var adRewardCount: Int = 0
 
 ) : BaseTimeEntity() {
 
@@ -159,6 +167,22 @@ class GroupCharacter(
     fun addCoin(amount: Int) {
         require(amount >= 0) { "coin gain must be non-negative" }
         coin += amount
+    }
+
+    /**
+     * 광고 시청 보상 코인 적립(하루 [dailyCap] 회 한도). [today] 가 [adRewardDate] 와
+     * 다르면 카운트를 리셋한다. 한도를 이미 채웠으면 false(코인 변화 없음), 적립했으면 true.
+     */
+    fun claimAdReward(rewardCoin: Int, dailyCap: Int, today: java.time.LocalDate): Boolean {
+        require(rewardCoin >= 0) { "ad reward coin must be non-negative" }
+        if (adRewardDate != today) {
+            adRewardDate = today
+            adRewardCount = 0
+        }
+        if (adRewardCount >= dailyCap) return false
+        adRewardCount += 1
+        coin += rewardCoin
+        return true
     }
 
     /** 결제 성공 시 호출. 잔액 검증은 호출자(서비스 계층) 책임. */

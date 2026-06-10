@@ -90,6 +90,17 @@ class SchemaAutoMigration(
             column = "image_url",
             addSql = "ALTER TABLE character_quiz ADD COLUMN image_url VARCHAR(2048) NULL"
         ),
+        // 광고 보상 하루 한도 추적용. NULL 허용/기본 0 이라 추가만으로 충분(backfill 불필요).
+        MissingColumn(
+            table = "group_character",
+            column = "ad_reward_date",
+            addSql = "ALTER TABLE group_character ADD COLUMN ad_reward_date DATE NULL"
+        ),
+        MissingColumn(
+            table = "group_character",
+            column = "ad_reward_count",
+            addSql = "ALTER TABLE group_character ADD COLUMN ad_reward_count INT NOT NULL DEFAULT 0"
+        ),
         // 마스터 진화 시험 통과 여부. 기존에 이미 레벨 20 에 도달해 MASTER 로 보이던 그룹은
         // 컬럼 추가 시 false 로 들어가 GLOW 로 후퇴하는 회귀가 생기므로, level>=20 인 행은
         // 곧바로 true 로 backfill 해 마스터 상태를 보존한다.

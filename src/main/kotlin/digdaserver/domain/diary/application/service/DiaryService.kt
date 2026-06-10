@@ -17,8 +17,12 @@ interface DiaryService {
 
     fun getDiaries(userId: UUID, groupRoomId: Long, month: YearMonth?, limit: Int, offset: Int): DiaryListResponse
 
-    /** 시그니처 지도 — 그룹의 지역별 일기 수 집계. */
-    fun getDiaryRegionMap(userId: UUID, groupRoomId: Long): DiaryRegionMapResponse
+    /**
+     * 시그니처 지도 — 그룹의 지역별 일기 수 집계.
+     * [scope] 가 "claim" 이면 정복 칭호 판정용으로 **사용자 가입 이후 작성분만** 집계하고
+     * 어드민 채움은 제외한다(소급 칭호 방지). 그 외엔 그룹 전체(표시용).
+     */
+    fun getDiaryRegionMap(userId: UUID, groupRoomId: Long, scope: String? = null): DiaryRegionMapResponse
 
     /** 시그니처 지도 — 특정 지역(regionKey)의 그룹 일기 목록. */
     fun getDiariesByRegion(

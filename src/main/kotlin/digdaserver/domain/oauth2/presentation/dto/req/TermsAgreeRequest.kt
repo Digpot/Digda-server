@@ -11,8 +11,8 @@ data class TermsAgreeRequest(
     @Schema(description = "개인정보처리방침 동의 (필수)", example = "true")
     val privacyPolicy: Boolean,
 
-    @Schema(description = "만 14세 이상 확인 (필수)", example = "true")
-    val ageConfirmation: Boolean,
+    @Schema(description = "연령 확인 (레거시 호환용, 미전송 시 true)", example = "true")
+    val ageConfirmation: Boolean = true,
 
     @Schema(description = "마케팅 수신 동의 (선택)", example = "false")
     val marketingConsent: Boolean = false,

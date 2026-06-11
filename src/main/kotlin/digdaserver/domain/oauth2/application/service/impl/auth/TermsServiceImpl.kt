@@ -17,7 +17,8 @@ class TermsServiceImpl(
 ) : TermsService {
 
     override fun agreeToTerms(userId: UUID, request: TermsAgreeRequest) {
-        if (!request.termsOfService || !request.privacyPolicy || !request.ageConfirmation) {
+        // 만 14세 확인 항목 제거 — 이용약관/개인정보처리방침 동의만 필수로 검증한다.
+        if (!request.termsOfService || !request.privacyPolicy) {
             throw DigdaException(ErrorCode.REQUIRED_TERMS_NOT_AGREED)
         }
 

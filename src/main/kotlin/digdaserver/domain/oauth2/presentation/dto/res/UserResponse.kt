@@ -28,7 +28,7 @@ data class UserResponse(
         fun from(user: User): UserResponse {
             return UserResponse(
                 id = user.id.toString(),
-                name = user.name,
+                name = user.displayedName(),
                 email = user.email,
                 profileImage = user.profileImage,
                 provider = user.socialProvider.value,

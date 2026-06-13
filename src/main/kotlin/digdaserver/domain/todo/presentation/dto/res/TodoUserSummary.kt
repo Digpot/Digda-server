@@ -11,7 +11,7 @@ data class TodoUserSummary(
     companion object {
         fun from(user: User): TodoUserSummary = TodoUserSummary(
             userId = user.id,
-            name = user.name,
+            name = user.displayedName(),
             profileImage = user.profileImage
         )
     }

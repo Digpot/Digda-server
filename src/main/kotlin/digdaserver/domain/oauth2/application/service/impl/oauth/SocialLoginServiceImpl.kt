@@ -169,6 +169,13 @@ class SocialLoginServiceImpl(
             return Pair(existingUser, isNewUser)
         }
 
+        // 신규 가입: 같은 이메일을 쓰는 다른 계정이 이미 있으면 가입을 막는다(이메일 중복 방지).
+        val email = userResponse.getEmail()
+        if (!email.isNullOrBlank() && userRepository.existsByEmail(email)) {
+            log.info("회원가입 차단: 이메일 중복, provider={}", provider)
+            throw DigdaException(ErrorCode.DUPLICATE_EMAIL)
+        }
+
         val profileImage = if (provider == SocialProvider.APPLE) appleProfile else userResponse.getProfile()
 
         val newUser = User(

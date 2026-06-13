@@ -34,8 +34,13 @@ class User(
 
     var email: String?,
 
+    // 소셜 로그인에서 받아온 원본 이름. 가입 시 1회 설정되며 프로필 편집으로는 바뀌지 않는다.
     @Column(nullable = false, length = 20)
     var name: String,
+
+    // 사용자가 프로필 편집에서 직접 지정한 표시 이름. null 이면 소셜 원본(name)을 그대로 노출.
+    @Column(name = "display_name", length = 20)
+    var displayName: String? = null,
 
     @Column(name = "profile_image")
     var profileImage: String? = null,
@@ -77,8 +82,12 @@ class User(
     var privacySetting: UserPrivacySetting? = null
         protected set
 
+    /** 화면에 노출할 이름 — 사용자가 지정한 표시 이름이 있으면 그것을, 없으면 소셜 원본 이름을 쓴다. */
+    fun displayedName(): String = displayName ?: name
+
     fun updateProfile(name: String?, profileImage: String?) {
-        name?.let { this.name = it }
+        // 프로필 편집은 원본 name 을 건드리지 않고 표시 이름(displayName)만 갱신한다.
+        name?.let { this.displayName = it }
         profileImage?.let { this.profileImage = it }
     }
 

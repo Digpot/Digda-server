@@ -10,7 +10,7 @@ data class MembershipSummary(
 ) {
     companion object {
         fun from(membership: Membership): MembershipSummary = MembershipSummary(
-            name = membership.user.name,
+            name = membership.user.displayedName(),
             profileImage = membership.user.profileImage,
             role = membership.role.name.lowercase(),
             color = membership.color

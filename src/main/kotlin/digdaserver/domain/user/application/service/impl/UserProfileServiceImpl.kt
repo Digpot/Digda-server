@@ -59,7 +59,8 @@ class UserProfileServiceImpl(
         request.name?.let { name ->
             if (name.length < 2) throw DigdaException(ErrorCode.NAME_TOO_SHORT)
             if (name.length > 20) throw DigdaException(ErrorCode.NAME_TOO_LONG)
-            user.name = name
+            // 소셜 원본 name 은 보존하고 표시 이름(displayName)만 갱신한다.
+            user.displayName = name
         }
 
         // profileImageId: null(미전송)=변경없음, Optional.empty=초기화, Optional(값)=변경.

@@ -20,8 +20,22 @@ data class DiarySummaryResponse(
     val commentCount: Int,
     val likeCount: Long,
     val likedByMe: Boolean,
-    val createdAt: LocalDateTime
+    val createdAt: LocalDateTime,
+    /** 이 뷰어에게 숨겨진 일기(차단/신고)인지. true 면 본문 필드는 비워진 상태로 내려간다. */
+    val hidden: Boolean = false,
+    /** 숨김 사유 코드(BLOCKED_USER / REPORTED / HIDDEN). 보일 때는 null. */
+    val hiddenReason: String? = null
 ) {
+    /** 차단/신고로 숨겨야 할 때 — 본문을 비우고 플래그만 남긴 사본. 날짜·기분·작성자는 슬롯/표시용으로 유지. */
+    fun asHidden(reason: String): DiarySummaryResponse = copy(
+        title = "",
+        location = null,
+        thumbnailUrl = null,
+        imageCount = 0,
+        hidden = true,
+        hiddenReason = reason
+    )
+
     companion object {
         fun from(
             diary: Diary,

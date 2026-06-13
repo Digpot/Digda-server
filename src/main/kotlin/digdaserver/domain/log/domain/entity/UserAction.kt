@@ -15,5 +15,9 @@ enum class UserAction {
     REMOVE_MEMBER,
     TRANSFER_OWNER,
     CREATE_TODO,
+    REPORT,
+    BLOCK_USER,
+    UNBLOCK_USER,
+    HIDE_CONTENT,
     OTHER
 }

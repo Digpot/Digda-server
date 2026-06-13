@@ -15,14 +15,27 @@ data class DiaryCalendarResponse(
     val stats: DiaryCalendarStats = DiaryCalendarStats()
 )
 
-/** 캘린더 한 칸(날짜)에 대응하는 대표 일기. 하루 여러 편이면 [count] 로 표시하고 대표 1건을 노출. */
+/**
+ * 캘린더 한 칸(날짜)에 대응하는 대표 일기. 하루 여러 편이면 [count] 로 표시하고 대표 1건을 노출.
+ *
+ * 차단/신고로 숨겨진 일기여도 [count] 는 유지된다 — "하루 1편" 슬롯이 빈 날로 보이지 않게 하기 위함.
+ * 이때 [hidden] 만 true 가 되고 [thumbnailUrl] 은 비워진다.
+ */
 data class DiaryCalendarEntry(
     val date: LocalDate,
     val diaryId: Long,
     val thumbnailUrl: String?,
     val mood: Int,
-    val count: Int
-)
+    val count: Int,
+    val hidden: Boolean = false,
+    val hiddenReason: String? = null
+) {
+    fun asHidden(reason: String): DiaryCalendarEntry = copy(
+        thumbnailUrl = null,
+        hidden = true,
+        hiddenReason = reason
+    )
+}
 
 /**
  * 통계 스트립 값.

@@ -1,5 +1,6 @@
 package digdaserver.domain.schedule.application.service.impl
 
+import digdaserver.domain.block.application.service.ContentVisibilityService
 import digdaserver.domain.comment.domain.entity.CommentTargetType
 import digdaserver.domain.comment.domain.repository.CommentRepository
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
@@ -34,7 +35,8 @@ class ScheduleServiceImpl(
     private val commentRepository: CommentRepository,
     private val userRepository: UserRepository,
     private val notificationService: NotificationService,
-    private val userActionLogService: UserActionLogService
+    private val userActionLogService: UserActionLogService,
+    private val contentVisibilityService: ContentVisibilityService
 ) : ScheduleService {
 
     override fun getSchedules(userId: UUID, groupRoomId: Long, startDate: LocalDate, endDate: LocalDate): ScheduleListResponse {
@@ -46,7 +48,13 @@ class ScheduleServiceImpl(
         membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
             .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
 
-        val schedules = scheduleRepository.findAllByGroupRoomIdAndDateRange(groupRoomId, startDate, endDate)
+        val allSchedules = scheduleRepository.findAllByGroupRoomIdAndDateRange(groupRoomId, startDate, endDate)
+
+        // 차단/신고 숨김 — 일정은 슬롯 제약이 없어 캘린더에서 아예 제외한다(작성자 차단 또는 개별 숨김).
+        val visibility = contentVisibilityService.forViewer(userId)
+        val schedules = allSchedules.filter {
+            visibility.scheduleHiddenReason(it.id, it.createdBy.id) == null
+        }
 
         val scheduleIds = schedules.map { it.id }
         val commentCountMap: Map<Long, Int> = if (scheduleIds.isNotEmpty()) {
@@ -79,9 +87,20 @@ class ScheduleServiceImpl(
         val commentCount = commentRepository.countByTargetTypeAndTargetId(CommentTargetType.SCHEDULE, scheduleId)
         val comments = commentRepository.findAllByTargetTypeAndTargetIdOrderByCreatedAtAsc(CommentTargetType.SCHEDULE, scheduleId)
 
+        // 차단/신고 숨김 — 일정 본문(직접 접근 방어)과 차단 사용자 댓글을 비워 내려보낸다.
+        val visibility = contentVisibilityService.forViewer(userId)
+        val scheduleResponse = ScheduleResponse.from(schedule, commentCount).let { resp ->
+            val reason = visibility.scheduleHiddenReason(schedule.id, schedule.createdBy.id)
+            if (reason != null) resp.asHidden(reason) else resp
+        }
+
         return ScheduleDetailResponse(
-            schedule = ScheduleResponse.from(schedule, commentCount),
-            comments = comments.map { CommentResponse.from(it) }
+            schedule = scheduleResponse,
+            comments = comments.map { comment ->
+                val resp = CommentResponse.from(comment)
+                val reason = visibility.commentHiddenReason(comment.id, comment.createdBy.id)
+                if (reason != null) resp.asHidden(reason) else resp
+            }
         )
     }
 

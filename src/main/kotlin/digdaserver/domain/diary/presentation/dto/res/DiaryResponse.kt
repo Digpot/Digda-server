@@ -21,8 +21,22 @@ data class DiaryResponse(
     val updatedAt: LocalDateTime,
     val likeCount: Long,
     val likedByMe: Boolean,
-    val reactions: List<DiaryReactionSummary>
+    val reactions: List<DiaryReactionSummary>,
+    /** 이 뷰어에게 숨겨진 일기(차단/신고)인지. true 면 title/content/imageUrls 는 비워진 상태. */
+    val hidden: Boolean = false,
+    /** 숨김 사유 코드(BLOCKED_USER / REPORTED / HIDDEN). 보일 때는 null. */
+    val hiddenReason: String? = null
 ) {
+    /** 차단/신고로 숨겨야 할 때 — 본문을 비운 사본. */
+    fun asHidden(reason: String): DiaryResponse = copy(
+        title = "",
+        content = "",
+        location = null,
+        imageUrls = emptyList(),
+        hidden = true,
+        hiddenReason = reason
+    )
+
     companion object {
         fun from(
             diary: Diary,

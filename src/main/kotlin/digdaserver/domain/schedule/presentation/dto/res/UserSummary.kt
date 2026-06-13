@@ -11,7 +11,7 @@ data class UserSummary(
     companion object {
         fun from(user: User): UserSummary = UserSummary(
             userId = user.id,
-            name = user.name,
+            name = user.displayedName(),
             profileImage = user.profileImage
         )
     }

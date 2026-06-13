@@ -17,6 +17,8 @@ interface UserRepository : JpaRepository<User, UUID> {
 
     fun findBySocialIdAndSocialProvider(socialId: String, socialProvider: SocialProvider): Optional<User>
 
+    fun existsByEmail(email: String): Boolean
+
     fun countByRole(role: Role): Long
 
     fun findAllByRole(role: Role): List<User>

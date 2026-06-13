@@ -14,7 +14,7 @@ data class MyProfileResponse(
     companion object {
         fun from(user: User): MyProfileResponse = MyProfileResponse(
             id = user.id.toString(),
-            name = user.name,
+            name = user.displayedName(),
             email = user.email,
             profileImage = user.profileImage,
             provider = user.socialProvider.name.lowercase(),

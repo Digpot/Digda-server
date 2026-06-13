@@ -131,6 +131,11 @@ enum class ErrorCode(
     // ── Title (칭호) ──
     TITLE_NOT_OWNED("TITLE_NOT_OWNED", "획득하지 않은 칭호는 장착할 수 없습니다.", 400),
 
+    // ── Report / Block ──
+    REPORT_INVALID_TARGET("REPORT_INVALID_TARGET", "잘못된 신고 대상입니다.", 400),
+    CANNOT_REPORT_SELF("CANNOT_REPORT_SELF", "자기 자신은 신고할 수 없습니다.", 400),
+    CANNOT_BLOCK_SELF("CANNOT_BLOCK_SELF", "자기 자신은 차단할 수 없습니다.", 400),
+
     // ── Rate Limit ──
     RATE_LIMIT_EXCEEDED("RATE_LIMIT_EXCEEDED", "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.", 429),
 

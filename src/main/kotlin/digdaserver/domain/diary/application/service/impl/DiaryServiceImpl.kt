@@ -1,5 +1,7 @@
 package digdaserver.domain.diary.application.service.impl
 
+import digdaserver.domain.block.application.service.ContentVisibilityService
+import digdaserver.domain.block.application.service.VisibilityReason
 import digdaserver.domain.character.application.service.CharacterService
 import digdaserver.domain.comment.domain.entity.CommentTargetType
 import digdaserver.domain.comment.domain.repository.CommentRepository
@@ -62,6 +64,7 @@ class DiaryServiceImpl(
     private val diaryLikeRepository: DiaryLikeRepository,
     private val diaryReactionRepository: DiaryReactionRepository,
     private val groupRegionFillRepository: GroupRegionFillRepository,
+    private val contentVisibilityService: ContentVisibilityService,
     @Lazy private val characterService: CharacterService
 ) : DiaryService {
 
@@ -203,14 +206,19 @@ class DiaryServiceImpl(
             emptySet()
         }
 
+        // 차단/신고 숨김 — 항목을 삭제하지 않고 본문만 비워 플래그를 단다(목록 자리·총개수 유지).
+        val visibility = contentVisibilityService.forViewer(userId)
+
         return DiaryListResponse(
             diaries = diaries.map { diary ->
-                DiarySummaryResponse.from(
+                val summary = DiarySummaryResponse.from(
                     diary = diary,
                     commentCount = commentCountMap[diary.id] ?: 0,
                     likeCount = likeCountMap[diary.id] ?: 0L,
                     likedByMe = diary.id in likedByMeSet
                 )
+                val reason = visibility.diaryHiddenReason(diary.id, diary.createdBy.id)
+                if (reason != null) summary.asHidden(reason) else summary
             },
             total = page.totalElements
         )
@@ -224,19 +232,33 @@ class DiaryServiceImpl(
         // 사진 그리드용: 해당 월의 모든 일기를 이미지까지 한 번에 로드.
         val monthDiaries = diaryRepository.findAllWithImagesByGroupRoomIdAndDateBetween(groupRoomId, startDate, endDate)
 
+        // 차단/신고 숨김 — 일기를 지우지 않고 대표 칸만 숨김 표시. "하루 1편" 슬롯이 빈 날로 보이지 않게.
+        val visibility = contentVisibilityService.forViewer(userId)
+
         // 날짜별 그룹핑. 같은 날 여러 편이면 최신(createdAt DESC, 쿼리에서 이미 정렬)을 대표로 사용.
         val byDate = monthDiaries.groupBy { it.date }
         val entries = byDate.entries
             .sortedBy { it.key }
             .map { (date, diaries) ->
-                val representative = diaries.first()
-                DiaryCalendarEntry(
+                // 대표는 보이는 일기 우선. 전부 숨김이면 첫 일기를 대표로 두되 숨김 표시(슬롯·count 유지).
+                val visible = diaries.firstOrNull {
+                    visibility.diaryHiddenReason(it.id, it.createdBy.id) == null
+                }
+                val representative = visible ?: diaries.first()
+                val entry = DiaryCalendarEntry(
                     date = date,
                     diaryId = representative.id,
                     thumbnailUrl = representative.images.minByOrNull { it.sortOrder }?.url,
                     mood = representative.mood,
                     count = diaries.size
                 )
+                if (visible != null) {
+                    entry
+                } else {
+                    val reason = visibility.diaryHiddenReason(representative.id, representative.createdBy.id)
+                        ?: VisibilityReason.HIDDEN
+                    entry.asHidden(reason)
+                }
             }
         val dates = entries.map { it.date }
 
@@ -292,9 +314,20 @@ class DiaryServiceImpl(
         val likedByMe = diaryLikeRepository.existsByDiaryIdAndUserId(diaryId, userId)
         val reactions = buildReactionSummariesForOneDiary(diaryId, userId)
 
+        // 차단/신고 숨김 — 본문/댓글을 비워 내려보낸다(상세 직접 접근 방어 + 차단 사용자 댓글 숨김).
+        val visibility = contentVisibilityService.forViewer(userId)
+        val diaryResponse = DiaryResponse.from(diary, likeCount, likedByMe, reactions).let { resp ->
+            val reason = visibility.diaryHiddenReason(diary.id, diary.createdBy.id)
+            if (reason != null) resp.asHidden(reason) else resp
+        }
+
         return DiaryDetailResponse(
-            diary = DiaryResponse.from(diary, likeCount, likedByMe, reactions),
-            comments = comments.map { DiaryCommentResponse.from(it) }
+            diary = diaryResponse,
+            comments = comments.map { comment ->
+                val resp = DiaryCommentResponse.from(comment)
+                val reason = visibility.commentHiddenReason(comment.id, comment.createdBy.id)
+                if (reason != null) resp.asHidden(reason) else resp
+            }
         )
     }
 

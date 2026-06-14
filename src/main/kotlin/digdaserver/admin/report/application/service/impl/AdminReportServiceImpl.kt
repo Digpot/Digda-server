@@ -3,6 +3,7 @@ package digdaserver.admin.report.application.service.impl
 import digdaserver.admin.common.dto.res.AdminPageResponse
 import digdaserver.admin.report.application.service.AdminReportService
 import digdaserver.admin.report.presentation.dto.res.AdminReportResponse
+import digdaserver.admin.report.presentation.dto.res.AdminReportTargetContentResponse
 import digdaserver.domain.comment.domain.repository.CommentRepository
 import digdaserver.domain.diary.domain.repository.DiaryRepository
 import digdaserver.domain.report.domain.entity.Report
@@ -43,7 +44,12 @@ class AdminReportServiceImpl(
         val result = reportRepository.searchForAdmin(status, targetType, pageable)
         return AdminPageResponse.of(result) { report ->
             val reported = resolveReportedUser(report)
-            AdminReportResponse.from(report, reported?.id?.toString(), reported?.displayedName())
+            AdminReportResponse.from(
+                report,
+                reported?.id?.toString(),
+                reported?.displayedName(),
+                resolveTargetContent(report)
+            )
         }
     }
 
@@ -53,7 +59,89 @@ class AdminReportServiceImpl(
             .orElseThrow { DigdaException(ErrorCode.RESOURCE_NOT_FOUND) }
         report.markReviewed(status)
         val reported = resolveReportedUser(report)
-        return AdminReportResponse.from(report, reported?.id?.toString(), reported?.displayedName())
+        return AdminReportResponse.from(
+            report,
+            reported?.id?.toString(),
+            reported?.displayedName(),
+            resolveTargetContent(report)
+        )
+    }
+
+    /**
+     * 신고 대상(targetId)의 원본 콘텐츠를 어드민 검토용 스냅샷으로 만든다.
+     * - DIARY:    제목 + 본문 + 사진 URL 들
+     * - SCHEDULE: 제목 + 기간/시간 요약
+     * - COMMENT:  댓글 내용
+     * - USER:     원본 콘텐츠 없음(available=false)
+     * 콘텐츠가 삭제됐거나 파싱 실패하면 available=false.
+     */
+    private fun resolveTargetContent(report: Report): AdminReportTargetContentResponse {
+        return try {
+            when (report.targetType) {
+                ReportTargetType.USER -> AdminReportTargetContentResponse.unavailable()
+
+                ReportTargetType.DIARY ->
+                    report.targetId.toLongOrNull()
+                        ?.let { diaryRepository.findById(it).orElse(null) }
+                        ?.let { diary ->
+                            AdminReportTargetContentResponse(
+                                available = true,
+                                title = diary.title,
+                                text = diary.content,
+                                images = diary.images.map { it.url },
+                                authorName = diary.createdBy.displayedName(),
+                                createdAt = diary.createdAt
+                            )
+                        } ?: AdminReportTargetContentResponse.unavailable()
+
+                ReportTargetType.SCHEDULE ->
+                    report.targetId.toLongOrNull()
+                        ?.let { scheduleRepository.findById(it).orElse(null) }
+                        ?.let { schedule ->
+                            val period = if (schedule.startDate == schedule.endDate) {
+                                schedule.startDate.toString()
+                            } else {
+                                "${schedule.startDate} ~ ${schedule.endDate}"
+                            }
+                            val time = when {
+                                schedule.allDay -> "종일"
+                                schedule.startTime != null ->
+                                    "${schedule.startTime}" +
+                                        (schedule.endTime?.let { " ~ $it" } ?: "")
+                                else -> ""
+                            }
+                            AdminReportTargetContentResponse(
+                                available = true,
+                                title = schedule.title,
+                                text = listOf(period, time).filter { it.isNotBlank() }
+                                    .joinToString(" · "),
+                                authorName = schedule.createdBy.displayedName(),
+                                createdAt = schedule.createdAt
+                            )
+                        } ?: AdminReportTargetContentResponse.unavailable()
+
+                ReportTargetType.COMMENT ->
+                    report.targetId.toLongOrNull()
+                        ?.let { commentRepository.findById(it).orElse(null) }
+                        ?.let { comment ->
+                            AdminReportTargetContentResponse(
+                                available = true,
+                                text = comment.text,
+                                authorName = comment.createdBy.displayedName(),
+                                createdAt = comment.createdAt
+                            )
+                        } ?: AdminReportTargetContentResponse.unavailable()
+            }
+        } catch (e: Exception) {
+            log.warn(
+                "action=신고 원본 콘텐츠 해석 실패, reportId={}, targetType={}, targetId={}, error={}",
+                report.id,
+                report.targetType,
+                report.targetId,
+                e.message
+            )
+            AdminReportTargetContentResponse.unavailable()
+        }
     }
 
     /**

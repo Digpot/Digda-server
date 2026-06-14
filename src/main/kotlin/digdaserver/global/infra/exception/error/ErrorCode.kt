@@ -138,6 +138,10 @@ enum class ErrorCode(
     CANNOT_REPORT_SELF("CANNOT_REPORT_SELF", "자기 자신은 신고할 수 없습니다.", 400),
     CANNOT_BLOCK_SELF("CANNOT_BLOCK_SELF", "자기 자신은 차단할 수 없습니다.", 400),
 
+    // ── Inquiry (고객센터) ──
+    INQUIRY_CONTENT_REQUIRED("INQUIRY_CONTENT_REQUIRED", "문의 내용을 입력해주세요.", 400),
+    INQUIRY_DAILY_LIMIT("INQUIRY_DAILY_LIMIT", "고객센터 문의는 하루 2번까지만 보낼 수 있어요.", 429),
+
     // ── Rate Limit ──
     RATE_LIMIT_EXCEEDED("RATE_LIMIT_EXCEEDED", "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.", 429),
 

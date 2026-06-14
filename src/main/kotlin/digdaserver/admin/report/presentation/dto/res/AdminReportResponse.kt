@@ -47,13 +47,18 @@ data class AdminReportResponse(
     val createdAt: LocalDateTime,
 
     @Schema(description = "검토 시각")
-    val reviewedAt: LocalDateTime?
+    val reviewedAt: LocalDateTime?,
+
+    @Schema(description = "신고된 콘텐츠 원본 스냅샷(검토용)")
+    val targetContent: AdminReportTargetContentResponse
 ) {
     companion object {
         fun from(
             report: Report,
             reportedUserId: String? = null,
-            reportedUserName: String? = null
+            reportedUserName: String? = null,
+            targetContent: AdminReportTargetContentResponse =
+                AdminReportTargetContentResponse.unavailable()
         ): AdminReportResponse = AdminReportResponse(
             reportId = report.id,
             reporterId = report.reporter.id.toString(),
@@ -67,7 +72,8 @@ data class AdminReportResponse(
             detail = report.detail,
             status = report.status,
             createdAt = report.createdAt,
-            reviewedAt = report.reviewedAt
+            reviewedAt = report.reviewedAt,
+            targetContent = targetContent
         )
     }
 }

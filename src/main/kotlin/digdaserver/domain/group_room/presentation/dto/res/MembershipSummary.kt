@@ -3,6 +3,7 @@ package digdaserver.domain.group_room.presentation.dto.res
 import digdaserver.domain.membership.domain.entity.Membership
 
 data class MembershipSummary(
+    val userId: String,
     val name: String,
     val profileImage: String?,
     val role: String,
@@ -10,6 +11,7 @@ data class MembershipSummary(
 ) {
     companion object {
         fun from(membership: Membership): MembershipSummary = MembershipSummary(
+            userId = membership.user.id.toString(),
             name = membership.user.displayedName(),
             profileImage = membership.user.profileImage,
             role = membership.role.name.lowercase(),

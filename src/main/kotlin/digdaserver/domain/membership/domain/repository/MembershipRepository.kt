@@ -17,6 +17,10 @@ interface MembershipRepository : JpaRepository<Membership, Long> {
     @Query("SELECT m FROM Membership m JOIN FETCH m.groupRoom g WHERE m.user.id = :userId AND g.deletedAt IS NULL ORDER BY g.lastActivityAt DESC")
     fun findAllByUserIdWithGroupRoom(userId: UUID): List<Membership>
 
+    /** 1인당 그룹방 개수 제한 판정용 — 삭제되지 않은 그룹방의 참여 수. */
+    @Query("SELECT COUNT(m) FROM Membership m WHERE m.user.id = :userId AND m.groupRoom.deletedAt IS NULL")
+    fun countActiveByUserId(userId: UUID): Long
+
     fun existsByGroupRoomIdAndUserId(groupRoomId: Long, userId: UUID): Boolean
 
     fun countByGroupRoomId(groupRoomId: Long): Int

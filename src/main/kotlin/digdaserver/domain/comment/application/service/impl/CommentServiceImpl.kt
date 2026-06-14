@@ -43,6 +43,8 @@ class CommentServiceImpl(
         val user = userRepository.findById(userId)
             .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
 
+        if (user.restricted) throw DigdaException(ErrorCode.USER_RESTRICTED)
+
         val comment = commentRepository.save(
             Comment(
                 targetType = CommentTargetType.SCHEDULE,
@@ -80,6 +82,8 @@ class CommentServiceImpl(
 
         val user = userRepository.findById(userId)
             .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
+
+        if (user.restricted) throw DigdaException(ErrorCode.USER_RESTRICTED)
 
         val comment = commentRepository.save(
             Comment(

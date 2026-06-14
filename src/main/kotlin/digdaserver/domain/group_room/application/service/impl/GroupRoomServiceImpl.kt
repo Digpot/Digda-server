@@ -82,6 +82,13 @@ class GroupRoomServiceImpl(
         val user = userRepository.findById(userId)
             .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
 
+        if (user.restricted) throw DigdaException(ErrorCode.USER_RESTRICTED)
+
+        // 1인당 그룹방은 최대 MAX_GROUP_ROOMS_PER_USER 개 (생성+참여 합산).
+        if (membershipRepository.countActiveByUserId(userId) >= MAX_GROUP_ROOMS_PER_USER) {
+            throw DigdaException(ErrorCode.GROUP_ROOM_LIMIT_EXCEEDED)
+        }
+
         val thumbnailUrl = resolveImageUrl(request.thumbnailImageId)
 
         val groupRoom = groupRoomRepository.save(
@@ -360,5 +367,8 @@ class GroupRoomServiceImpl(
 
     companion object {
         private val KST: ZoneId = ZoneId.of("Asia/Seoul")
+
+        /** 1인당 참여 가능한 그룹방 최대 개수(생성+참여 합산). */
+        const val MAX_GROUP_ROOMS_PER_USER = 6L
     }
 }

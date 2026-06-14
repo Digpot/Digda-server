@@ -353,6 +353,8 @@ class DiaryServiceImpl(
         val user = userRepository.findById(userId)
             .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
 
+        if (user.restricted) throw DigdaException(ErrorCode.USER_RESTRICTED)
+
         val resolvedUrls = resolveImageUrls(request.imageIds)
 
         val diary = Diary(

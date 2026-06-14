@@ -23,4 +23,8 @@ interface UserBlockRepository : JpaRepository<UserBlock, Long> {
     /** 조회 필터용 — 내가 차단한 사용자 ID 집합. */
     @Query("SELECT b.blocked.id FROM UserBlock b WHERE b.blocker.id = :blockerId")
     fun findBlockedIdsByBlockerId(@Param("blockerId") blockerId: UUID): List<UUID>
+
+    /** 알림 억제용 — 이 사용자(blocked)를 차단한 사람들의 ID 집합. */
+    @Query("SELECT b.blocker.id FROM UserBlock b WHERE b.blocked.id = :blockedId")
+    fun findBlockerIdsByBlockedId(@Param("blockedId") blockedId: UUID): List<UUID>
 }

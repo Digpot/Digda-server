@@ -2,6 +2,7 @@ package digdaserver.admin.user.presentation.controller
 
 import digdaserver.admin.common.dto.res.AdminPageResponse
 import digdaserver.admin.user.application.service.AdminUserService
+import digdaserver.admin.user.presentation.dto.req.AdminUpdateUserRestrictionRequest
 import digdaserver.admin.user.presentation.dto.req.AdminUpdateUserRoleRequest
 import digdaserver.admin.user.presentation.dto.res.AdminUserResponse
 import digdaserver.domain.user.domain.entity.Role
@@ -51,5 +52,19 @@ class AdminUserController(
         request: AdminUpdateUserRoleRequest
     ): ResponseEntity<AdminUserResponse> {
         return ResponseEntity.ok(adminUserService.updateRole(userId, request.role))
+    }
+
+    @Operation(
+        summary = "사용자 서비스 이용 제한",
+        description = "제한된 사용자는 앱에서 마이페이지 외 기능을 사용할 수 없습니다."
+    )
+    @PatchMapping("/{userId}/restriction")
+    fun updateRestriction(
+        @PathVariable userId: UUID,
+        @Valid
+        @RequestBody
+        request: AdminUpdateUserRestrictionRequest
+    ): ResponseEntity<AdminUserResponse> {
+        return ResponseEntity.ok(adminUserService.updateRestriction(userId, request.restricted))
     }
 }

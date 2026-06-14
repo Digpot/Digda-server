@@ -39,6 +39,7 @@ enum class ErrorCode(
     NAME_TOO_SHORT("NAME_TOO_SHORT", "닉네임은 2자 이상이어야 합니다.", 400),
     NAME_TOO_LONG("NAME_TOO_LONG", "닉네임은 20자 이하여야 합니다.", 400),
     INVALID_ROLE("INVALID_ROLE", "유효하지 않은 역할입니다.", 400),
+    USER_RESTRICTED("USER_RESTRICTED", "서비스 이용이 제한된 계정입니다. 자세한 내용은 고객센터로 문의해주세요.", 403),
 
     // ── GroupRoom ──
     GROUP_ROOM_NOT_FOUND("GROUP_ROOM_NOT_FOUND", "존재하지 않는 그룹방입니다.", 404),
@@ -48,6 +49,7 @@ enum class ErrorCode(
     GROUP_ROOM_NOT_SCHEDULED_FOR_DELETION("GROUP_ROOM_NOT_SCHEDULED_FOR_DELETION", "삭제 예약되지 않은 그룹방입니다.", 400),
     GROUP_ROOM_ALREADY_DELETED("GROUP_ROOM_ALREADY_DELETED", "이미 삭제된 그룹방입니다.", 410),
     OWNS_ACTIVE_GROUP_ROOM("OWNS_ACTIVE_GROUP_ROOM", "소유 중인 그룹방이 있어 탈퇴할 수 없습니다. 방장을 양도해주세요.", 409),
+    GROUP_ROOM_LIMIT_EXCEEDED("GROUP_ROOM_LIMIT_EXCEEDED", "참여할 수 있는 그룹방은 최대 6개입니다.", 409),
 
     // ── Invite ──
     INVITE_CODE_INVALID("INVITE_CODE_INVALID", "존재하지 않는 초대 코드입니다.", 404),

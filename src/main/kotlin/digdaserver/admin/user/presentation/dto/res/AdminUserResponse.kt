@@ -25,6 +25,9 @@ data class AdminUserResponse(
     @Schema(description = "권한(USER/ADMIN)")
     val role: String,
 
+    @Schema(description = "서비스 이용 제한 여부")
+    val restricted: Boolean,
+
     @Schema(description = "가입일시")
     val createdAt: LocalDateTime,
 
@@ -39,6 +42,7 @@ data class AdminUserResponse(
             profileImage = user.profileImage,
             socialProvider = user.socialProvider.name,
             role = user.role.name,
+            restricted = user.restricted,
             createdAt = user.createdAt,
             updatedAt = user.updatedAt
         )

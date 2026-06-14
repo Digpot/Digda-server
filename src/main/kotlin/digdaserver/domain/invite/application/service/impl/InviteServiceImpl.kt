@@ -1,5 +1,6 @@
 package digdaserver.domain.invite.application.service.impl
 
+import digdaserver.domain.group_room.application.service.impl.GroupRoomServiceImpl.Companion.MAX_GROUP_ROOMS_PER_USER
 import digdaserver.domain.group_room.domain.entity.GroupRoomRole
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.group_room.presentation.dto.res.GroupRoomResponse
@@ -81,6 +82,11 @@ class InviteServiceImpl(
             throw DigdaException(ErrorCode.ALREADY_JOINED)
         }
 
+        // 1인당 그룹방 개수 제한 — 가입 화면에서 미리 막아 안내한다.
+        if (membershipRepository.countActiveByUserId(userId) >= MAX_GROUP_ROOMS_PER_USER) {
+            throw DigdaException(ErrorCode.GROUP_ROOM_LIMIT_EXCEEDED)
+        }
+
         return InviteValidateResponse(
             groupRoomName = groupRoom.name,
             thumbnailImage = groupRoom.thumbnailImage,
@@ -109,8 +115,15 @@ class InviteServiceImpl(
             throw DigdaException(ErrorCode.ALREADY_JOINED)
         }
 
+        // 1인당 그룹방 개수 제한(생성+참여 합산). 실제 가입 시점에서도 재확인한다.
+        if (membershipRepository.countActiveByUserId(userId) >= MAX_GROUP_ROOMS_PER_USER) {
+            throw DigdaException(ErrorCode.GROUP_ROOM_LIMIT_EXCEEDED)
+        }
+
         val user = userRepository.findById(userId)
             .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
+
+        if (user.restricted) throw DigdaException(ErrorCode.USER_RESTRICTED)
 
         membershipRepository.save(
             Membership(

@@ -111,6 +111,12 @@ class SchemaAutoMigration(
             postSql = listOf(
                 "UPDATE group_character SET master_unlocked = b'1' WHERE level >= 20"
             )
+        ),
+        // 서비스 이용 제한 플래그. user 는 MySQL 예약어라 백틱 필요. 기본 false.
+        MissingColumn(
+            table = "user",
+            column = "restricted",
+            addSql = "ALTER TABLE `user` ADD COLUMN restricted BIT(1) NOT NULL DEFAULT b'0'"
         )
     )
 

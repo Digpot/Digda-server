@@ -20,6 +20,21 @@ class AdminUserServiceImpl(
 ) : AdminUserService {
 
     override fun search(keyword: String?, role: Role?, page: Int, size: Int): AdminPageResponse<AdminUserResponse> {
+        // 키워드가 UUID(user_id) 형태면 정확 매칭으로 단건 조회 — 신고된 사용자를 ID 로 바로 찾기 위함.
+        val asUuid = keyword?.trim()?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+        if (asUuid != null) {
+            val user = userRepository.findById(asUuid).orElse(null)
+                ?.takeIf { role == null || it.role == role }
+            val content = listOfNotNull(user?.let(AdminUserResponse::from))
+            return AdminPageResponse(
+                page = 0,
+                size = size,
+                totalElements = content.size.toLong(),
+                totalPages = if (content.isEmpty()) 0 else 1,
+                content = content
+            )
+        }
+
         val pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
         val result = userRepository.searchForAdmin(keyword, role, pageable)
         return AdminPageResponse.of(result, AdminUserResponse::from)
@@ -36,6 +51,14 @@ class AdminUserServiceImpl(
         val user = userRepository.findById(userId)
             .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
         user.role = role
+        return AdminUserResponse.from(user)
+    }
+
+    @Transactional
+    override fun updateRestriction(userId: UUID, restricted: Boolean): AdminUserResponse {
+        val user = userRepository.findById(userId)
+            .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
+        user.updateRestricted(restricted)
         return AdminUserResponse.from(user)
     }
 }

@@ -51,7 +51,11 @@ class User(
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    var role: Role = Role.USER
+    var role: Role = Role.USER,
+
+    // 서비스 이용 제한 — true 면 앱에서 마이페이지 외 기능을 막는다(어드민이 설정).
+    @Column(name = "restricted", nullable = false)
+    var restricted: Boolean = false
 
 ) : BaseTimeEntity() {
 
@@ -110,5 +114,10 @@ class User(
     /** 자격증명 없는 유령 ADMIN 정리용 — 역할만 USER 로 강등(데이터 삭제 아님). */
     fun demoteToUser() {
         this.role = Role.USER
+    }
+
+    /** 서비스 이용 제한 설정/해제 (어드민 전용). */
+    fun updateRestricted(value: Boolean) {
+        this.restricted = value
     }
 }

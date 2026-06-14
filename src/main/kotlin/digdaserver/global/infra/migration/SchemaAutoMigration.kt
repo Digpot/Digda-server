@@ -129,13 +129,53 @@ class SchemaAutoMigration(
         )
     )
 
+    /**
+     * 신규 테이블 보강용 — 엔티티에는 있지만 prod 에 아직 없는 테이블을 멱등하게 CREATE.
+     * `CREATE TABLE IF NOT EXISTS` 라 이미 있으면 MySQL 이 스킵하므로 안전하다.
+     *
+     * - `deletion_request`: 비로그인 계정/데이터 삭제 요청(Google Play 데이터 안전성 정책의
+     *    계정·데이터 삭제 URL 요건). 어드민 공개 페이지에서 접수된다.
+     */
+    private val missingTables: List<MissingTable> = listOf(
+        MissingTable(
+            table = "deletion_request",
+            createSql = """
+                CREATE TABLE IF NOT EXISTS deletion_request (
+                    deletion_request_id BIGINT NOT NULL AUTO_INCREMENT,
+                    type VARCHAR(32) NOT NULL,
+                    email VARCHAR(255) NOT NULL,
+                    group_room_name VARCHAR(255) NULL,
+                    content VARCHAR(2000) NULL,
+                    status VARCHAR(32) NOT NULL,
+                    created_at DATETIME(6) NOT NULL,
+                    handled_at DATETIME(6) NULL,
+                    PRIMARY KEY (deletion_request_id),
+                    KEY idx_deletion_request_status_created (status, created_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """.trimIndent()
+        )
+    )
+
     override fun run(args: ApplicationArguments?) {
         log.info(
-            "action=startup schema auto-migration 시작, modify={}건, addIfMissing={}건, addIndex={}건",
+            "action=startup schema auto-migration 시작, addTable={}건, modify={}건, addIfMissing={}건, addIndex={}건",
+            missingTables.size,
             requiredColumns.size,
             missingColumns.size,
             missingIndexes.size
         )
+        for (mt in missingTables) {
+            try {
+                createTableIfMissing(mt)
+            } catch (e: Exception) {
+                log.error(
+                    "action=startup schema auto-migration CREATE TABLE 실패, table={}, error={}",
+                    mt.table,
+                    e.message,
+                    e
+                )
+            }
+        }
         for (rc in requiredColumns) {
             try {
                 migrateOne(rc)
@@ -177,6 +217,15 @@ class SchemaAutoMigration(
             }
         }
         log.info("action=startup schema auto-migration 완료")
+    }
+
+    private fun createTableIfMissing(mt: MissingTable) {
+        // CREATE TABLE IF NOT EXISTS 자체가 멱등이라 존재 여부 선조회 없이 실행해도 안전하다.
+        log.info(
+            "action=startup schema auto-migration CREATE TABLE 실행(IF NOT EXISTS), table={}",
+            mt.table
+        )
+        jdbcTemplate.execute(mt.createSql)
     }
 
     private fun addIndexIfMissing(mi: MissingIndex) {
@@ -362,6 +411,11 @@ class SchemaAutoMigration(
     private data class MissingIndex(
         val table: String,
         val indexName: String,
+        val createSql: String
+    )
+
+    private data class MissingTable(
+        val table: String,
         val createSql: String
     )
 }

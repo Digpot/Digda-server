@@ -32,10 +32,10 @@ class AdminInquiryServiceImpl(
     }
 
     @Transactional
-    override fun markAnswered(inquiryId: Long): AdminInquiryResponse {
+    override fun answer(inquiryId: Long, answer: String): AdminInquiryResponse {
         val inquiry = inquiryRepository.findById(inquiryId)
             .orElseThrow { DigdaException(ErrorCode.RESOURCE_NOT_FOUND) }
-        inquiry.markAnswered()
+        inquiry.answer(answer.trim())
         return AdminInquiryResponse.from(inquiry)
     }
 }

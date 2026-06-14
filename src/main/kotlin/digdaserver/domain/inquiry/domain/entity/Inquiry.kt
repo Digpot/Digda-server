@@ -45,13 +45,19 @@ class Inquiry(
     @Column(name = "status", nullable = false, length = 32)
     var status: InquiryStatus = InquiryStatus.PENDING,
 
+    /** 어드민 답변 내용. 미답변이면 null. */
+    @Column(name = "answer", length = 2000)
+    var answer: String? = null,
+
     @Column(name = "created_at", nullable = false)
     val createdAt: LocalDateTime = LocalDateTime.now(),
 
     @Column(name = "answered_at")
     var answeredAt: LocalDateTime? = null
 ) {
-    fun markAnswered() {
+    /** 어드민이 답변을 등록 — 답변 내용 저장 + 상태 ANSWERED 전이. */
+    fun answer(answer: String) {
+        this.answer = answer
         this.status = InquiryStatus.ANSWERED
         this.answeredAt = LocalDateTime.now()
     }

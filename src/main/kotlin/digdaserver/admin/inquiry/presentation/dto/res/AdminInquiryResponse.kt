@@ -23,6 +23,9 @@ data class AdminInquiryResponse(
     @Schema(description = "처리 상태")
     val status: InquiryStatus,
 
+    @Schema(description = "어드민 답변 내용(미답변이면 null)")
+    val answer: String?,
+
     @Schema(description = "접수 시각")
     val createdAt: LocalDateTime,
 
@@ -36,6 +39,7 @@ data class AdminInquiryResponse(
             userName = inquiry.user.displayedName(),
             content = inquiry.content,
             status = inquiry.status,
+            answer = inquiry.answer,
             createdAt = inquiry.createdAt,
             answeredAt = inquiry.answeredAt
         )

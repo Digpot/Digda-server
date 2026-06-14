@@ -48,6 +48,7 @@ class AdminReportServiceImpl(
                 report,
                 reported?.id?.toString(),
                 reported?.displayedName(),
+                reported?.restricted,
                 resolveTargetContent(report)
             )
         }
@@ -63,6 +64,7 @@ class AdminReportServiceImpl(
             report,
             reported?.id?.toString(),
             reported?.displayedName(),
+            reported?.restricted,
             resolveTargetContent(report)
         )
     }

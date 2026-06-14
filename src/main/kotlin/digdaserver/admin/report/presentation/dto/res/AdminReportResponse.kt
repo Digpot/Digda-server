@@ -31,6 +31,9 @@ data class AdminReportResponse(
     @Schema(description = "피신고자 이름. 해석 불가 시 null")
     val reportedUserName: String?,
 
+    @Schema(description = "피신고자의 현재 이용 제한 상태. 해석 불가 시 null")
+    val reportedUserRestricted: Boolean?,
+
     @Schema(description = "대상이 속한 그룹방 ID")
     val groupRoomId: Long?,
 
@@ -57,6 +60,7 @@ data class AdminReportResponse(
             report: Report,
             reportedUserId: String? = null,
             reportedUserName: String? = null,
+            reportedUserRestricted: Boolean? = null,
             targetContent: AdminReportTargetContentResponse =
                 AdminReportTargetContentResponse.unavailable()
         ): AdminReportResponse = AdminReportResponse(
@@ -67,6 +71,7 @@ data class AdminReportResponse(
             targetId = report.targetId,
             reportedUserId = reportedUserId,
             reportedUserName = reportedUserName,
+            reportedUserRestricted = reportedUserRestricted,
             groupRoomId = report.groupRoomId,
             reason = report.reason,
             detail = report.detail,

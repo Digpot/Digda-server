@@ -119,6 +119,8 @@ class ScheduleServiceImpl(
         val user = userRepository.findById(userId)
             .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
 
+        if (user.restricted) throw DigdaException(ErrorCode.USER_RESTRICTED)
+
         val schedule = scheduleRepository.save(
             Schedule(
                 groupRoom = groupRoom,

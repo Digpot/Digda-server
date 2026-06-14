@@ -1,5 +1,6 @@
 package digdaserver.domain.notification.application.service.impl
 
+import digdaserver.domain.block.domain.repository.UserBlockRepository
 import digdaserver.domain.group_room.domain.entity.GroupRoom
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.membership.domain.repository.MembershipRepository
@@ -30,6 +31,7 @@ class NotificationServiceImpl(
     private val membershipRepository: MembershipRepository,
     private val groupRoomRepository: GroupRoomRepository,
     private val userRepository: UserRepository,
+    private val userBlockRepository: UserBlockRepository,
     private val pushDispatcher: NotificationPushDispatcher
 ) : NotificationService {
 
@@ -136,7 +138,8 @@ class NotificationServiceImpl(
                 groupRoomName = groupRoom.name,
                 relatedId = diaryId,
                 relatedType = "DIARY"
-            )
+            ),
+            actorUserId = authorUserId
         )
     }
 
@@ -165,7 +168,8 @@ class NotificationServiceImpl(
                 groupRoomName = groupRoom.name,
                 relatedId = scheduleId,
                 relatedType = "SCHEDULE"
-            )
+            ),
+            actorUserId = creatorUserId
         )
     }
 
@@ -232,7 +236,8 @@ class NotificationServiceImpl(
                 groupRoomName = groupRoom.name,
                 relatedId = scheduleId,
                 relatedType = "SCHEDULE"
-            )
+            ),
+            actorUserId = actorUserId
         )
     }
 
@@ -334,7 +339,8 @@ class NotificationServiceImpl(
                 groupRoomName = groupRoom.name,
                 relatedId = scheduleId,
                 relatedType = "SCHEDULE"
-            )
+            ),
+            actorUserId = commenterUserId
         )
     }
 
@@ -359,7 +365,8 @@ class NotificationServiceImpl(
                 groupRoomName = groupRoom.name,
                 relatedId = diaryId,
                 relatedType = "DIARY"
-            )
+            ),
+            actorUserId = commenterUserId
         )
     }
 
@@ -423,7 +430,8 @@ class NotificationServiceImpl(
                 groupRoomName = groupRoom.name,
                 relatedId = quizId,
                 relatedType = "QUIZ"
-            )
+            ),
+            actorUserId = authorUserId
         )
     }
 
@@ -447,7 +455,8 @@ class NotificationServiceImpl(
                 groupRoomName = groupRoom.name,
                 relatedId = quizId,
                 relatedType = "QUIZ"
-            )
+            ),
+            actorUserId = solverUserId
         )
     }
 
@@ -475,7 +484,8 @@ class NotificationServiceImpl(
                 message = message,
                 groupRoomId = groupRoomId,
                 groupRoomName = groupRoom.name
-            )
+            ),
+            actorUserId = actorUserId
         )
     }
 
@@ -531,13 +541,30 @@ class NotificationServiceImpl(
         return notifiedCount
     }
 
-    private fun notify(recipients: List<User>, payload: NotificationPayload) {
+    /**
+     * [actorUserId] 를 넘기면, 그 사용자를 '차단한' 수신자에게는 알림을 보내지 않는다.
+     * (차단한 사람이 일기·일정·댓글 등을 작성해도 알림이 뜨지 않게 하기 위함)
+     * 작성 주체가 없는 운영성 알림(공지·리마인더·멤버 변동)은 actorUserId 없이 호출한다.
+     */
+    private fun notify(
+        recipients: List<User>,
+        payload: NotificationPayload,
+        actorUserId: UUID? = null
+    ) {
         if (recipients.isEmpty()) return
 
-        val notifications = recipients.map { user -> payload.toEntity(user) }
+        val targets = if (actorUserId != null) {
+            val blockers = userBlockRepository.findBlockerIdsByBlockedId(actorUserId).toHashSet()
+            recipients.filter { it.id !in blockers }
+        } else {
+            recipients
+        }
+        if (targets.isEmpty()) return
+
+        val notifications = targets.map { user -> payload.toEntity(user) }
         notificationRepository.saveAll(notifications)
 
-        pushDispatcher.dispatch(recipients, payload)
+        pushDispatcher.dispatch(targets, payload)
     }
 
     private fun NotificationPayload.toEntity(recipient: User): Notification =

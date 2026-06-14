@@ -12,4 +12,6 @@ interface AdminUserService {
     fun getDetail(userId: UUID): AdminUserResponse
 
     fun updateRole(userId: UUID, role: Role): AdminUserResponse
+
+    fun updateRestriction(userId: UUID, restricted: Boolean): AdminUserResponse
 }

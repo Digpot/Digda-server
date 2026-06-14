@@ -25,6 +25,12 @@ data class AdminReportResponse(
     @Schema(description = "대상 ID(콘텐츠는 PK, USER 는 UUID)")
     val targetId: String,
 
+    @Schema(description = "피신고자 ID(UUID). 대상 콘텐츠/사용자의 작성자. 해석 불가 시 null")
+    val reportedUserId: String?,
+
+    @Schema(description = "피신고자 이름. 해석 불가 시 null")
+    val reportedUserName: String?,
+
     @Schema(description = "대상이 속한 그룹방 ID")
     val groupRoomId: Long?,
 
@@ -44,12 +50,18 @@ data class AdminReportResponse(
     val reviewedAt: LocalDateTime?
 ) {
     companion object {
-        fun from(report: Report): AdminReportResponse = AdminReportResponse(
+        fun from(
+            report: Report,
+            reportedUserId: String? = null,
+            reportedUserName: String? = null
+        ): AdminReportResponse = AdminReportResponse(
             reportId = report.id,
             reporterId = report.reporter.id.toString(),
             reporterName = report.reporter.displayedName(),
             targetType = report.targetType,
             targetId = report.targetId,
+            reportedUserId = reportedUserId,
+            reportedUserName = reportedUserName,
             groupRoomId = report.groupRoomId,
             reason = report.reason,
             detail = report.detail,

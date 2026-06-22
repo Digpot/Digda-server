@@ -1,1380 +1,627 @@
 # 📘 API 명세서 — DigDa (그룹 다이어리)
 
+> 이 문서는 `dev` 브랜치 컨트롤러에서 재생성되었습니다 (기준일 2026-06-17).
+> 실제 런타임 스펙은 Swagger UI(`/swagger-ui.html`, `/v3/api-docs`)가 단일 소스입니다.
+
 ---
 
 ## 📌 개요
 
-**프로젝트**: DigDa — 그룹 기반 공유 다이어리 앱
-**플랫폼**: Flutter (iOS/Android)
-**인증 방식**: 소셜 로그인 (카카오, 네이버, 애플) + 관리자 계정 + JWT
-**API 스타일**: RESTful JSON API
-**Base URL**: `https://api.digda.app/v1`
-
-### 도메인 네이밍 규칙
-
-| 앱 용어 | API 도메인명 | 리소스 경로 | 설명 |
-|---------|-------------|------------|------|
-| 그룹 (방) | **GroupRoom** | `/group-rooms` | 다이어리 방 단위 |
-| 일기 (글) | **Diary** | `/group-rooms/:groupRoomId/diaries` | 개별 일기 글 |
-| 구성원 | **Membership** | `/group-rooms/:groupRoomId/memberships` | 그룹 내 구성원 관리 |
-| 사용자 | **User** | `/users` | 로그인한 사용자 본인 |
-
-> **왜 Member가 아니라 Membership인가?**
-> `User`는 "나 자신"의 프로필/설정, `Membership`은 "특정 그룹 안에서의 소속 관계"를 의미합니다.
-> Member라고 하면 User와 혼동되므로, 관계(소속)를 나타내는 Membership으로 명명합니다.
-
-### API 설계 기준
-
-| 항목 | 기준 |
-|------|------|
-| 인증 | Bearer JWT (Access Token 1시간 + Refresh Token 30일) |
-| 날짜 형식 | ISO 8601 (`2026-03-19T09:00:00Z`) |
-| 페이지네이션 | Offset 기반 (`?limit=20&offset=0`) |
-| 에러 응답 | `{ "error": { "code": "...", "message": "..." } }` |
-| 이미지 업로드 | Multipart form-data |
-| 삭제 전략 | 그룹: Soft Delete (7일 복구), 나머지: Hard Delete |
-| 권한 체크 | 그룹 구성원 여부 → 리소스 소유자/방장 여부 순서 |
-| HTTP 메서드 | GET(조회), POST(생성), PUT(전체수정), PATCH(부분수정), DELETE(삭제) |
-
----
-
-## 📂 도메인 목록
-
-| # | 도메인 | 브랜치 | 엔드포인트 수 | 설명 |
-|---|--------|--------|:---:|------|
-| 1 | Auth | `feature/auth-api` | 6 | 소셜 로그인, 토큰 갱신, 약관 동의, 로그아웃, 회원 탈퇴 |
-| 2 | User | `feature/user-api` | 4 | 프로필 조회/수정, 알림 설정 |
-| 3 | GroupRoom | `feature/group-room-api` | 6 | 그룹(방) 생성, 조회, 수정, 삭제, 복구 |
-| 4 | Invite | `feature/invite-api` | 3 | 초대 코드 생성, 검증, 참여 |
-| 5 | Membership | `feature/membership-api` | 4 | 구성원 목록, 내보내기, 역할 변경, 탈퇴 |
-| 6 | Schedule | `feature/schedule-api` | 5 | 일정 CRUD, 참여자 관리 |
-| 7 | Diary | `feature/diary-api` | 6 | 일기 CRUD, 이미지 첨부, 캘린더 조회 |
-| 8 | Comment | `feature/comment-api` | 4 | 일정·일기 댓글 작성/삭제 |
-| 9 | Todo | `feature/todo-api` | 4 | 할 일 CRUD, 완료 토글 |
-| 10 | Notification | `feature/notification-api` | 4 | 알림 목록, 읽음 처리, 삭제 |
-| 11 | Device | `feature/device-api` | 2 | 푸시 알림용 디바이스 토큰 등록/해제 |
-| 12 | Upload | `feature/upload-api` | 1 | 이미지 업로드 (단일) |
-| | | **합계** | **48** | |
-
----
-
-## 📦 도메인별 상세
-
----
-
-### 🔐 1. Auth (인증)
-
-- **브랜치**: `feature/auth-api`
-- **설명**: 소셜 로그인, 온보딩(약관 동의), JWT 토큰 관리, 로그아웃, 회원 탈퇴
-- **인증 필요**: 로그인·약관조회 제외 전부
-
----
-
-#### 1-1. 소셜 로그인
-
-**POST** `/auth/login`
-
-소셜 프로바이더 토큰으로 로그인. 최초 로그인 시 계정 자동 생성.
-유저 식별은 **소셜 고유 ID + provider 조합**으로 수행 (email 기반 아님).
-
-**Request Body**
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|:---:|------|
-| provider | string | ✅ | `kakao` · `naver` · `apple` |
-| accessToken | string | ✅ | 소셜 프로바이더 액세스 토큰 |
-| idToken | string | 조건부 | Apple Sign In 시 필수 |
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| accessToken | string | JWT 액세스 토큰 (만료: 1시간) |
-| refreshToken | string | 리프레시 토큰 (만료: 30일) |
-| user | User | 사용자 정보 |
-| isNewUser | boolean | 신규 가입 여부 (true면 약관 동의 화면으로) |
-
----
-
-#### 1-2. 약관 동의 (온보딩)
-
-**POST** `/auth/terms`
-
-신규 가입자가 필수/선택 약관에 동의. `isNewUser: true`일 때만 호출.
-
-**Request Body**
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|:---:|------|
-| termsOfService | boolean | ✅ | 이용약관 동의 (필수) |
-| privacyPolicy | boolean | ✅ | 개인정보처리방침 동의 (필수) |
-| ageConfirmation | boolean | ✅ | 만 14세 이상 확인 (필수) |
-| marketingConsent | boolean | ❌ | 마케팅 수신 동의 (선택) |
-| pushConsent | boolean | ❌ | 푸시 알림 수신 동의 (선택) |
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| user | User | 약관 동의 완료된 사용자 정보 |
-
-**에러 케이스**
-
-| 코드 | HTTP | 상황 |
-|------|:---:|------|
-| `REQUIRED_TERMS_NOT_AGREED` | 400 | 필수 약관 미동의 |
-
----
-
-#### 1-3. 약관 문서 조회
-
-**GET** `/auth/terms/:type`
-
-약관 전문 HTML 조회. 인증 불필요.
-
-**Path Parameters**
-
-| 파라미터 | 설명 |
-|----------|------|
-| type | `terms-of-service` · `privacy-policy` · `marketing` |
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| title | string | 약관 제목 |
-| content | string | 약관 본문 (HTML) |
-| version | string | 약관 버전 (`v1.0`) |
-| updatedAt | string | 최종 수정일 |
-
----
-
-#### 1-4. 토큰 갱신
-
-**POST** `/auth/refresh`
-
-**Request Body**
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|:---:|------|
-| refreshToken | string | ✅ | 기존 리프레시 토큰 |
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| accessToken | string | 새 액세스 토큰 |
-| refreshToken | string | 새 리프레시 토큰 (Rotation 적용) |
-
-**에러 케이스**
-
-| 코드 | HTTP | 상황 |
-|------|:---:|------|
-| `TOKEN_EXPIRED` | 401 | 리프레시 토큰 만료 → 재로그인 필요 |
-| `TOKEN_INVALID` | 401 | 유효하지 않은 토큰 |
-
----
-
-#### 1-5. 로그아웃
-
-**POST** `/auth/logout`
-
-서버 측 리프레시 토큰 무효화 + 디바이스 토큰 해제.
-
-**Response** `204 No Content`
-
----
-
-#### 1-6. 회원 탈퇴
-
-**DELETE** `/auth/account`
-
-계정 영구 삭제. 소유 중인 그룹이 있으면 먼저 양도 필요.
-
-**Response** `204 No Content`
-
-**에러 케이스**
-
-| 코드 | HTTP | 상황 |
-|------|:---:|------|
-| `OWNS_ACTIVE_GROUP` | 409 | 소유 중인 그룹이 있어 탈퇴 불가. 방장 양도 후 재시도. |
-
----
-
-### 👤 2. User (사용자)
-
-- **브랜치**: `feature/user-api`
-- **설명**: 내 프로필 조회·수정, 알림 설정
-- **인증 필요**: 전부
-
----
-
-#### 2-1. 내 프로필 조회
-
-**GET** `/users/me`
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| id | string | 사용자 UUID |
-| name | string | 닉네임 (2~20자) |
-| email | string? | 소셜 계정 이메일 (nullable — provider가 미제공 시 null) |
-| profileImage | string? | 프로필 이미지 URL (null이면 기본 아바타) |
-| statusMessage | string? | 상태 메시지 (최대 100자) |
-| provider | string | `kakao` · `naver` · `apple` · `admin` |
-| createdAt | string | 가입일 |
-
----
-
-#### 2-2. 프로필 수정
-
-**PUT** `/users/me`
-
-**Request Body**
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|:---:|------|
-| name | string | ❌ | 닉네임 (2~20자) |
-| statusMessage | string? | ❌ | 상태 메시지 (빈 문자열 = 삭제, 최대 100자) |
-| profileImageId | string? | ❌ | Upload API로 받은 이미지 ID (null = 기본 아바타로 초기화) |
-
-**Response** `200 OK` — 수정된 User 객체
-
-**에러 케이스**
-
-| 코드 | HTTP | 상황 |
-|------|:---:|------|
-| `NAME_TOO_SHORT` | 400 | 닉네임 2자 미만 |
-| `NAME_TOO_LONG` | 400 | 닉네임 20자 초과 |
-| `STATUS_MESSAGE_TOO_LONG` | 400 | 상태 메시지 100자 초과 |
-
----
-
-#### 2-3. 알림 설정 조회
-
-**GET** `/users/me/notification-settings`
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| pushEnabled | boolean | 푸시 알림 전체 ON/OFF |
-| scheduleNotification | boolean | 일정 관련 알림 |
-| diaryNotification | boolean | 일기 관련 알림 |
-| commentNotification | boolean | 댓글 알림 |
-| marketingConsent | boolean | 마케팅 수신 동의 |
-
----
-
-#### 2-4. 알림 설정 수정
-
-**PUT** `/users/me/notification-settings`
-
-**Request Body** — 위 응답과 동일 구조 (변경할 필드만 전송)
-
-**Response** `200 OK` — 수정된 설정 객체
-
----
-
-### 🏠 3. GroupRoom (그룹)
-
-- **브랜치**: `feature/group-room-api`
-- **설명**: 다이어리 그룹(방) 생성, 목록 조회, 상세 조회, 수정, 삭제(Soft Delete 7일), 복구
-- **인증 필요**: 전부
-- **권한**: 수정/삭제/복구는 방장(owner)만
-
----
-
-#### 3-1. 그룹 생성
-
-**POST** `/group-rooms`
-
-생성 시 초대 코드 자동 발급. 생성자가 방장(owner)이 됨.
-
-**Request Body**
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|:---:|------|
-| name | string | ✅ | 그룹명 (2~20자) |
-| maxMembers | int | ✅ | 최대 인원 (2~99) |
-| thumbnailImageId | string | ❌ | Upload API로 받은 이미지 ID |
-
-**Response** `201 Created`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| group | Group | 생성된 그룹 |
-| inviteCode | string | 자동 발급된 6자리 초대 코드 |
-| inviteCodeExpiresAt | string | 초대 코드 만료 시각 (24시간 후) |
-
----
-
-#### 3-2. 내 그룹 목록
-
-**GET** `/group-rooms`
-
-내가 속한 모든 그룹. 최근 활동순 정렬.
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| groups | GroupListItem[] | 그룹 배열 |
-
-GroupListItem 객체:
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| id | string | 그룹 ID |
-| name | string | 그룹명 |
-| thumbnailImage | string? | 썸네일 이미지 URL |
-| memberCount | int | 현재 구성원 수 |
-| maxMembers | int | 최대 인원 |
-| myRole | string | 내 역할 (`owner` · `member`) |
-| lastActivityAt | string | 마지막 활동 시각 |
-| isDeleteScheduled | boolean | 삭제 예약 여부 |
-
----
-
-#### 3-3. 그룹 상세 조회
-
-**GET** `/group-rooms/:groupRoomId`
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| group | Group | 그룹 정보 |
-| memberships | MembershipSummary[] | 구성원 목록 (간략) |
-| myRole | string | 내 역할 |
-| inviteCode | string? | 현재 유효한 초대 코드 (방장에게만 노출) |
-
----
-
-#### 3-4. 그룹 수정
-
-**PUT** `/group-rooms/:groupRoomId`
-
-방장만 가능.
-
-**Request Body**
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|:---:|------|
-| name | string | ❌ | 그룹명 (2~20자) |
-| maxMembers | int | ❌ | 최대 인원 (현재 구성원 수 이상이어야 함) |
-| thumbnailImageId | string? | ❌ | 새 썸네일 이미지 ID (null = 삭제) |
-
-**Response** `200 OK` — 수정된 Group 객체
-
-**에러 케이스**
-
-| 코드 | HTTP | 상황 |
-|------|:---:|------|
-| `MAX_MEMBERS_BELOW_CURRENT` | 400 | 현재 구성원 수보다 적은 값으로 설정 시도 |
-
----
-
-#### 3-5. 그룹 삭제 (Soft Delete)
-
-**DELETE** `/group-rooms/:groupRoomId`
-
-방장만 가능. 즉시 삭제가 아닌 7일 후 영구 삭제 예약.
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| deleteScheduledAt | string | 영구 삭제 예정 시각 (7일 후) |
-
----
-
-#### 3-6. 그룹 복구
-
-**POST** `/group-rooms/:groupRoomId/recover`
-
-방장만 가능. 삭제 예약 기간(7일) 내에만 복구 가능.
-
-**Response** `200 OK` — 복구된 Group 객체
-
-**에러 케이스**
-
-| 코드 | HTTP | 상황 |
-|------|:---:|------|
-| `GROUP_NOT_SCHEDULED_FOR_DELETION` | 400 | 삭제 예약되지 않은 그룹 |
-| `GROUP_ALREADY_DELETED` | 410 | 이미 영구 삭제됨 |
-
----
-
-### 🔗 4. Invite (초대)
-
-- **브랜치**: `feature/invite-api`
-- **설명**: 초대 코드 생성·검증·참여
-- **인증 필요**: 전부
-
----
-
-#### 4-1. 초대 코드 생성 (재발급)
-
-**POST** `/group-rooms/:groupRoomId/invites`
-
-방장만 가능. 기존 코드 무효화 후 새 코드 발급. 유효기간 24시간.
-
-**Response** `201 Created`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| code | string | 6자리 영숫자 초대 코드 (대소문자 무시) |
-| expiresAt | string | 만료 시각 |
-
----
-
-#### 4-2. 초대 코드 검증
-
-**POST** `/invites/validate`
-
-코드 입력 시 그룹 미리보기. 참여 전 확인용.
-
-**Request Body**
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|:---:|------|
-| code | string | ✅ | 6자리 초대 코드 |
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| groupRoomName | string | 그룹룸명 |
-| thumbnailImage | string? | 썸네일 이미지 URL |
-| memberCount | int | 현재 구성원 수 |
-| maxMembers | int | 최대 인원 |
-| expiresAt | string | 코드 만료 시각 |
-
-**에러 케이스**
-
-| 코드 | HTTP | 상황 |
-|------|:---:|------|
-| `INVITE_CODE_INVALID` | 404 | 존재하지 않는 코드 |
-| `INVITE_CODE_EXPIRED` | 410 | 만료된 코드 |
-| `GROUP_FULL` | 409 | 인원 초과 |
-| `ALREADY_JOINED` | 409 | 이미 참여 중인 그룹 |
-
----
-
-#### 4-3. 초대 코드로 참여
-
-**POST** `/invites/join`
-
-**Request Body**
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|:---:|------|
-| code | string | ✅ | 6자리 초대 코드 |
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| groupRoom | GroupRoom | 참여한 그룹룸 정보 |
-| memberships | MembershipSummary[] | 전체 구성원 목록 |
-
-> 참여 성공 시 기존 구성원에게 `member_joined` 푸시 알림 발송
-
----
-
-### 👥 5. Membership (구성원 관리)
-
-- **브랜치**: `feature/membership-api`
-- **설명**: 그룹 내 구성원 목록 조회, 내보내기(추방), 역할 변경(방장 양도), 자발적 탈퇴
-- **인증 필요**: 전부
-- **권한**: 내보내기/역할 변경은 방장만
-
----
-
-#### 5-1. 구성원 목록
-
-**GET** `/group-rooms/:groupRoomId/memberships`
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| memberships | Membership[] | 구성원 배열 |
-
-Membership 객체:
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| userId | string | 사용자 UUID |
-| name | string | 닉네임 |
-| profileImage | string? | 프로필 이미지 URL |
-| color | string | 구성원 컬러 (hex, 캘린더 표시용) |
-| role | string | `owner` · `member` |
-| joinedAt | string | 참여일 |
-
----
-
-#### 5-2. 구성원 내보내기 (추방)
-
-**DELETE** `/group-rooms/:groupRoomId/memberships/:userId`
-
-방장만 가능. 클라이언트에서 2단계 확인 UI 처리.
-
-**Response** `204 No Content`
-
-> 내보내진 사용자에게 `member_removed` 푸시 알림 발송
-
-**에러 케이스**
-
-| 코드 | HTTP | 상황 |
-|------|:---:|------|
-| `CANNOT_REMOVE_OWNER` | 400 | 방장은 내보낼 수 없음 |
-| `USER_NOT_IN_GROUP` | 404 | 해당 그룹 구성원이 아님 |
-
----
-
-#### 5-3. 역할 변경 (방장 양도)
-
-**PUT** `/group-rooms/:groupRoomId/memberships/:userId/role`
-
-현재 방장만 가능. 지정한 구성원에게 방장을 양도하면 기존 방장은 일반 구성원이 됨.
-
-**Request Body**
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|:---:|------|
-| role | string | ✅ | `owner` (양도 대상) |
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| memberships | Membership[] | 변경된 전체 구성원 목록 |
-
----
-
-#### 5-4. 그룹 탈퇴
-
-**POST** `/group-rooms/:groupRoomId/leave`
-
-자발적 탈퇴. 방장은 양도 후에만 탈퇴 가능.
-
-**Response** `204 No Content`
-
-**에러 케이스**
-
-| 코드 | HTTP | 상황 |
-|------|:---:|------|
-| `OWNER_CANNOT_LEAVE` | 400 | 방장은 양도 후 탈퇴 가능 |
-
----
-
-### 📅 6. Schedule (일정)
-
-- **브랜치**: `feature/schedule-api`
-- **설명**: 그룹 일정 CRUD, 참여자 지정, 월별 조회
-- **인증 필요**: 전부
-- **권한**: 수정/삭제는 작성자 또는 방장
-
----
-
-#### 6-1. 일정 목록 (기간 조회)
-
-**GET** `/group-rooms/:groupRoomId/schedules`
-
-**Query Parameters**
-
-| 파라미터 | 타입 | 필수 | 설명 |
-|----------|------|:---:|------|
-| startDate | string | ✅ | 조회 시작일 (`2026-03-01`) |
-| endDate | string | ✅ | 조회 종료일 (`2026-03-31`) |
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| schedules | Schedule[] | 기간 내 일정 목록 |
-
-Schedule 객체:
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| id | string | 일정 ID |
-| title | string | 제목 (최대 50자) |
-| color | string | 색상 hex |
-| startDate | string | 시작일 |
-| endDate | string | 종료일 |
-| startTime | string? | 시작 시간 `HH:mm` (종일이면 null) |
-| endTime | string? | 종료 시간 `HH:mm` |
-| allDay | boolean | 종일 여부 |
-| participants | UserSummary[] | 참여자 목록 |
-| createdBy | UserSummary | 작성자 |
-| commentCount | int | 댓글 수 |
-| createdAt | string | 작성일시 |
-
-> **색상 옵션**: `#FF6B6B`(빨강), `#A78BFA`(보라), `#60A5FA`(파랑), `#34D399`(초록), `#FB923C`(주황)
-
----
-
-#### 6-2. 일정 상세
-
-**GET** `/group-rooms/:groupRoomId/schedules/:scheduleId`
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| schedule | Schedule | 일정 전체 정보 |
-| comments | Comment[] | 댓글 목록 (시간순) |
-
----
-
-#### 6-3. 일정 생성
-
-**POST** `/group-rooms/:groupRoomId/schedules`
-
-**Request Body**
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|:---:|------|
-| title | string | ✅ | 제목 (1~50자) |
-| color | string | ✅ | 색상 hex |
-| startDate | string | ✅ | 시작일 (`YYYY-MM-DD`) |
-| endDate | string | ✅ | 종료일 (`YYYY-MM-DD`, 시작일 이상) |
-| startTime | string | ❌ | 시작 시간 (`HH:mm`, allDay=false일 때) |
-| endTime | string | ❌ | 종료 시간 (`HH:mm`) |
-| allDay | boolean | ✅ | 종일 여부 |
-| participantIds | string[] | ❌ | 참여자 사용자 UUID 배열 |
-
-**Response** `201 Created` — Schedule 객체
-
-> 그룹 구성원에게 `schedule_created` 푸시 알림 발송
-
-**에러 케이스**
-
-| 코드 | HTTP | 상황 |
-|------|:---:|------|
-| `END_DATE_BEFORE_START` | 400 | 종료일이 시작일보다 이전 |
-| `END_TIME_BEFORE_START` | 400 | 같은 날인데 종료 시간이 시작 시간보다 이전 |
-| `INVALID_PARTICIPANT` | 400 | 참여자가 그룹 구성원이 아님 |
-
----
-
-#### 6-4. 일정 수정
-
-**PUT** `/group-rooms/:groupRoomId/schedules/:scheduleId`
-
-작성자 또는 방장만 가능. Request Body는 생성과 동일 (변경할 필드만).
-
-**Response** `200 OK` — 수정된 Schedule 객체
-
-> 참여자에게 `schedule_updated` 푸시 알림 발송
-
----
-
-#### 6-5. 일정 삭제
-
-**DELETE** `/group-rooms/:groupRoomId/schedules/:scheduleId`
-
-작성자 또는 방장만 가능.
-
-**Response** `204 No Content`
-
----
-
-### 📓 7. Diary (일기)
-
-- **브랜치**: `feature/diary-api`
-- **설명**: 개별 일기 글 CRUD, 이미지 첨부, 날씨·기분 선택, 캘린더용 날짜 조회
-- **인증 필요**: 전부
-- **권한**: 수정/삭제는 작성자 또는 방장
-
----
-
-#### 7-1. 일기 목록 (최신순)
-
-**GET** `/group-rooms/:groupRoomId/diaries`
-
-**Query Parameters**
-
-| 파라미터 | 타입 | 필수 | 설명 |
-|----------|------|:---:|------|
-| month | string | ❌ | 월 필터 (`2026-03`) |
-| limit | int | ❌ | 페이지 크기 (기본 20, 최대 100) |
-| offset | int | ❌ | 오프셋 (기본 0) |
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| diaries | DiarySummary[] | 일기 목록 (본문 미포함) |
-| total | int | 전체 개수 |
-
-DiarySummary 객체:
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| id | string | 일기 ID |
-| title | string | 제목 |
-| date | string | 날짜 |
-| weather | int | 날씨 (0=맑음, 1=흐림, 2=비, 3=눈) |
-| mood | int | 기분 (0=행복, 1=사랑, 2=웃음, 3=뿌듯) |
-| thumbnailImage | string? | 첫 번째 이미지 URL (썸네일용) |
-| createdBy | UserSummary | 작성자 |
-| commentCount | int | 댓글 수 |
-| createdAt | string | 작성일시 |
-
----
-
-#### 7-2. 일기 캘린더 (날짜별 존재 여부)
-
-**GET** `/group-rooms/:groupRoomId/diaries/calendar`
-
-캘린더에 dot marker를 표시하기 위한 경량 API.
-
-**Query Parameters**
-
-| 파라미터 | 타입 | 필수 | 설명 |
-|----------|------|:---:|------|
-| month | string | ✅ | 조회 월 (`2026-03`) |
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| dates | string[] | 일기가 존재하는 날짜 배열 (`["2026-03-01", "2026-03-05", ...]`) |
-
----
-
-#### 7-3. 일기 상세
-
-**GET** `/group-rooms/:groupRoomId/diaries/:diaryId`
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| diary | Diary | 일기 전체 정보 |
-| comments | Comment[] | 댓글 목록 (시간순) |
-
-Diary 객체:
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| id | string | 일기 ID |
-| title | string | 제목 (최대 20자) |
-| content | string | 본문 (최대 300자) |
-| date | string | 날짜 |
-| weather | int | 날씨 |
-| mood | int | 기분 |
-| images | string[] | 이미지 URL 배열 |
-| createdBy | UserSummary | 작성자 |
-| createdAt | string | 작성일시 |
-| updatedAt | string | 수정일시 |
-
----
-
-#### 7-4. 일기 작성
-
-**POST** `/group-rooms/:groupRoomId/diaries`
-
-**Request Body**
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|:---:|------|
-| title | string | ✅ | 제목 (1~20자) |
-| content | string | ✅ | 본문 (1~300자) |
-| date | string | ✅ | 날짜 (`YYYY-MM-DD`, 오늘 이전만 가능) |
-| weather | int | ✅ | 0~3 |
-| mood | int | ✅ | 0~3 |
-| imageIds | string[] | ❌ | Upload API로 받은 이미지 ID 배열 (최대 5장) |
-
-**Response** `201 Created` — Diary 객체
-
-> 그룹 구성원에게 `diary_written` 푸시 알림 발송
-
-**에러 케이스**
-
-| 코드 | HTTP | 상황 |
-|------|:---:|------|
-| `FUTURE_DATE_NOT_ALLOWED` | 400 | 미래 날짜에 일기 작성 시도 |
-| `INVALID_WEATHER_VALUE` | 400 | weather가 0~3 범위 밖 |
-| `INVALID_MOOD_VALUE` | 400 | mood가 0~3 범위 밖 |
-| `TOO_MANY_IMAGES` | 400 | 이미지 5장 초과 |
-
----
-
-#### 7-5. 일기 수정
-
-**PUT** `/group-rooms/:groupRoomId/diaries/:diaryId`
-
-작성자 또는 방장만 가능. Request Body는 작성과 동일 (변경할 필드만).
-
-**Response** `200 OK` — 수정된 Diary 객체
-
----
-
-#### 7-6. 일기 삭제
-
-**DELETE** `/group-rooms/:groupRoomId/diaries/:diaryId`
-
-작성자 또는 방장만 가능.
-
-**Response** `204 No Content`
-
----
-
-### 💬 8. Comment (댓글)
-
-- **브랜치**: `feature/comment-api`
-- **설명**: 일정·일기에 댓글 작성/삭제
-- **인증 필요**: 전부
-- **권한**: 삭제는 댓글 작성자 또는 방장
-
----
-
-#### 8-1. 일정 댓글 작성
-
-**POST** `/group-rooms/:groupRoomId/schedules/:scheduleId/comments`
-
-**Request Body**
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|:---:|------|
-| text | string | ✅ | 댓글 내용 (1~200자) |
-
-**Response** `201 Created`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| id | string | 댓글 ID |
-| text | string | 내용 |
-| createdBy | UserSummary | 작성자 |
-| createdAt | string | 작성 시각 |
-
-> 일정 작성자 + 기존 댓글 작성자에게 `comment_on_schedule` 푸시 알림 발송
-
----
-
-#### 8-2. 일기 댓글 작성
-
-**POST** `/group-rooms/:groupRoomId/diaries/:diaryId/comments`
-
-Request/Response는 일정 댓글과 동일.
-
-> 일기 작성자 + 기존 댓글 작성자에게 `comment_on_diary` 푸시 알림 발송
-
----
-
-#### 8-3. 일정 댓글 삭제
-
-**DELETE** `/group-rooms/:groupRoomId/schedules/:scheduleId/comments/:commentId`
-
-**Response** `204 No Content`
-
----
-
-#### 8-4. 일기 댓글 삭제
-
-**DELETE** `/group-rooms/:groupRoomId/diaries/:diaryId/comments/:commentId`
-
-**Response** `204 No Content`
-
----
-
-### ✅ 9. Todo (할 일)
-
-- **브랜치**: `feature/todo-api`
-- **설명**: 그룹 공유 할 일 목록 — 생성, 완료 토글, 삭제
-- **인증 필요**: 전부
-- **권한**: 삭제는 작성자 또는 방장, 토글은 모든 구성원
-
----
-
-#### 9-1. 할 일 목록
-
-**GET** `/group-rooms/:groupRoomId/todos`
-
-미완료 → 완료 순서, 각각 생성일 기준 정렬.
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| todos | Todo[] | 할 일 배열 |
-| progress | Progress | 진행률 |
-
-Todo 객체:
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| id | string | 할 일 ID |
-| text | string | 내용 (최대 100자) |
-| completed | boolean | 완료 여부 |
-| completedAt | string? | 완료 시각 |
-| completedBy | UserSummary? | 완료 처리한 사용자 |
-| createdBy | UserSummary | 작성자 |
-| createdAt | string | 작성일 |
-
-Progress 객체:
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| total | int | 전체 개수 |
-| completed | int | 완료 개수 |
-| percent | int | 진행률 (0~100) |
-
----
-
-#### 9-2. 할 일 생성
-
-**POST** `/group-rooms/:groupRoomId/todos`
-
-**Request Body**
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|:---:|------|
-| text | string | ✅ | 내용 (1~100자) |
-
-**Response** `201 Created` — Todo 객체
-
----
-
-#### 9-3. 할 일 완료 토글
-
-**PATCH** `/group-rooms/:groupRoomId/todos/:todoId`
-
-**Request Body**
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|:---:|------|
-| completed | boolean | ✅ | 완료 여부 |
-
-**Response** `200 OK` — 수정된 Todo 객체
-
----
-
-#### 9-4. 할 일 삭제
-
-**DELETE** `/group-rooms/:groupRoomId/todos/:todoId`
-
-**Response** `204 No Content`
-
----
-
-### 🔔 10. Notification (알림)
-
-- **브랜치**: `feature/notification-api`
-- **설명**: 인앱 알림 목록 조회, 읽음 처리, 전체 읽음, 삭제
-- **인증 필요**: 전부
-
----
-
-#### 10-1. 알림 목록
-
-**GET** `/notifications`
-
-**Query Parameters**
-
-| 파라미터 | 타입 | 필수 | 설명 |
-|----------|------|:---:|------|
-| limit | int | ❌ | 페이지 크기 (기본 20, 최대 100) |
-| offset | int | ❌ | 오프셋 (기본 0) |
-
-**Response** `200 OK`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| notifications | Notification[] | 알림 배열 (최신순) |
-| total | int | 전체 개수 |
-| unreadCount | int | 읽지 않은 수 |
-
-Notification 객체:
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| id | string | 알림 ID |
-| type | string | 알림 유형 |
-| title | string | 알림 제목 |
-| message | string | 알림 메시지 |
-| groupRoomId | string? | 관련 그룹룸 ID |
-| groupRoomName | string? | 그룹룸명 |
-| relatedId | string? | 관련 리소스 ID (일정/일기) |
-| relatedType | string? | 관련 리소스 타입 (`schedule` · `diary` · `comment`) |
-| isRead | boolean | 읽음 여부 |
-| createdAt | string | 생성 시각 |
-
-**알림 유형 (type) 전체 목록**
-
-| type | 트리거 시점 | 수신 대상 | 푸시 발송 |
-|------|-----------|----------|:---:|
-| `schedule_created` | 일정 생성 | 그룹 전체 구성원 (작성자 제외) | ✅ |
-| `schedule_updated` | 일정 수정 | 해당 일정 참여자 (수정자 제외) | ✅ |
-| `diary_written` | 일기 작성 | 그룹 전체 구성원 (작성자 제외) | ✅ |
-| `comment_on_schedule` | 일정에 댓글 | 일정 작성자 + 기존 댓글 작성자 (본인 제외) | ✅ |
-| `comment_on_diary` | 일기에 댓글 | 일기 작성자 + 기존 댓글 작성자 (본인 제외) | ✅ |
-| `member_joined` | 새 구성원 참여 | 기존 구성원 전체 | ✅ |
-| `member_left` | 구성원 자발적 탈퇴 | 남은 구성원 전체 | ✅ |
-| `member_removed` | 구성원 내보내기 | 내보내진 사용자 | ✅ |
-| `ownership_transferred` | 방장 양도 | 그룹 전체 구성원 | ✅ |
-| `group_delete_scheduled` | 그룹 삭제 예약 | 전체 구성원 | ✅ |
-| `announcement` | 공지 | 전체 구성원 | ✅ |
-
----
-
-#### 10-2. 알림 읽음 처리
-
-**PATCH** `/notifications/:notificationId`
-
-**Request Body**
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|:---:|------|
-| isRead | boolean | ✅ | `true` |
-
-**Response** `204 No Content`
-
----
-
-#### 10-3. 전체 읽음 처리
-
-**POST** `/notifications/read-all`
-
-**Response** `204 No Content`
-
----
-
-#### 10-4. 알림 삭제
-
-**DELETE** `/notifications/:notificationId`
-
-**Response** `204 No Content`
-
----
-
-### 📱 11. Device (디바이스)
-
-- **브랜치**: `feature/device-api`
-- **설명**: 푸시 알림 발송을 위한 디바이스 토큰(FCM) 등록·해제
-- **인증 필요**: 전부
-
----
-
-#### 11-1. 디바이스 토큰 등록
-
-**POST** `/devices`
-
-앱 시작 시 또는 토큰 갱신 시 호출. 동일 토큰이면 upsert.
-
-**Request Body**
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|:---:|------|
-| token | string | ✅ | FCM 디바이스 토큰 |
-| platform | string | ✅ | `ios` · `android` |
-
-**Response** `201 Created`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| deviceId | string | 등록된 디바이스 ID |
-
----
-
-#### 11-2. 디바이스 토큰 해제
-
-**DELETE** `/devices/:deviceId`
-
-로그아웃 시 또는 토큰 만료 시 호출.
-
-**Response** `204 No Content`
-
----
-
-### 📤 12. Upload (업로드)
-
-- **브랜치**: `feature/upload-api`
-- **설명**: 이미지 업로드 (프로필, 그룹 썸네일, 일기 사진)
-- **인증 필요**: 전부
-
----
-
-#### 12-1. 이미지 업로드 (단일)
-
-**POST** `/uploads/images`
-
-Multipart form-data 방식.
-
-**Request**
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|:---:|------|
-| file | binary | ✅ | 이미지 파일 (PNG/JPEG, 최대 5MB) |
-| purpose | string | ✅ | `profile` · `group_thumbnail` · `diary` |
-
-**Response** `201 Created`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| id | string | 이미지 ID (다른 API에서 참조용) |
-| url | string | CDN 접근 URL |
-| width | int | 너비 (px) |
-| height | int | 높이 (px) |
-
-**에러 케이스**
-
-| 코드 | HTTP | 상황 |
-|------|:---:|------|
-| `FILE_TOO_LARGE` | 413 | 5MB 초과 |
-| `INVALID_FILE_TYPE` | 400 | PNG/JPEG 외 파일 |
-
----
-
-#### 12-2. 이미지 업로드 (다중)
-
-**POST** `/uploads/images/batch`
-
-일기 사진 여러 장 동시 업로드. Multipart form-data.
-
-**Request** — 최대 5개 파일 (`files[]`)
-
-**Response** `201 Created`
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| images | UploadResult[] | 업로드된 이미지 배열 (각각 id, url, width, height) |
-
----
-
-## 🔒 공통 사항
+| 항목 | 값 |
+|------|----|
+| 프로젝트 | DigDa — 그룹 기반 공유 다이어리 앱 |
+| 서버 | Spring Boot (Kotlin) + JPA(MySQL) + Redis |
+| 인증 방식 | 소셜 로그인(카카오·네이버·애플) + 관리자 계정 + JWT (Access/Refresh) |
+| API 스타일 | RESTful JSON |
+| Base URL | 호스트 직하 (context-path 없음). 예: `https://api.digda.app` |
+| 날짜 형식 | ISO 8601 (`LocalDate` `2026-06-17`, `LocalTime` `09:00`, `LocalDateTime`) |
+| 식별자 | 사용자 = UUID(BINARY16), 그 외 도메인 = Long(auto-increment) |
+| 에러 응답 | `ErrorCode` 기반 `{ code, message }` (HTTP status 동봉) |
+| 이미지 업로드 | Multipart form-data → S3 URL 반환, 이후 `imageId`/URL로 참조 |
+| 그룹 삭제 | Soft Delete (24시간 후 영구 삭제), 그 외 Hard Delete |
+
+### 경로 컨벤션
+
+| 영역 | 경로 접두 | 인증 |
+|------|-----------|------|
+| 앱 일반 API | `/auth/*`, `/users/*`, `/group-rooms/*`, `/character*`, `/titles`, `/blocks/*`, `/reports`, `/inquiries`, `/notifications`, `/devices`, `/uploads/*`, `/nickname-exhibits`, `/app-config` | JWT (로그인/토큰갱신 제외) |
+| 어드민 API | `/api/admin/**` | JWT + `ROLE_ADMIN` |
+| 공개(비로그인) | `/api/web/public/**`, `/auth/login`, `/auth/refresh`, `/api/app/reissue`, `/api/healthcheck` | 불필요 |
+| 테스트 전용 | `/api/test/**`, `/api/callback/**` | 불필요 (⚠️ 운영 비활성 대상) |
 
 ### 인증 헤더
-
-모든 인증 필요 API:
 
 ```
 Authorization: Bearer {accessToken}
 ```
 
-### 공통 에러 응답
+---
 
-| HTTP 코드 | 의미 |
-|:---------:|------|
-| 400 | 잘못된 요청 (유효성 검증 실패, 잘못된 파라미터) |
-| 401 | 인증 실패 (토큰 없음, 만료, 유효하지 않음) |
-| 403 | 권한 없음 (구성원이 아니거나 방장이 아님) |
-| 404 | 리소스를 찾을 수 없음 |
-| 409 | 충돌 (이미 참여 중, 중복 데이터) |
-| 410 | 만료됨 (초대 코드 만료, 삭제된 리소스) |
+## 📂 도메인 목록
+
+### 앱(클라이언트) 도메인
+
+| # | 도메인 | 엔드포인트 | 설명 |
+|---|--------|:---:|------|
+| 1 | Auth | 7 | 소셜 로그인, 토큰 갱신, 약관, 로그아웃, 회원 탈퇴 |
+| 2 | User | 4 | 프로필 조회/수정, 알림 설정 |
+| 3 | GroupRoom | 7 | 그룹방 CRUD, 홈 대시보드, 삭제 예약/복구 |
+| 4 | Invite | 3 | 초대 코드 생성/검증/참여 |
+| 5 | Membership | 4 | 구성원 목록, 내보내기, 방장 양도, 탈퇴 |
+| 6 | Schedule | 5 | 일정 CRUD, 참여자, 기간 조회 |
+| 7 | Diary | 10 | 일기 CRUD, 캘린더, 지역지도, 좋아요, 리액션 |
+| 8 | Comment | 4 | 일정·일기 댓글 작성/삭제 |
+| 9 | Todo | 4 | 할 일 CRUD, 완료 토글 |
+| 10 | Notification | 4 | 알림 목록, 읽음, 전체 읽음, 삭제 |
+| 11 | Device | 2 | FCM 디바이스 토큰 등록/해제 |
+| 12 | Upload | 1 | 이미지 업로드 |
+| 13 | Character | 6 | 모찌 상태, 경험치, 진화 트리, 마스터 게임, 광고 보상 |
+| 14 | CharacterQuiz | 4 | 퀴즈 생성/목록/랜덤/응시 |
+| 15 | CharacterShop | 4 | 상점 조회, 구매, 장착, 해제 |
+| 16 | Title | 5 | 칭호 카탈로그/보유/획득/장착 |
+| 17 | Block | 5 | 사용자 차단, 게시물 숨김 |
+| 18 | Report | 1 | 신고 |
+| 19 | Inquiry | 2 | 고객센터 문의 작성/목록 |
+| 20 | NicknameExhibit | 2 | 역대 별명 전시관 접근/목록 |
+| 21 | AppConfig | 1 | 앱 운영 설정 조회 |
+| 22 | Public(DeletionRequest) | 2 | 비로그인 계정/데이터 삭제 요청 |
+| 23 | Infra | 2 | 헬스체크, 인증 체크 |
+| | **앱 합계** | **84** | (테스트 전용 3개 별도) |
+
+### 어드민 도메인 (`/api/admin/**`, `ROLE_ADMIN`)
+
+| # | 도메인 | 엔드포인트 | 설명 |
+|---|--------|:---:|------|
+| A1 | Auth | 1 | 관리자 로그인 |
+| A2 | Dashboard | 1 | 요약 통계 |
+| A3 | User | 4 | 사용자 목록/상세/권한/이용제한 |
+| A4 | GroupRoom | 3 | 그룹방 목록/상세/상태변경 |
+| A5 | Diary | 3 | 일기 목록/상세/삭제 |
+| A6 | Schedule | 2 | 일정 목록/상세 |
+| A7 | Character | 3 | 모찌 목록/상세/보정 |
+| A8 | Report | 2 | 신고 목록/처리 |
+| A9 | Inquiry | 2 | 문의 목록/답변 |
+| A10 | DeletionRequest | 2 | 삭제 요청 목록/완료 |
+| A11 | Announcement | 2 | 공지 발송/목록 |
+| A12 | Notification | 1 | 알림 목록 |
+| A13 | AppConfig | 2 | 운영 설정 조회/수정 |
+| A14 | Title | 4 | 칭호 카탈로그/보유/부여/회수 |
+| A15 | NicknameExhibit | 7 | 별명 카드 CRUD + 접근 권한 관리 |
+| A16 | RegionMap | 4 | 시그니처 지도 채움 관리 |
+| A17 | DB | 6 | 테이블/컬럼/행 조회·수정·삭제 |
+| A18 | Log | 1 | 유저 행동 로그 조회 |
+| | **어드민 합계** | **50** | |
+
+> **전체 ~134개 엔드포인트** (앱 84 + 어드민 50, 테스트 3 별도).
+
+---
+
+## 📦 앱 도메인 상세
+
+### 🔐 1. Auth (`/auth`, oauth2)
+
+| 메서드 | 경로 | 인증 | 설명 |
+|--------|------|:---:|------|
+| POST | `/auth/login` | ❌ | 소셜 로그인. 최초 로그인 시 계정 자동 생성 (소셜 ID+provider 식별) |
+| POST | `/auth/terms` | ✅ | 약관 동의 (신규 가입 시) |
+| GET | `/auth/terms/{type}` | ✅ | 약관 문서 조회 (⚠️ 폐지 예정) |
+| POST | `/auth/refresh` | ❌ | 토큰 갱신 (Refresh Rotation) |
+| POST | `/api/app/reissue` | ❌ | 토큰 재발급 (레거시 호환) |
+| POST | `/auth/logout` | ✅ | 로그아웃 (Refresh 무효화 + 디바이스 해제) |
+| DELETE | `/auth/account` | ✅ | 회원 탈퇴 (소유 그룹 있으면 양도 필요) |
+
+**`POST /auth/login` Request** — `LoginRequest`
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|:---:|------|
+| provider | string | ✅ | `kakao` · `naver` · `apple` |
+| accessToken | string | ✅ | 소셜 액세스 토큰 |
+| idToken | string | 조건부 | Apple Sign In 시 |
+
+**`POST /auth/terms` Request** — `TermsAgreeRequest`: `termsOfService`✅, `privacyPolicy`✅, `ageConfirmation`(기본 true), `marketingConsent`, `pushConsent`
+
+**관련 에러**: `REQUIRED_TERMS_NOT_AGREED`, `TOKEN_EXPIRED`, `TOKEN_INVALID`, `REFRESH_TOKEN_INVALID`, `OWNS_ACTIVE_GROUP_ROOM`, `SOCIAL_AUTH_FAILED`, `INVALID_PROVIDER`
+
+---
+
+### 👤 2. User (`/users`)
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/users/me` | 내 프로필 조회 |
+| PUT | `/users/me` | 프로필 수정 (닉네임·프로필 이미지) |
+| GET | `/users/me/notification-settings` | 알림 설정 조회 |
+| PUT | `/users/me/notification-settings` | 알림 설정 수정 |
+
+**`PUT /users/me` Request** — `UpdateProfileRequest`
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| name | string? | 표시 이름(displayName). 소셜 원본 name은 변경 안 됨 |
+| profileImageId | `Optional<string>`? | 이미지 ID. 빈 Optional = 기본 아바타로 초기화 |
+
+**`PUT /users/me/notification-settings` Request** — `UpdateNotificationSettingRequest` (변경 필드만): `pushEnabled`, `scheduleNotification`, `diaryNotification`, `commentNotification`, `marketingConsent`
+
+**관련 에러**: `NAME_TOO_SHORT`, `NAME_TOO_LONG`, `IMAGE_NOT_FOUND`, `NOTIFICATION_SETTING_NOT_FOUND`
+
+---
+
+### 🏠 3. GroupRoom (`/group-rooms`)
+
+| 메서드 | 경로 | 권한 | 설명 |
+|--------|------|:---:|------|
+| POST | `/group-rooms` | 멤버 | 그룹방 생성 (생성자가 방장, 초대 코드 자동 발급) |
+| GET | `/group-rooms` | 멤버 | 내 그룹방 목록 (최근 활동순) |
+| GET | `/group-rooms/{groupRoomId}` | 멤버 | 그룹방 상세 |
+| GET | `/group-rooms/{groupRoomId}/home` | 멤버 | 그룹 홈 대시보드 (오늘 요약 + 활성 그룹) |
+| PUT | `/group-rooms/{groupRoomId}` | 방장 | 그룹방 수정 |
+| DELETE | `/group-rooms/{groupRoomId}` | 방장 | 삭제 예약 (24시간 후 영구 삭제) |
+| POST | `/group-rooms/{groupRoomId}/recover` | 방장 | 삭제 예약 복구 (24시간 내) |
+
+**`POST /group-rooms` Request** — `CreateGroupRoomRequest`: `name`✅(2~20자), `maxMembers`✅, `thumbnailImageId`?
+
+**`PUT /group-rooms/{id}` Request** — `UpdateGroupRoomRequest`: `name`?, `maxMembers`?, `thumbnailImageId`(`Optional<string>` — 빈 값=썸네일 제거)
+
+**관련 에러**: `GROUP_ROOM_NOT_FOUND`, `GROUP_ROOM_NAME_TOO_SHORT/LONG`, `MAX_MEMBERS_BELOW_CURRENT`, `GROUP_ROOM_NOT_SCHEDULED_FOR_DELETION`, `GROUP_ROOM_ALREADY_DELETED`, `GROUP_ROOM_LIMIT_EXCEEDED`(최대 6개), `NOT_GROUP_ROOM_MEMBER`, `NOT_GROUP_ROOM_OWNER`
+
+---
+
+### 🔗 4. Invite
+
+| 메서드 | 경로 | 권한 | 설명 |
+|--------|------|:---:|------|
+| POST | `/group-rooms/{groupRoomId}/invites` | 방장 | 초대 코드 재발급 (기존 무효화) |
+| POST | `/invites/validate` | 멤버 | 초대 코드 검증 (그룹 미리보기) |
+| POST | `/invites/join` | 멤버 | 초대 코드로 참여 |
+
+**Request** — `InviteCodeRequest`: `code`✅ (6자리)
+
+**관련 에러**: `INVITE_CODE_INVALID`, `INVITE_CODE_EXPIRED`, `GROUP_ROOM_FULL`, `ALREADY_JOINED`, `GROUP_ROOM_LIMIT_EXCEEDED`
+
+---
+
+### 👥 5. Membership
+
+| 메서드 | 경로 | 권한 | 설명 |
+|--------|------|:---:|------|
+| GET | `/group-rooms/{groupRoomId}/memberships` | 멤버 | 구성원 목록 |
+| DELETE | `/group-rooms/{groupRoomId}/memberships/{targetUserId}` | 방장 | 구성원 내보내기 |
+| PUT | `/group-rooms/{groupRoomId}/memberships/{targetUserId}/role` | 방장 | 역할 변경(방장 양도) |
+| POST | `/group-rooms/{groupRoomId}/leave` | 멤버 | 그룹방 탈퇴 |
+
+**`PUT .../role` Request** — `ChangeRoleRequest`: `role`✅ (`owner`)
+
+**관련 에러**: `CANNOT_REMOVE_OWNER`, `USER_NOT_IN_GROUP_ROOM`, `OWNER_CANNOT_LEAVE`
+
+---
+
+### 📅 6. Schedule
+
+| 메서드 | 경로 | 권한 | 설명 |
+|--------|------|:---:|------|
+| GET | `/group-rooms/{groupRoomId}/schedules` | 멤버 | 일정 목록 (기간: `startDate`,`endDate`) |
+| GET | `/group-rooms/{groupRoomId}/schedules/{scheduleId}` | 멤버 | 일정 상세 (+ 댓글) |
+| POST | `/group-rooms/{groupRoomId}/schedules` | 멤버 | 일정 생성 |
+| PUT | `/group-rooms/{groupRoomId}/schedules/{scheduleId}` | 작성자/방장 | 일정 수정 |
+| DELETE | `/group-rooms/{groupRoomId}/schedules/{scheduleId}` | 작성자/방장 | 일정 삭제 |
+
+**`POST` Request** — `CreateScheduleRequest`: `title`✅(≤50자), `color`✅(hex), `startDate`✅, `endDate`✅, `startTime`?, `endTime`?, `allDay`✅, `participantIds`?(UUID[])
+
+**관련 에러**: `SCHEDULE_NOT_FOUND`, `END_DATE_BEFORE_START`, `END_TIME_BEFORE_START`, `INVALID_PARTICIPANT`
+
+---
+
+### 📓 7. Diary
+
+| 메서드 | 경로 | 권한 | 설명 |
+|--------|------|:---:|------|
+| GET | `/group-rooms/{groupRoomId}/diaries` | 멤버 | 일기 목록 (월 필터·페이지네이션) |
+| GET | `/group-rooms/{groupRoomId}/diaries/calendar` | 멤버 | 일기 존재 날짜 배열 |
+| GET | `/group-rooms/{groupRoomId}/diaries/region-map` | 멤버 | 시그니처 지도 — region_key별 일기 수 집계 |
+| GET | `/group-rooms/{groupRoomId}/diaries/by-region` | 멤버 | 특정 지역(regionKey)의 일기 목록 |
+| GET | `/group-rooms/{groupRoomId}/diaries/{diaryId}` | 멤버 | 일기 상세 (+ 댓글) |
+| POST | `/group-rooms/{groupRoomId}/diaries` | 멤버 | 일기 작성 (이미지 0~10장) |
+| PUT | `/group-rooms/{groupRoomId}/diaries/{diaryId}` | 작성자/방장 | 일기 수정 |
+| DELETE | `/group-rooms/{groupRoomId}/diaries/{diaryId}` | 작성자/방장 | 일기 삭제 |
+| POST | `/group-rooms/{groupRoomId}/diaries/{diaryId}/like` | 멤버 | 좋아요 토글 |
+| POST | `/group-rooms/{groupRoomId}/diaries/{diaryId}/reactions` | 멤버 | 이모지 리액션 토글 |
+
+**`POST` Request** — `CreateDiaryRequest`: `title`✅(≤20자), `content`✅(≤300자), `date`✅, `weather`✅(0~3), `mood`✅(0~3), `location`?, `regionKey`?, `regionSido`?, `regionSigungu`?, `imageIds`(string[], 최대 10)
+
+**리액션 Request** — `ToggleDiaryReactionRequest`: `type` (`HEART`·`CRY`·`SPARKLE`·`LAUGH`·`FIRE`)
+
+**관련 에러**: `DIARY_NOT_FOUND`, `FUTURE_DATE_NOT_ALLOWED`, `DIARY_DATE_TOO_OLD`(3개월), `DIARY_EDIT_WINDOW_EXPIRED`(3개월), `INVALID_WEATHER_VALUE`, `INVALID_MOOD_VALUE`
+
+---
+
+### 💬 8. Comment
+
+| 메서드 | 경로 | 권한 | 설명 |
+|--------|------|:---:|------|
+| POST | `/group-rooms/{groupRoomId}/schedules/{scheduleId}/comments` | 멤버 | 일정 댓글 작성 |
+| POST | `/group-rooms/{groupRoomId}/diaries/{diaryId}/comments` | 멤버 | 일기 댓글 작성 |
+| DELETE | `/group-rooms/{groupRoomId}/schedules/{scheduleId}/comments/{commentId}` | 작성자/방장 | 일정 댓글 삭제 |
+| DELETE | `/group-rooms/{groupRoomId}/diaries/{diaryId}/comments/{commentId}` | 작성자/방장 | 일기 댓글 삭제 |
+
+**Request** — `CreateCommentRequest`: `text`✅ (≤200자). **에러**: `COMMENT_NOT_FOUND`, `COMMENT_TOO_LONG`
+
+---
+
+### ✅ 9. Todo
+
+| 메서드 | 경로 | 권한 | 설명 |
+|--------|------|:---:|------|
+| GET | `/group-rooms/{groupRoomId}/todos` | 멤버 | 할 일 목록 (미완료→완료) |
+| POST | `/group-rooms/{groupRoomId}/todos` | 멤버 | 할 일 생성 |
+| PATCH | `/group-rooms/{groupRoomId}/todos/{todoId}` | 멤버 | 완료 토글 |
+| DELETE | `/group-rooms/{groupRoomId}/todos/{todoId}` | 작성자/방장 | 할 일 삭제 |
+
+**Request** — 생성 `CreateTodoRequest`: `text`✅(≤100자) / 토글 `ToggleTodoRequest`: `completed`✅. **에러**: `TODO_NOT_FOUND`, `TODO_TEXT_TOO_LONG`
+
+---
+
+### 🔔 10. Notification
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/notifications` | 알림 목록 (최신순, 페이지네이션) |
+| PATCH | `/notifications/{notificationId}` | 읽음 처리 (`UpdateNotificationReadRequest`: `isRead`) |
+| POST | `/notifications/read-all` | 전체 읽음 |
+| DELETE | `/notifications/{notificationId}` | 알림 삭제 |
+
+**알림 유형(`type`)** — `NotificationType` enum (JSON 소문자 직렬화):
+`schedule_created`, `schedule_updated`, `schedule_day_before`, `schedule_today`, `diary_written`,
+`comment_on_schedule`, `comment_on_diary`, `member_joined`, `member_left`, `member_removed`,
+`ownership_transferred`, `group_delete_scheduled`, `quiz_created`, `quiz_answered`,
+`mochi_levelup`, `diko_unlocked`, `announcement`
+
+**에러**: `NOTIFICATION_NOT_FOUND`
+
+---
+
+### 📱 11. Device
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/devices` | FCM 토큰 등록 (동일 토큰 upsert) |
+| DELETE | `/devices/{deviceId}` | 디바이스 해제 |
+
+**Request** — `RegisterDeviceRequest`: `token`✅, `platform`✅ (`ios`·`android`). **에러**: `DEVICE_NOT_FOUND`
+
+---
+
+### 📤 12. Upload
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/uploads/images` | 이미지 업로드 (multipart/form-data, PNG/JPEG) |
+
+**Request**: `file`(binary)✅, `purpose`(`PROFILE`·`GROUP_THUMBNAIL`·`DIARY`·`QUIZ`).
+**에러**: `FILE_TOO_LARGE`, `INVALID_FILE_TYPE`
+
+---
+
+### 🐣 13. Character (`/character`) — 그룹 공용 모찌
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/character?groupRoomId=` | 그룹 캐릭터 상태 (첫 진입 시 자동 생성) |
+| POST | `/character/exp` | 경험치 가산 (레벨업/진화 계산 응답) |
+| GET | `/character/stages?groupRoomId=` | 진화 트리 + 도달 여부 |
+| POST | `/character/master-game-start` | 마스터 게임 시작 (입장료 코인 차감) |
+| POST | `/character/master-game-reward` | 마스터 게임 점수 제출 → 코인 보상 |
+| POST | `/character/ad-reward` | 광고 시청 보상 코인 적립 (하루 한도) |
+
+**Request** — `AddExpRequest`: `amount`✅, `source`? / `MasterGameRewardRequest`: `score`✅
+
+**진화 단계(`CharacterStage`)**: EGG(Lv.1) → SPROUT(3) → BLOOM(6) → BLOSSOM(10) → GLOW(15) → MASTER(20).
+디코는 Lv.10에 해금, 마스터는 레벨 20 + 챔피언 챌린지 통과 시 진화.
+
+**에러**: `CHARACTER_NOT_FOUND`, `INSUFFICIENT_COIN`, `NOT_MASTER_CHARACTER`, `INVALID_GAME_SCORE`, `AD_REWARD_LIMIT_EXCEEDED`(429)
+
+---
+
+### ❓ 14. CharacterQuiz (`/character-quizzes`)
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/character-quizzes` | 퀴즈 생성 (그룹 멤버, 4지선다, EXP 배수 1~3) |
+| GET | `/character-quizzes?groupRoomId=` | 그룹 퀴즈 목록 (최신순) |
+| GET | `/character-quizzes/random?groupRoomId=` | 랜덤 풀기 후보 1건 |
+| POST | `/character-quizzes/{quizId}/attempt` | 퀴즈 응시 (정답+보상+캐릭터 상태) |
+
+**Request** — `CreateQuizRequest`: `groupRoomId`✅, `category`✅, `question`✅, `options`✅(4개), `correctIndex`✅, `expMultiplier`✅, `imageUrl`? / `SubmitAttemptRequest`: `selectedIndex`✅, `practice`(기본 false)
+
+**에러**: `QUIZ_NOT_FOUND`, `QUIZ_ALREADY_ATTEMPTED`, `QUIZ_CANNOT_ATTEMPT_OWN`, `QUIZ_NO_AVAILABLE`, `QUIZ_INVALID_OPTION_COUNT`, `QUIZ_OPTION_INVALID`, `QUIZ_QUESTION_INVALID`, `QUIZ_INVALID_CORRECT_INDEX`, `QUIZ_INVALID_MULTIPLIER`, `QUIZ_IMAGE_REQUIRES_DIKO`
+
+---
+
+### 🛍 15. CharacterShop (`/character/shop`)
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/character/shop?groupRoomId=` | 상점 조회 (카테고리별 + 보유/장착 + 잔액) |
+| POST | `/character/shop/items/{itemKey}/buy` | 아이템 구매 (코인 차감, 영구 보유) |
+| PUT | `/character/shop/equip` | 아이템 장착 (`EquipItemRequest`: `itemKey`) |
+| DELETE | `/character/shop/equip/{itemType}` | 카테고리 슬롯 해제 (SKIN은 default 복귀) |
+
+**카테고리(`ShopItemType`)**: SKIN, HAT, GLASSES, HAIRPIN, ACCESSORY, MISC.
+**에러**: `SHOP_ITEM_NOT_FOUND`, `ALREADY_OWNED_ITEM`, `ITEM_NOT_OWNED`, `INSUFFICIENT_COIN`
+
+---
+
+### 🏅 16. Title (`/titles`) — 계정 단위 칭호
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/titles/catalog` | 칭호 카탈로그 (전체 정의) |
+| GET | `/titles` | 내 칭호 목록 (조회 시 일기 수 칭호 자동 적재) |
+| POST | `/titles/claim` | 칭호 획득 적재 (멱등) |
+| GET | `/titles/equipped?groupRoomId=` | 그룹 모찌 장착 칭호 |
+| PUT | `/titles/equip` | 그룹 모찌에 칭호 장착/해제 |
+
+**Request** — `ClaimTitlesRequest`: `titles[]`(`code`, `groupRoomId`?) / `EquipTitleRequest`: `groupRoomId`✅, `code`?(null=해제)
+
+**에러**: `TITLE_NOT_OWNED`
+
+---
+
+### 🚫 17. Block
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/blocks/users/{userId}` | 사용자 차단 (전역·단방향) |
+| DELETE | `/blocks/users/{userId}` | 차단 해제 |
+| GET | `/blocks/users` | 차단 목록 (최신순) |
+| POST | `/blocks/content` | 게시물 숨기기 (`HideContentRequest`: `targetType`, `targetId`) |
+| DELETE | `/blocks/content` | 게시물 숨김 해제 |
+
+**숨김 대상(`HideTargetType`)**: DIARY, COMMENT, SCHEDULE. **에러**: `CANNOT_BLOCK_SELF`
+
+---
+
+### 🚨 18. Report
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/reports` | 신고 (콘텐츠 신고 시 신고자 본인에게서 자동 숨김) |
+
+**Request** — `CreateReportRequest`: `targetType`✅(`DIARY`·`COMMENT`·`SCHEDULE`·`USER`), `targetId`✅, `reason`✅(`SPAM`·`ABUSE`·`SEXUAL`·`VIOLENCE`·`PRIVACY`·`ETC`), `detail`?, `groupRoomId`?
+
+**에러**: `REPORT_INVALID_TARGET`, `CANNOT_REPORT_SELF`
+
+---
+
+### 📨 19. Inquiry
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/inquiries` | 고객센터 문의 작성 (하루 2건 제한) |
+| GET | `/inquiries` | 내 문의 목록 (최신순) |
+
+**Request** — `CreateInquiryRequest`: `content`✅(≤1000자). **에러**: `INQUIRY_CONTENT_REQUIRED`, `INQUIRY_DAILY_LIMIT`(429)
+
+---
+
+### 🖼 20. NicknameExhibit (`/nickname-exhibits`)
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/nickname-exhibits/access` | 전시관 접근 권한 조회 (버튼 노출 판단) |
+| GET | `/nickname-exhibits` | 별명 카드 목록 (접근 허용자만, 미허용 시 403) |
+
+**에러**: `EXHIBIT_ACCESS_DENIED`, `EXHIBIT_NOT_FOUND`
+
+---
+
+### ⚙️ 21. AppConfig
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/app-config` | 앱 운영 설정 조회 (대공지 노출/메시지 + 피드백 노출/URL) |
+
+---
+
+### 🌐 22. Public — DeletionRequest (`/api/web/public`, 비로그인)
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/api/web/public/deletion-requests/account` | 계정 삭제 요청 (`email`) |
+| POST | `/api/web/public/deletion-requests/data` | 데이터 삭제 요청 (`email`, `groupRoomName`, `content`) |
+
+> Google Play 데이터 안전성 정책의 계정·데이터 삭제 URL 요건 충족용. 디그팟 어드민 공개 페이지에서 접수.
+
+---
+
+### 🩺 23. Infra (`/api`)
+
+| 메서드 | 경로 | 인증 | 설명 |
+|--------|------|:---:|------|
+| GET | `/api/healthcheck` | ❌ | 헬스 체크 |
+| GET | `/api/authcheck` | ✅ | 인증 토큰 유효성 확인 |
+
+---
+
+## 🛠 어드민 도메인 상세 (`/api/admin/**`, `ROLE_ADMIN`)
+
+| 도메인 | 메서드 | 경로 | 설명 |
+|--------|--------|------|------|
+| Auth | POST | `/api/admin/auth/login` | 관리자 로그인 (이메일/비밀번호, 비인증 허용) |
+| Dashboard | GET | `/api/admin/dashboard/summary` | 요약 통계 (사용자/그룹방/일기/일정/댓글/할일) |
+| User | GET | `/api/admin/users` | 사용자 목록 (키워드/권한 필터, 페이징) |
+| User | GET | `/api/admin/users/{userId}` | 사용자 상세 |
+| User | PATCH | `/api/admin/users/{userId}/role` | 권한 변경 |
+| User | PATCH | `/api/admin/users/{userId}/restriction` | 서비스 이용 제한 설정/해제 |
+| GroupRoom | GET | `/api/admin/group-rooms` | 그룹방 목록 (삭제 포함 필터) |
+| GroupRoom | GET | `/api/admin/group-rooms/{groupRoomId}` | 그룹방 상세 |
+| GroupRoom | PATCH | `/api/admin/group-rooms/{groupRoomId}/status` | 상태 변경 (RECOVER/SCHEDULE_DELETE/HARD_DELETE) |
+| Diary | GET | `/api/admin/diaries` | 일기 목록 (키워드) |
+| Diary | GET | `/api/admin/diaries/{diaryId}` | 일기 상세 |
+| Diary | DELETE | `/api/admin/diaries/{diaryId}` | 일기 영구 삭제 |
+| Schedule | GET | `/api/admin/schedules` | 일정 목록 |
+| Schedule | GET | `/api/admin/schedules/{scheduleId}` | 일정 상세 |
+| Character | GET | `/api/admin/characters` | 모찌 목록 (키워드/삭제 포함) |
+| Character | GET | `/api/admin/characters/{groupRoomId}` | 모찌 상세 |
+| Character | PATCH | `/api/admin/characters/{groupRoomId}` | 모찌 보정 (레벨/코인/디코) |
+| Report | GET | `/api/admin/reports` | 신고 목록 (상태/대상 필터) |
+| Report | PATCH | `/api/admin/reports/{reportId}/status` | 신고 처리 (RESOLVED/DISMISSED) |
+| Inquiry | GET | `/api/admin/inquiries` | 문의 목록 (상태 필터) |
+| Inquiry | PATCH | `/api/admin/inquiries/{inquiryId}/answer` | 문의 답변 등록 |
+| DeletionRequest | GET | `/api/admin/deletion-requests` | 삭제 요청 목록 (상태 필터) |
+| DeletionRequest | PATCH | `/api/admin/deletion-requests/{deletionRequestId}/done` | 처리 완료 |
+| Announcement | POST | `/api/admin/announcements` | 공지 발송 (ALL/USER_IDS, 알림+FCM) |
+| Announcement | GET | `/api/admin/announcements` | 공지 목록 (키워드) |
+| Notification | GET | `/api/admin/notifications` | 알림 목록 (type/groupRoomId/keyword 필터) |
+| AppConfig | GET | `/api/admin/app-config` | 운영 설정 조회 |
+| AppConfig | PUT | `/api/admin/app-config` | 운영 설정 수정 (`UpdateAppConfigRequest`) |
+| Title | GET | `/api/admin/titles/catalog` | 칭호 카탈로그 |
+| Title | GET | `/api/admin/titles/users/{userId}` | 사용자 보유 칭호 |
+| Title | POST | `/api/admin/titles/grant` | 칭호 부여 (멱등) |
+| Title | DELETE | `/api/admin/titles/users/{userId}/{code}` | 칭호 회수 |
+| NicknameExhibit | GET | `/api/admin/nickname-exhibits` | 별명 카드 목록 |
+| NicknameExhibit | POST | `/api/admin/nickname-exhibits` | 별명 카드 등록 |
+| NicknameExhibit | PATCH | `/api/admin/nickname-exhibits/{id}` | 별명 카드 수정 |
+| NicknameExhibit | DELETE | `/api/admin/nickname-exhibits/{id}` | 별명 카드 삭제 |
+| NicknameExhibit | GET | `/api/admin/nickname-exhibits/access` | 접근 허용 사용자 목록 |
+| NicknameExhibit | POST | `/api/admin/nickname-exhibits/access` | 접근 허용 추가 (멱등) |
+| NicknameExhibit | DELETE | `/api/admin/nickname-exhibits/access/{userId}` | 접근 허용 해제 |
+| RegionMap | GET | `/api/admin/region-map?groupRoomId=` | 채운 지역 목록 |
+| RegionMap | POST | `/api/admin/region-map/fill` | 지역 채우기 (멱등) |
+| RegionMap | POST | `/api/admin/region-map/unfill` | 지역 채움 해제 |
+| RegionMap | DELETE | `/api/admin/region-map?groupRoomId=` | 그룹 채움 전체 해제 |
+| DB | GET | `/api/admin/db/tables` | 테이블 목록 |
+| DB | GET | `/api/admin/db/tables/{name}/columns` | 컬럼 정보 |
+| DB | GET | `/api/admin/db/tables/{name}/rows` | 행 조회 (페이징·정렬, size≤200) |
+| DB | POST | `/api/admin/db/tables/{name}/rows` | 행 추가 |
+| DB | PATCH | `/api/admin/db/tables/{name}/rows` | 행 수정 (PK 매칭, 1행 강제) |
+| DB | DELETE | `/api/admin/db/tables/{name}/rows` | 행 삭제 (PK 매칭, 1행 강제) |
+| Log | GET | `/api/admin/logs` | 유저 행동 로그 (actor/action/기간/키워드 필터) |
+
+**관련 어드민 에러**: `ADMIN_NOT_FOUND`, `ADMIN_PASSWORD_MISMATCH`, `NOT_ADMIN_USER`, `INVALID_ROLE`, `USER_RESTRICTED`, `ADMIN_TABLE_NOT_ALLOWED`, `ADMIN_TABLE_NOT_FOUND`, `ADMIN_COLUMN_NOT_ALLOWED`, `ADMIN_PK_NOT_FOUND`, `ADMIN_PK_VALUE_MISSING`, `ADMIN_ROW_NOT_FOUND`, `ADMIN_ROW_AFFECTED_INVALID`, `ADMIN_NO_FIELDS_TO_UPDATE`
+
+---
+
+## 🔒 공통 사항
+
+### 에러 응답
+
+`ErrorCode` enum 기반. 본문:
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| code | string | 에러 코드 (예: `INVITE_CODE_EXPIRED`) |
+| message | string | 사용자에게 노출 가능한 메시지 |
+
+### 전체 ErrorCode 목록
+
+| 코드 | HTTP | 메시지 |
+|------|:---:|------|
+| `SERVER_ERROR` | 500 | 서버 내부 오류가 발생했습니다. |
+| `INVALID_PARAMETER` | 400 | 잘못된 파라미터입니다. |
+| `PARAMETER_VALIDATION_ERROR` | 400 | 파라미터 검증 에러입니다. |
+| `PARAMETER_GRAMMAR_ERROR` | 400 | 잘못된 요청 형식입니다. |
+| `RESOURCE_NOT_FOUND` | 404 | 요청한 리소스를 찾을 수 없습니다. |
+| `UNAUTHORIZED` | 401 | 인증이 필요합니다. |
+| `FORBIDDEN` | 403 | 권한이 없습니다. |
+| `TOKEN_EXPIRED` | 401 | 토큰이 만료되었습니다. 재로그인이 필요합니다. |
+| `TOKEN_INVALID` | 401 | 유효하지 않은 토큰입니다. |
+| `ACCESS_TOKEN_INVALID` | 401 | Access Token이 유효하지 않습니다. |
+| `REFRESH_TOKEN_INVALID` | 401 | Refresh Token이 유효하지 않습니다. |
+| `REFRESH_TOKEN_NOT_FOUND` | 401 | Refresh Token이 존재하지 않습니다. |
+| `DUPLICATE_LOGIN` | 409 | 이미 로그인된 상태입니다. |
+| `INVALID_PROVIDER` | 400 | 지원하지 않는 소셜 로그인 제공자입니다. |
+| `APPLE_JWT_ERROR` | 500 | Apple JWT 처리 중 오류가 발생했습니다. |
+| `APPLE_KEY_PARSE_ERROR` | 401 | Apple 공개키 파싱에 실패했습니다. |
+| `ID_TOKEN_INVALID` | 401 | 잘못된 ID 토큰입니다. |
+| `SOCIAL_AUTH_FAILED` | 401 | 소셜 인증에 실패했습니다. |
+| `REQUIRED_TERMS_NOT_AGREED` | 400 | 필수 약관에 동의해야 합니다. |
+| `USER_NOT_FOUND` | 404 | 존재하지 않는 사용자입니다. |
+| `DUPLICATE_EMAIL` | 409 | 이미 사용 중인 이메일입니다. |
+| `NAME_TOO_SHORT` / `NAME_TOO_LONG` | 400 | 닉네임 길이 제한 (2~20자) |
+| `INVALID_ROLE` | 400 | 유효하지 않은 역할입니다. |
+| `USER_RESTRICTED` | 403 | 서비스 이용이 제한된 계정입니다. |
+| `GROUP_ROOM_NOT_FOUND` | 404 | 존재하지 않는 그룹방입니다. |
+| `GROUP_ROOM_NAME_TOO_SHORT` / `_TOO_LONG` | 400 | 그룹방명 길이 제한 (2~20자) |
+| `MAX_MEMBERS_BELOW_CURRENT` | 400 | 현재 구성원 수보다 적은 값 설정 불가. |
+| `GROUP_ROOM_NOT_SCHEDULED_FOR_DELETION` | 400 | 삭제 예약되지 않은 그룹방. |
+| `GROUP_ROOM_ALREADY_DELETED` | 410 | 이미 삭제된 그룹방. |
+| `OWNS_ACTIVE_GROUP_ROOM` | 409 | 소유 그룹방이 있어 탈퇴 불가 (양도 필요). |
+| `GROUP_ROOM_LIMIT_EXCEEDED` | 409 | 참여 가능한 그룹방은 최대 6개. |
+| `INVITE_CODE_INVALID` | 404 | 존재하지 않는 초대 코드. |
+| `INVITE_CODE_EXPIRED` | 410 | 만료된 초대 코드. |
+| `GROUP_ROOM_FULL` | 409 | 그룹방 인원 초과. |
+| `ALREADY_JOINED` | 409 | 이미 참여 중인 그룹방. |
+| `NOT_GROUP_ROOM_MEMBER` | 403 | 그룹방 구성원이 아님. |
+| `NOT_GROUP_ROOM_OWNER` | 403 | 방장 권한 필요. |
+| `CANNOT_REMOVE_OWNER` | 400 | 방장은 내보낼 수 없음. |
+| `USER_NOT_IN_GROUP_ROOM` | 404 | 그룹방 구성원이 아님. |
+| `OWNER_CANNOT_LEAVE` | 400 | 방장은 양도 후 탈퇴 가능. |
+| `SCHEDULE_NOT_FOUND` | 404 | 존재하지 않는 일정. |
+| `END_DATE_BEFORE_START` | 400 | 종료일이 시작일보다 이전. |
+| `END_TIME_BEFORE_START` | 400 | 종료 시간이 시작 시간보다 이전. |
+| `INVALID_PARTICIPANT` | 400 | 참여자가 그룹 구성원이 아님. |
+| `DIARY_NOT_FOUND` | 404 | 존재하지 않는 일기. |
+| `FUTURE_DATE_NOT_ALLOWED` | 400 | 미래 날짜 작성 불가. |
+| `DIARY_DATE_TOO_OLD` | 400 | 3개월 이전 날짜 작성 불가. |
+| `DIARY_EDIT_WINDOW_EXPIRED` | 400 | 3개월 지난 일기 수정/삭제 불가. |
+| `INVALID_WEATHER_VALUE` / `INVALID_MOOD_VALUE` | 400 | 0~3 범위 위반. |
+| `COMMENT_NOT_FOUND` | 404 | 존재하지 않는 댓글. |
+| `COMMENT_TOO_LONG` | 400 | 댓글 200자 초과. |
+| `TODO_NOT_FOUND` | 404 | 존재하지 않는 할 일. |
+| `TODO_TEXT_TOO_LONG` | 400 | 할 일 100자 초과. |
+| `NOTIFICATION_NOT_FOUND` | 404 | 존재하지 않는 알림. |
+| `NOTIFICATION_SETTING_NOT_FOUND` | 404 | 알림 설정 없음. |
+| `DEVICE_NOT_FOUND` | 404 | 존재하지 않는 디바이스. |
+| `FILE_TOO_LARGE` | 413 | 사진 용량 초과 (100MB 이하). |
+| `INVALID_FILE_TYPE` | 400 | PNG/JPEG만 허용. |
+| `IMAGE_NOT_FOUND` | 404 | 존재하지 않는 이미지. |
+| `CHARACTER_NOT_FOUND` | 404 | 캐릭터 정보 없음. |
+| `INSUFFICIENT_COIN` | 400 | 코인 부족. |
+| `SHOP_ITEM_NOT_FOUND` | 404 | 존재하지 않는 아이템. |
+| `ALREADY_OWNED_ITEM` | 409 | 이미 보유한 아이템. |
+| `ITEM_NOT_OWNED` | 400 | 미보유 아이템 장착 불가. |
+| `NOT_MASTER_CHARACTER` | 400 | 마스터 단계만 보상 가능. |
+| `INVALID_GAME_SCORE` | 400 | 유효하지 않은 게임 점수. |
+| `AD_REWARD_LIMIT_EXCEEDED` | 429 | 오늘 광고 보상 한도 초과. |
+| `QUIZ_NOT_FOUND` | 404 | 존재하지 않는 퀴즈. |
+| `QUIZ_ALREADY_ATTEMPTED` | 409 | 이미 응시한 퀴즈. |
+| `QUIZ_CANNOT_ATTEMPT_OWN` | 400 | 직접 만든 퀴즈 응시 불가. |
+| `QUIZ_NO_AVAILABLE` | 404 | 풀 수 있는 퀴즈 없음. |
+| `QUIZ_INVALID_OPTION_COUNT` | 400 | 선택지는 정확히 4개. |
+| `QUIZ_OPTION_INVALID` | 400 | 선택지 1~100자. |
+| `QUIZ_QUESTION_INVALID` | 400 | 문제 1~200자. |
+| `QUIZ_INVALID_CORRECT_INDEX` | 400 | 정답 번호 1~4. |
+| `QUIZ_INVALID_MULTIPLIER` | 400 | EXP 배수 1~3. |
+| `QUIZ_IMAGE_REQUIRES_DIKO` | 400 | 사진 퀴즈는 디코 등장 그룹만. |
+| `EXHIBIT_NOT_FOUND` | 404 | 존재하지 않는 전시관 카드. |
+| `EXHIBIT_ACCESS_DENIED` | 403 | 전시관 접근 권한 없음. |
+| `TITLE_NOT_OWNED` | 400 | 미획득 칭호 장착 불가. |
+| `REPORT_INVALID_TARGET` | 400 | 잘못된 신고 대상. |
+| `CANNOT_REPORT_SELF` | 400 | 자기 자신 신고 불가. |
+| `CANNOT_BLOCK_SELF` | 400 | 자기 자신 차단 불가. |
+| `INQUIRY_CONTENT_REQUIRED` | 400 | 문의 내용 필요. |
+| `INQUIRY_DAILY_LIMIT` | 429 | 문의는 하루 2건. |
+| `RATE_LIMIT_EXCEEDED` | 429 | 요청 횟수 초과. |
+| `ADMIN_*` | 400~500 | 어드민 인증/DB 작업 관련 (위 어드민 섹션 참고) |
+
+### HTTP 상태 코드 요약
+
+| 코드 | 의미 |
+|:---:|------|
+| 400 | 잘못된 요청 (검증 실패) |
+| 401 | 인증 실패 (토큰 없음/만료/무효) |
+| 403 | 권한 없음 (비구성원/비방장/이용제한) |
+| 404 | 리소스 없음 |
+| 409 | 충돌 (중복/이미 참여 등) |
+| 410 | 만료 (초대 코드/삭제된 그룹) |
 | 413 | 파일 크기 초과 |
-| 429 | 요청 횟수 초과 (Rate Limit) |
-| 500 | 서버 내부 오류 |
-
-에러 응답 본문:
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| error.code | string | 에러 코드 (예: `INVITE_CODE_EXPIRED`) |
-| error.message | string | 사용자에게 보여줄 수 있는 메시지 |
-| error.details | object? | 유효성 검증 시 필드별 에러 |
-
-### 공통 객체
-
-**UserSummary** — 목록/댓글 등에서 사용자를 간략히 표현
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| id | string | 사용자 UUID |
-| name | string | 닉네임 |
-| profileImage | string? | 프로필 이미지 URL |
-
-**Comment** — 일정/일기 댓글 공통 구조
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| id | string | 댓글 ID |
-| text | string | 내용 (최대 200자) |
-| createdBy | UserSummary | 작성자 |
-| createdAt | string | 작성 시각 |
-
-### Rate Limiting
-
-| 대상 | 제한 |
-|------|------|
-| 일반 API | 100 req/min |
-| 인증 API (`/auth/*`) | 10 req/min |
-| 업로드 API (`/uploads/*`) | 30 req/min |
-
-응답 헤더:
-
-```
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 42
-X-RateLimit-Reset: 1679234567
-```
-
-### 페이지네이션 응답 형식
-
-페이지네이션이 적용된 API의 응답:
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| total | int | 전체 결과 수 |
-| limit | int | 요청한 페이지 크기 |
-| offset | int | 현재 오프셋 |
-| hasMore | boolean | 다음 페이지 존재 여부 |
+| 429 | 요청/한도 초과 |
+| 500 | 서버 오류 |
 
 ---
 
-## 🌿 브랜치 전략
+## 📊 데이터베이스
 
-### 브랜치 구조
-
-```
-main
- └── develop
-      ├── feature/auth-api          ← 1순위
-      ├── feature/user-api          ← 2순위
-      ├── feature/upload-api        ← 3순위
-      ├── feature/group-api         ← 4순위
-      ├── feature/invite-api        ← 5순위
-      ├── feature/membership-api    ← 6순위
-      ├── feature/device-api        ← 7순위 (독립)
-      ├── feature/schedule-api      ← 8순위
-      ├── feature/diary-api         ← 9순위
-      ├── feature/comment-api       ← 10순위
-      ├── feature/todo-api          ← 11순위 (독립)
-      └── feature/notification-api  ← 12순위
-```
-
-### 개발 순서 (의존성 기반)
-
-| 순서 | 브랜치 | 의존 대상 | 이유 |
-|:---:|--------|----------|------|
-| 1 | `feature/auth-api` | — | 모든 API의 인증 기반, JWT 발급 |
-| 2 | `feature/user-api` | Auth | 프로필·설정, 인증된 사용자 필요 |
-| 3 | `feature/upload-api` | Auth | 이미지 업로드, 이후 도메인에서 참조 |
-| 4 | `feature/group-api` | Auth, Upload | 그룹 CRUD, 썸네일 이미지 |
-| 5 | `feature/invite-api` | Group | 초대 코드는 그룹에 종속 |
-| 6 | `feature/membership-api` | Group | 구성원 관리는 그룹에 종속 |
-| 7 | `feature/device-api` | Auth | FCM 토큰 등록, Auth만 의존 (병렬 가능) |
-| 8 | `feature/schedule-api` | Group, Membership | 일정은 그룹+구성원 필요 |
-| 9 | `feature/diary-api` | Group, Upload | 일기는 그룹+이미지 필요 |
-| 10 | `feature/comment-api` | Schedule, Diary | 댓글은 일정/일기에 종속 |
-| 11 | `feature/todo-api` | Group | 할 일은 그룹에만 종속 (병렬 가능) |
-| 12 | `feature/notification-api` | 전체 | 모든 도메인 이벤트를 수신하여 알림+푸시 생성 |
-
-> 7번(Device)과 11번(Todo)은 의존성이 적어 다른 도메인과 병렬 개발 가능
-
-### 머지 규칙
-
-- 각 feature 브랜치 → `develop`으로 PR 생성
-- 코드 리뷰 필수 (최소 1인)
-- CI 파이프라인 통과 후 머지 (lint + test + build)
-- `develop` → `main`은 릴리스 시점에 머지
-- 핫픽스: `main`에서 `hotfix/*` 브랜치 생성 → `main` + `develop` 양쪽 머지
-
----
-
-## 📊 데이터베이스 ERD 요약
-
-| 테이블 | 주요 관계 | 비고 |
-|--------|-----------|------|
-| users | — | 소셜 로그인 정보 포함 |
-| user_terms | users 1:1 | 약관 동의 내역 |
-| user_notification_settings | users 1:1 | 알림 설정 |
-| user_privacy_settings | users 1:1 | 개인정보 설정 |
-| groups | users N:1 (owner) | Soft Delete 지원 |
-| group_memberships | users N:M groups | 조인 테이블, role·color 포함 |
-| invite_codes | groups 1:N | 24시간 만료 |
-| schedules | groups 1:N | 색상, 종일 여부 포함 |
-| schedule_participants | users N:M schedules | 일정 참여자 |
-| diaries | groups 1:N | 날씨, 기분 포함 |
-| diary_images | diaries 1:N | 이미지 URL, 순서 |
-| comments | schedules/diaries 다형성 1:N | parentType으로 구분 |
-| todos | groups 1:N | 완료 여부, 완료자 |
-| notifications | users 1:N | type, relatedId로 연결 |
-| devices | users 1:N | FCM 토큰, 플랫폼 |
-| uploaded_images | users 1:N | purpose별 분류 |
-
----
-
-## 📋 엔드포인트 전체 목록 (49개)
-
-| # | 메서드 | 엔드포인트 | 도메인 | 설명 |
-|:---:|:---:|------|------|------|
-| 1 | POST | `/auth/login` | Auth | 소셜 로그인 |
-| 2 | POST | `/auth/terms` | Auth | 약관 동의 |
-| 3 | GET | `/auth/terms/:type` | Auth | 약관 문서 조회 |
-| 4 | POST | `/auth/refresh` | Auth | 토큰 갱신 |
-| 5 | POST | `/auth/logout` | Auth | 로그아웃 |
-| 6 | DELETE | `/auth/account` | Auth | 회원 탈퇴 |
-| 7 | GET | `/users/me` | User | 내 프로필 조회 |
-| 8 | PUT | `/users/me` | User | 프로필 수정 |
-| 9 | GET | `/users/me/notification-settings` | User | 알림 설정 조회 |
-| 10 | PUT | `/users/me/notification-settings` | User | 알림 설정 수정 |
-| 11 | POST | `/group-rooms` | GroupRoom | 그룹 생성 |
-| 12 | GET | `/group-rooms` | GroupRoom | 내 그룹 목록 |
-| 13 | GET | `/group-rooms/:groupRoomId` | GroupRoom | 그룹 상세 |
-| 14 | PUT | `/group-rooms/:groupRoomId` | GroupRoom | 그룹 수정 |
-| 15 | DELETE | `/group-rooms/:groupRoomId` | GroupRoom | 그룹 삭제 |
-| 16 | POST | `/group-rooms/:groupRoomId/recover` | GroupRoom | 그룹 복구 |
-| 17 | POST | `/group-rooms/:groupRoomId/invites` | Invite | 초대 코드 생성 |
-| 18 | POST | `/invites/validate` | Invite | 초대 코드 검증 |
-| 19 | POST | `/invites/join` | Invite | 초대 코드로 참여 |
-| 20 | GET | `/group-rooms/:groupRoomId/memberships` | Membership | 구성원 목록 |
-| 21 | DELETE | `/group-rooms/:groupRoomId/memberships/:userId` | Membership | 구성원 내보내기 |
-| 22 | PUT | `/group-rooms/:groupRoomId/memberships/:userId/role` | Membership | 역할 변경 |
-| 23 | POST | `/group-rooms/:groupRoomId/leave` | Membership | 그룹 탈퇴 |
-| 24 | GET | `/group-rooms/:groupRoomId/schedules` | Schedule | 일정 목록 |
-| 25 | GET | `/group-rooms/:groupRoomId/schedules/:scheduleId` | Schedule | 일정 상세 |
-| 26 | POST | `/group-rooms/:groupRoomId/schedules` | Schedule | 일정 생성 |
-| 27 | PUT | `/group-rooms/:groupRoomId/schedules/:scheduleId` | Schedule | 일정 수정 |
-| 28 | DELETE | `/group-rooms/:groupRoomId/schedules/:scheduleId` | Schedule | 일정 삭제 |
-| 29 | GET | `/group-rooms/:groupRoomId/diaries` | Diary | 일기 목록 |
-| 30 | GET | `/group-rooms/:groupRoomId/diaries/calendar` | Diary | 일기 캘린더 |
-| 31 | GET | `/group-rooms/:groupRoomId/diaries/:diaryId` | Diary | 일기 상세 |
-| 32 | POST | `/group-rooms/:groupRoomId/diaries` | Diary | 일기 작성 |
-| 33 | PUT | `/group-rooms/:groupRoomId/diaries/:diaryId` | Diary | 일기 수정 |
-| 34 | DELETE | `/group-rooms/:groupRoomId/diaries/:diaryId` | Diary | 일기 삭제 |
-| 35 | POST | `/group-rooms/:groupRoomId/schedules/:scheduleId/comments` | Comment | 일정 댓글 작성 |
-| 36 | DELETE | `/group-rooms/:groupRoomId/schedules/:scheduleId/comments/:commentId` | Comment | 일정 댓글 삭제 |
-| 37 | POST | `/group-rooms/:groupRoomId/diaries/:diaryId/comments` | Comment | 일기 댓글 작성 |
-| 38 | DELETE | `/group-rooms/:groupRoomId/diaries/:diaryId/comments/:commentId` | Comment | 일기 댓글 삭제 |
-| 39 | GET | `/group-rooms/:groupRoomId/todos` | Todo | 할 일 목록 |
-| 40 | POST | `/group-rooms/:groupRoomId/todos` | Todo | 할 일 생성 |
-| 41 | PATCH | `/group-rooms/:groupRoomId/todos/:todoId` | Todo | 할 일 토글 |
-| 42 | DELETE | `/group-rooms/:groupRoomId/todos/:todoId` | Todo | 할 일 삭제 |
-| 43 | GET | `/notifications` | Notification | 알림 목록 |
-| 44 | PATCH | `/notifications/:notificationId` | Notification | 알림 읽음 |
-| 45 | POST | `/notifications/read-all` | Notification | 전체 읽음 |
-| 46 | DELETE | `/notifications/:notificationId` | Notification | 알림 삭제 |
-| 47 | POST | `/devices` | Device | 디바이스 토큰 등록 |
-| 48 | DELETE | `/devices/:deviceId` | Device | 디바이스 토큰 해제 |
-| 49 | POST | `/uploads/images` | Upload | 이미지 업로드 (단일) |
-
----
-
-## 🔑 권한 매트릭스
-
-| 행동 | 방장 (owner) | 구성원 (member) | 비구성원 |
-|------|:---:|:---:|:---:|
-| 그룹 조회 | ✅ | ✅ | ❌ |
-| 그룹 수정/삭제/복구 | ✅ | ❌ | ❌ |
-| 초대 코드 생성 | ✅ | ❌ | ❌ |
-| 구성원 내보내기 | ✅ | ❌ | ❌ |
-| 역할 변경 (방장 양도) | ✅ | ❌ | ❌ |
-| 일정 생성 | ✅ | ✅ | ❌ |
-| 일정 수정/삭제 (본인 것) | ✅ | ✅ | ❌ |
-| 일정 수정/삭제 (타인 것) | ✅ | ❌ | ❌ |
-| 일기 작성 | ✅ | ✅ | ❌ |
-| 일기 수정/삭제 (본인 것) | ✅ | ✅ | ❌ |
-| 일기 수정/삭제 (타인 것) | ✅ | ❌ | ❌ |
-| 댓글 작성 | ✅ | ✅ | ❌ |
-| 댓글 삭제 (본인 것) | ✅ | ✅ | ❌ |
-| 댓글 삭제 (타인 것) | ✅ | ❌ | ❌ |
-| 할 일 생성/토글 | ✅ | ✅ | ❌ |
-| 할 일 삭제 (본인 것) | ✅ | ✅ | ❌ |
-| 할 일 삭제 (타인 것) | ✅ | ❌ | ❌ |
+DB 구조는 [`ERD.md`](./ERD.md) 참고 — **39개 MySQL 테이블 + 2개 Redis 엔티티**.
+주요 도메인: 사용자/인증, 그룹방·일정·일기·할일·댓글, 그룹 캐릭터(모찌)·퀴즈·상점, 칭호,
+신고/차단/숨김, 문의, 삭제 요청, 어드민(자격증명·공지·감사 로그·앱 설정).

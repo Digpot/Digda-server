@@ -65,6 +65,12 @@ class DeviceServiceImpl(
         return RegisterDeviceResponse(deviceId = saved.id)
     }
 
+    // iOS FCM 등록 실패 진단(앱이 토큰을 못 얻어 /devices 를 못 칠 때)을 서버 로그로
+    // 노출한다. 윈도우 개발 환경에선 기기 콘솔을 못 보므로 원인을 여기서 확인한다. DB 저장 없음.
+    override fun logDiagnostic(userId: UUID, detail: String) {
+        log.warn("action=device_register_iOS진단, userId={}, detail={}", userId, detail)
+    }
+
     @Transactional
     override fun unregisterDevice(userId: UUID, deviceId: Long) {
         val device = deviceRepository.findById(deviceId)

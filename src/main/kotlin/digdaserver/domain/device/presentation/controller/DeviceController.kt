@@ -1,6 +1,7 @@
 package digdaserver.domain.device.presentation.controller
 
 import digdaserver.domain.device.application.service.DeviceService
+import digdaserver.domain.device.presentation.dto.req.DeviceDiagnosticRequest
 import digdaserver.domain.device.presentation.dto.req.RegisterDeviceRequest
 import digdaserver.domain.device.presentation.dto.res.RegisterDeviceResponse
 import io.swagger.v3.oas.annotations.Operation
@@ -29,6 +30,16 @@ class DeviceController(
     ): ResponseEntity<RegisterDeviceResponse> {
         val response = deviceService.registerDevice(UUID.fromString(userId), request.token, request.platform)
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
+    }
+
+    @Operation(summary = "디바이스 등록 진단 로깅", description = "iOS 가 FCM 토큰을 못 얻어 등록 실패 시 그 사유를 서버 로그로 남긴다(윈도우 디버깅용). DB 저장 없음.")
+    @PostMapping("/devices/diagnostic")
+    fun reportDiagnostic(
+        @AuthenticationPrincipal userId: String,
+        @RequestBody request: DeviceDiagnosticRequest
+    ): ResponseEntity<Void> {
+        deviceService.logDiagnostic(UUID.fromString(userId), request.detail)
+        return ResponseEntity.ok().build()
     }
 
     @Operation(summary = "디바이스 토큰 해제", description = "로그아웃 시 또는 토큰 만료 시 디바이스를 해제합니다.")

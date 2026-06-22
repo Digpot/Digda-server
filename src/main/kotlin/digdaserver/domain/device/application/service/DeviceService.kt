@@ -8,4 +8,6 @@ interface DeviceService {
     fun registerDevice(userId: UUID, token: String, platform: String): RegisterDeviceResponse
 
     fun unregisterDevice(userId: UUID, deviceId: Long)
+
+    fun logDiagnostic(userId: UUID, detail: String)
 }

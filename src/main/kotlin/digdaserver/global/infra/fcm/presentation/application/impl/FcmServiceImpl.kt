@@ -2,6 +2,8 @@ package digdaserver.global.infra.fcm.presentation.application.impl
 
 import com.google.firebase.messaging.AndroidConfig
 import com.google.firebase.messaging.AndroidNotification
+import com.google.firebase.messaging.ApnsConfig
+import com.google.firebase.messaging.Aps
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingException
 import com.google.firebase.messaging.MessagingErrorCode
@@ -72,6 +74,20 @@ class FcmServiceImpl(
                     AndroidNotification.builder()
                         .setChannelId("digda_default")
                         .setPriority(AndroidNotification.Priority.HIGH)
+                        .build()
+                )
+                .build()
+        )
+        // iOS(APNs) 설정을 명시한다. 상위 Notification 만으론 사운드/우선순위가 빠져
+        // 백그라운드 배너가 누락되거나 무음 처리될 수 있다. apns-push-type=alert,
+        // apns-priority=10(즉시 전달) + 기본 사운드로 표시를 보장한다.
+        .setApnsConfig(
+            ApnsConfig.builder()
+                .putHeader("apns-push-type", "alert")
+                .putHeader("apns-priority", "10")
+                .setAps(
+                    Aps.builder()
+                        .setSound("default")
                         .build()
                 )
                 .build()

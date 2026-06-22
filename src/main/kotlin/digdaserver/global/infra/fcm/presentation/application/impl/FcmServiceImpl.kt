@@ -103,11 +103,25 @@ class FcmServiceImpl(
         val invalid = mutableListOf<String>()
         responses.forEachIndexed { idx, resp ->
             if (resp.isSuccessful) return@forEachIndexed
-            val errorCode = resp.exception?.messagingErrorCode
+            val ex = resp.exception
+            val errorCode = ex?.messagingErrorCode
             if (errorCode in INVALID_TOKEN_ERRORS) {
                 invalid += chunk[idx]
             } else {
-                log.warn("FCM send failed for token ({}): {}", errorCode, resp.exception?.message)
+                // iOS 만 401 로 실패할 때 Apple 의 실제 거부 사유(InvalidProviderToken=키 문제,
+                // BadDeviceToken=환경 불일치, TopicDisallowed=번들 불일치 등)를 드러내기 위해
+                // FCM 응답 본문(httpResponse.content)과 전체 예외 스택을 함께 남긴다.
+                // 토큰 prefix 로 devices 테이블의 iOS/Android 행과 대조 가능.
+                val httpBody = ex?.httpResponse?.content
+                log.warn(
+                    "FCM send failed (token={}…, errorCode={}, messagingErrorCode={}): {} | apnsBody={}",
+                    chunk[idx].take(12),
+                    ex?.errorCode,
+                    errorCode,
+                    ex?.message,
+                    httpBody,
+                    ex
+                )
             }
         }
         return invalid

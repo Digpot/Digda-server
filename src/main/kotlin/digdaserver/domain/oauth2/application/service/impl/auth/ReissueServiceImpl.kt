@@ -40,7 +40,7 @@ class ReissueServiceImpl(
         val newRefreshToken = jwtUtil.createRefreshToken(userId, role, email)
 
         val newJsonWebToken = JsonWebToken.of(
-            refreshToken = refreshToken,
+            refreshToken = newRefreshToken,
             providerId = userId,
             email = email,
             role = role

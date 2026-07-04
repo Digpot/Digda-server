@@ -38,6 +38,9 @@ class SchemaAutoMigration(
      * - `uploaded_image.purpose`: 초기 MySQL ENUM 으로 생성됐는데 별명전시관 도입으로
      *    [ImagePurpose] 에 EXHIBIT 가 추가되면서 purpose=exhibit 업로드가 "Data truncated"
      *    로 500. notification.type 과 동일하게 VARCHAR(64) 로 일반화.
+     * - `diary.content`: 초기 VARCHAR(300) 으로 생성됐는데 그림일기 본문 길이 제한을 없애기로
+     *    하면서 300 자 초과 입력이 "Data truncated" 로 실패. 서버/DTO 에 별도 길이 검증이
+     *    없으므로 TEXT 로 완화해 사실상 무제한 저장을 허용한다.
      */
     private val requiredColumns: List<RequiredColumn> = listOf(
         RequiredColumn(
@@ -55,6 +58,16 @@ class SchemaAutoMigration(
             expectedMaxLength = 64,
             nullable = false,
             alterSql = "ALTER TABLE uploaded_image MODIFY COLUMN purpose VARCHAR(64) NOT NULL"
+        ),
+        // 그림일기 본문 길이 제한 해제 — VARCHAR(300) → TEXT. TEXT 의 CHARACTER_MAXIMUM_LENGTH
+        // 는 65535 라 expectedMaxLength 를 동일하게 두어 멱등 판정(이미 TEXT 면 skip)한다.
+        RequiredColumn(
+            table = "diary",
+            column = "content",
+            expectedDataType = "text",
+            expectedMaxLength = 65535,
+            nullable = false,
+            alterSql = "ALTER TABLE diary MODIFY COLUMN content TEXT NOT NULL"
         ),
         // 작성자 회원탈퇴 시 퀴즈를 보존(author=NULL)하려면 author_id 가 NULL 허용이어야 한다.
         // 기존 prod 컬럼은 BINARY(16) NOT NULL 이라 nullable 로 완화. FK 제약은 그대로 유지된다.

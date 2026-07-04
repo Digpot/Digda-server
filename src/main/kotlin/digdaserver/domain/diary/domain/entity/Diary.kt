@@ -41,7 +41,7 @@ class Diary(
     @Column(nullable = false, length = 20)
     var title: String,
 
-    @Column(nullable = false, length = 300)
+    @Column(nullable = false, columnDefinition = "TEXT")
     var content: String,
 
     @Column(nullable = false)

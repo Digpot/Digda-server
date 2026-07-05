@@ -436,21 +436,30 @@ class NotificationServiceImpl(
     }
 
     @Transactional
-    override fun notifyQuizAnsweredCorrectly(
+    override fun notifyQuizAnswered(
         groupRoomId: Long,
         quizId: Long,
-        solverUserId: UUID
+        solverUserId: UUID,
+        correct: Boolean
     ) {
         val groupRoom = findGroupRoom(groupRoomId)
         val solver = findUser(solverUserId)
         val recipients = memberRecipientsExcept(groupRoomId, solverUserId)
 
+        // 정답/오답 모두 알림을 보낸다. 오답도 위로 경험치가 있어 모찌 성장에 반영되므로
+        // 그룹원이 응시 현황을 알 수 있게 한다.
+        val (title, message) = if (correct) {
+            "퀴즈 정답!" to "${solver.name}님이 퀴즈를 맞혔어요! 모찌가 경험치를 얻었어요. 🎉"
+        } else {
+            "퀴즈 응시" to "${solver.name}님이 퀴즈에 도전했지만 아쉽게 틀렸어요. 😅"
+        }
+
         notify(
             recipients,
             NotificationPayload(
                 type = NotificationType.QUIZ_ANSWERED,
-                title = "퀴즈 정답!",
-                message = "${solver.name}님이 퀴즈를 맞혔어요! 모찌가 경험치를 얻었어요. 🎉",
+                title = title,
+                message = message,
                 groupRoomId = groupRoomId,
                 groupRoomName = groupRoom.name,
                 relatedId = quizId,

@@ -78,10 +78,11 @@ interface NotificationService {
         question: String
     )
 
-    fun notifyQuizAnsweredCorrectly(
+    fun notifyQuizAnswered(
         groupRoomId: Long,
         quizId: Long,
-        solverUserId: UUID
+        solverUserId: UUID,
+        correct: Boolean
     )
 
     fun notifyMochiLevelUp(

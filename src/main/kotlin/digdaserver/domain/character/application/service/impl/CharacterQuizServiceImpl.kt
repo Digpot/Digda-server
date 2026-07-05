@@ -125,8 +125,26 @@ class CharacterQuizServiceImpl(
         val safeSize = size.coerceIn(1, 100)
         val result =
             quizRepository.findPageByGroupRoomId(groupRoomId, PageRequest.of(safePage, safeSize))
+
+        // 조회자의 응시 기록을 한 번에 가져와 정답/오답 배지를 채운다(퀴즈당 1회 응시라
+        // quizId 로 유일). 미응시 퀴즈는 attempted=false 로 남는다.
+        val quizIds = result.content.map { it.id }
+        val attemptByQuizId = if (quizIds.isEmpty()) {
+            emptyMap()
+        } else {
+            attemptRepository.findAllByUserIdAndQuizIdIn(userId, quizIds)
+                .associateBy({ it.quiz.id }, { it.correct })
+        }
+
         return CharacterQuizListResponse(
-            items = result.content.map(CharacterQuizResponse::from),
+            items = result.content.map { quiz ->
+                val attemptCorrect = attemptByQuizId[quiz.id]
+                CharacterQuizResponse.from(
+                    quiz,
+                    attempted = attemptCorrect != null,
+                    attemptCorrect = attemptCorrect
+                )
+            },
             page = result.number,
             totalPages = result.totalPages,
             totalElements = result.totalElements
@@ -239,13 +257,12 @@ class CharacterQuizServiceImpl(
         )
 
         try {
-            if (correct) {
-                notificationService.notifyQuizAnsweredCorrectly(
-                    groupRoomId = quiz.groupRoom.id,
-                    quizId = quizId,
-                    solverUserId = userId
-                )
-            }
+            notificationService.notifyQuizAnswered(
+                groupRoomId = quiz.groupRoom.id,
+                quizId = quizId,
+                solverUserId = userId,
+                correct = correct
+            )
             if (gain.levelGained > 0 || gain.stageChanged) {
                 notificationService.notifyMochiLevelUp(
                     groupRoomId = quiz.groupRoom.id,

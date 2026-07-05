@@ -96,6 +96,11 @@ class MembershipServiceImpl(
         membership.changeRole(GroupRoomRole.MEMBER)
         targetMembership.changeRole(GroupRoomRole.OWNER)
 
+        // 멤버십 역할뿐 아니라 그룹방 소유자(owner_id)도 함께 옮겨야 한다.
+        // 이걸 빼먹으면 group_room.owner_id 가 이전 방장으로 남아 어드민 그룹목록에
+        // 이전 방장 이름이 계속 노출된다.
+        groupRoom.transferOwnership(targetMembership.user)
+
         notificationService.notifyOwnershipTransferred(groupRoomId, userId, targetUserId)
 
         userActionLogService.record(

@@ -41,18 +41,24 @@ data class AdminGroupRoomResponse(
     val updatedAt: LocalDateTime
 ) {
     companion object {
-        fun from(room: GroupRoom): AdminGroupRoomResponse = AdminGroupRoomResponse(
-            groupRoomId = room.id,
-            name = room.name,
-            thumbnailImage = room.thumbnailImage,
-            maxMembers = room.maxMembers,
-            ownerId = room.owner.id.toString(),
-            ownerName = room.owner.name,
-            lastActivityAt = room.lastActivityAt,
-            deleteScheduledAt = room.deleteScheduledAt,
-            deletedAt = room.deletedAt,
-            createdAt = room.createdAt,
-            updatedAt = room.updatedAt
-        )
+        fun from(room: GroupRoom): AdminGroupRoomResponse {
+            // 실제 방장은 OWNER 역할 멤버십이 소스오브트루스다. 과거 방장 양도 시
+            // group_room.owner_id 를 갱신하지 않던 버그로 남은 stale 데이터까지
+            // 올바르게 보이도록, OWNER 멤버십 유저를 우선 사용하고 없으면 owner 로 폴백.
+            val ownerUser = room.memberships.firstOrNull { it.isOwner }?.user ?: room.owner
+            return AdminGroupRoomResponse(
+                groupRoomId = room.id,
+                name = room.name,
+                thumbnailImage = room.thumbnailImage,
+                maxMembers = room.maxMembers,
+                ownerId = ownerUser.id.toString(),
+                ownerName = ownerUser.name,
+                lastActivityAt = room.lastActivityAt,
+                deleteScheduledAt = room.deleteScheduledAt,
+                deletedAt = room.deletedAt,
+                createdAt = room.createdAt,
+                updatedAt = room.updatedAt
+            )
+        }
     }
 }

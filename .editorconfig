@@ -1,0 +1,2 @@
+[*.kt]
+ktlint_disabled_rules=package-name

@@ -1,0 +1,46 @@
+package digdaserver.domain.user.domain.repository
+
+import digdaserver.domain.oauth2.domain.entity.SocialProvider
+import digdaserver.domain.user.domain.entity.Role
+import digdaserver.domain.user.domain.entity.User
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
+import org.springframework.stereotype.Repository
+import java.util.Optional
+import java.util.UUID
+
+@Repository
+interface UserRepository : JpaRepository<User, UUID> {
+
+    fun findBySocialIdAndSocialProvider(socialId: String, socialProvider: SocialProvider): Optional<User>
+
+    fun existsByEmail(email: String): Boolean
+
+    fun countByRole(role: Role): Long
+
+    fun findAllByRole(role: Role): List<User>
+
+    @Query("SELECT u.id FROM User u")
+    fun findAllIds(): List<UUID>
+
+    @Query("SELECT u.id FROM User u")
+    fun findAllIdsPageable(pageable: Pageable): Page<UUID>
+
+    @Query(
+        """
+        SELECT u FROM User u
+        WHERE (:keyword IS NULL OR :keyword = ''
+            OR LOWER(u.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(COALESCE(u.email, '')) LIKE LOWER(CONCAT('%', :keyword, '%')))
+          AND (:role IS NULL OR u.role = :role)
+        """
+    )
+    fun searchForAdmin(
+        @Param("keyword") keyword: String?,
+        @Param("role") role: Role?,
+        pageable: Pageable
+    ): Page<User>
+}

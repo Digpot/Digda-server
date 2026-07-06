@@ -1,0 +1,284 @@
+package digdaserver.domain.schedule.application.service.impl
+
+import digdaserver.domain.block.application.service.ContentVisibilityService
+import digdaserver.domain.comment.domain.entity.CommentTargetType
+import digdaserver.domain.comment.domain.repository.CommentRepository
+import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
+import digdaserver.domain.log.application.service.UserActionLogService
+import digdaserver.domain.log.domain.entity.UserAction
+import digdaserver.domain.membership.domain.repository.MembershipRepository
+import digdaserver.domain.notification.application.service.NotificationService
+import digdaserver.domain.schedule.application.service.ScheduleService
+import digdaserver.domain.schedule.domain.entity.Schedule
+import digdaserver.domain.schedule.domain.entity.ScheduleParticipant
+import digdaserver.domain.schedule.domain.repository.ScheduleRepository
+import digdaserver.domain.schedule.presentation.dto.req.CreateScheduleRequest
+import digdaserver.domain.schedule.presentation.dto.req.UpdateScheduleRequest
+import digdaserver.domain.schedule.presentation.dto.res.CommentResponse
+import digdaserver.domain.schedule.presentation.dto.res.ScheduleDetailResponse
+import digdaserver.domain.schedule.presentation.dto.res.ScheduleListResponse
+import digdaserver.domain.schedule.presentation.dto.res.ScheduleResponse
+import digdaserver.domain.user.domain.repository.UserRepository
+import digdaserver.global.infra.exception.error.DigdaException
+import digdaserver.global.infra.exception.error.ErrorCode
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
+import java.util.UUID
+
+@Service
+@Transactional(readOnly = true)
+class ScheduleServiceImpl(
+    private val scheduleRepository: ScheduleRepository,
+    private val groupRoomRepository: GroupRoomRepository,
+    private val membershipRepository: MembershipRepository,
+    private val commentRepository: CommentRepository,
+    private val userRepository: UserRepository,
+    private val notificationService: NotificationService,
+    private val userActionLogService: UserActionLogService,
+    private val contentVisibilityService: ContentVisibilityService
+) : ScheduleService {
+
+    override fun getSchedules(userId: UUID, groupRoomId: Long, startDate: LocalDate, endDate: LocalDate): ScheduleListResponse {
+        val groupRoom = groupRoomRepository.findById(groupRoomId)
+            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
+
+        if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
+
+        membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+            .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
+
+        val allSchedules = scheduleRepository.findAllByGroupRoomIdAndDateRange(groupRoomId, startDate, endDate)
+
+        // 차단/신고 숨김 — 일정은 슬롯 제약이 없어 캘린더에서 아예 제외한다(작성자 차단 또는 개별 숨김).
+        val visibility = contentVisibilityService.forViewer(userId)
+        val schedules = allSchedules.filter {
+            visibility.scheduleHiddenReason(it.id, it.createdBy.id) == null
+        }
+
+        val scheduleIds = schedules.map { it.id }
+        val commentCountMap: Map<Long, Int> = if (scheduleIds.isNotEmpty()) {
+            commentRepository.countByTargetTypeAndTargetIdIn(CommentTargetType.SCHEDULE, scheduleIds)
+                .associate { row -> (row[0] as Long) to (row[1] as Long).toInt() }
+        } else {
+            emptyMap()
+        }
+
+        return ScheduleListResponse(
+            schedules = schedules.map { schedule ->
+                val commentCount = commentCountMap[schedule.id] ?: 0
+                ScheduleResponse.from(schedule, commentCount)
+            }
+        )
+    }
+
+    override fun getScheduleDetail(userId: UUID, groupRoomId: Long, scheduleId: Long): ScheduleDetailResponse {
+        val groupRoom = groupRoomRepository.findById(groupRoomId)
+            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
+
+        if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
+
+        membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+            .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
+
+        val schedule = scheduleRepository.findById(scheduleId)
+            .orElseThrow { DigdaException(ErrorCode.SCHEDULE_NOT_FOUND) }
+
+        val commentCount = commentRepository.countByTargetTypeAndTargetId(CommentTargetType.SCHEDULE, scheduleId)
+        val comments = commentRepository.findAllByTargetTypeAndTargetIdOrderByCreatedAtAsc(CommentTargetType.SCHEDULE, scheduleId)
+
+        // 차단/신고 숨김 — 일정 본문(직접 접근 방어)과 차단 사용자 댓글을 비워 내려보낸다.
+        val visibility = contentVisibilityService.forViewer(userId)
+        val scheduleResponse = ScheduleResponse.from(schedule, commentCount).let { resp ->
+            val reason = visibility.scheduleHiddenReason(schedule.id, schedule.createdBy.id)
+            if (reason != null) resp.asHidden(reason) else resp
+        }
+
+        return ScheduleDetailResponse(
+            schedule = scheduleResponse,
+            comments = comments.map { comment ->
+                val resp = CommentResponse.from(comment)
+                val reason = visibility.commentHiddenReason(comment.id, comment.createdBy.id)
+                if (reason != null) resp.asHidden(reason) else resp
+            }
+        )
+    }
+
+    @Transactional
+    override fun createSchedule(userId: UUID, groupRoomId: Long, request: CreateScheduleRequest): ScheduleResponse {
+        val groupRoom = groupRoomRepository.findById(groupRoomId)
+            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
+
+        if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
+
+        membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+            .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
+
+        validateDateRange(request.startDate, request.endDate, request.startTime, request.endTime, request.allDay)
+
+        val user = userRepository.findById(userId)
+            .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
+
+        if (user.restricted) throw DigdaException(ErrorCode.USER_RESTRICTED)
+
+        val schedule = scheduleRepository.save(
+            Schedule(
+                groupRoom = groupRoom,
+                title = request.title,
+                color = request.color,
+                startDate = request.startDate,
+                endDate = request.endDate,
+                startTime = if (request.allDay) null else request.startTime,
+                endTime = if (request.allDay) null else request.endTime,
+                allDay = request.allDay,
+                createdBy = user
+            )
+        )
+
+        request.participantIds?.let { ids ->
+            addParticipants(schedule, groupRoomId, ids)
+        }
+
+        groupRoom.updateLastActivity()
+
+        val participantIds = request.participantIds ?: emptyList()
+        if (participantIds.isNotEmpty()) {
+            notificationService.notifyScheduleCreated(
+                groupRoomId = groupRoomId,
+                scheduleId = schedule.id,
+                creatorUserId = userId,
+                scheduleTitle = schedule.title,
+                participantUserIds = participantIds
+            )
+        }
+
+        userActionLogService.record(
+            actorId = userId,
+            action = UserAction.CREATE_SCHEDULE,
+            targetType = "SCHEDULE",
+            targetId = schedule.id.toString(),
+            detail = "groupRoomId=$groupRoomId, title=${schedule.title}"
+        )
+
+        return ScheduleResponse.from(schedule, 0)
+    }
+
+    @Transactional
+    override fun updateSchedule(userId: UUID, groupRoomId: Long, scheduleId: Long, request: UpdateScheduleRequest): ScheduleResponse {
+        val groupRoom = groupRoomRepository.findById(groupRoomId)
+            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
+
+        if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
+
+        // 일정은 그룹 멤버 누구나 수정 가능 (작성자/방장 제한 없음 — 일기와 반대).
+        membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+            .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
+
+        val schedule = scheduleRepository.findById(scheduleId)
+            .orElseThrow { DigdaException(ErrorCode.SCHEDULE_NOT_FOUND) }
+
+        val newStartDate = request.startDate ?: schedule.startDate
+        val newEndDate = request.endDate ?: schedule.endDate
+        val newAllDay = request.allDay ?: schedule.allDay
+        val newStartTime = if (newAllDay) null else (request.startTime ?: schedule.startTime)
+        val newEndTime = if (newAllDay) null else (request.endTime ?: schedule.endTime)
+
+        validateDateRange(newStartDate, newEndDate, newStartTime, newEndTime, newAllDay)
+
+        schedule.update(
+            title = request.title,
+            color = request.color,
+            startDate = request.startDate,
+            endDate = request.endDate,
+            startTime = newStartTime,
+            endTime = newEndTime,
+            allDay = request.allDay
+        )
+
+        val addedParticipantIds = request.participantIds?.let { newIds ->
+            val oldIdSet = schedule.participants.map { it.user.id }.toSet()
+            val newIdSet = newIds.toSet()
+
+            // 제거: 새 목록에 없는 기존 참여자만 삭제 (orphanRemoval 트리거)
+            val iterator = schedule.participants.iterator()
+            while (iterator.hasNext()) {
+                if (iterator.next().user.id !in newIdSet) iterator.remove()
+            }
+
+            // 추가: 기존에 없는 참여자만 INSERT — clear/re-insert 패턴 제거로 duplicate key 방지
+            val toAdd = newIds.filter { it !in oldIdSet }
+            addParticipants(schedule, groupRoomId, toAdd)
+
+            toAdd
+        } ?: emptyList()
+
+        groupRoom.updateLastActivity()
+
+        if (addedParticipantIds.isNotEmpty()) {
+            notificationService.notifyScheduleParticipantsAdded(
+                groupRoomId = groupRoomId,
+                scheduleId = schedule.id,
+                actorUserId = userId,
+                scheduleTitle = schedule.title,
+                addedParticipantUserIds = addedParticipantIds
+            )
+        }
+
+        val commentCount = commentRepository.countByTargetTypeAndTargetId(CommentTargetType.SCHEDULE, scheduleId)
+        return ScheduleResponse.from(schedule, commentCount)
+    }
+
+    @Transactional
+    override fun deleteSchedule(userId: UUID, groupRoomId: Long, scheduleId: Long) {
+        val groupRoom = groupRoomRepository.findById(groupRoomId)
+            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
+
+        if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
+
+        // 일정은 그룹 멤버 누구나 삭제 가능 (작성자/방장 제한 없음 — 일기와 반대).
+        membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+            .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
+
+        val schedule = scheduleRepository.findById(scheduleId)
+            .orElseThrow { DigdaException(ErrorCode.SCHEDULE_NOT_FOUND) }
+
+        val title = schedule.title
+        scheduleRepository.delete(schedule)
+
+        userActionLogService.record(
+            actorId = userId,
+            action = UserAction.DELETE_SCHEDULE,
+            targetType = "SCHEDULE",
+            targetId = scheduleId.toString(),
+            detail = "groupRoomId=$groupRoomId, title=$title"
+        )
+    }
+
+    private fun validateDateRange(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        startTime: java.time.LocalTime?,
+        endTime: java.time.LocalTime?,
+        allDay: Boolean
+    ) {
+        if (endDate.isBefore(startDate)) throw DigdaException(ErrorCode.END_DATE_BEFORE_START)
+
+        if (!allDay && startDate == endDate && startTime != null && endTime != null) {
+            if (endTime.isBefore(startTime)) throw DigdaException(ErrorCode.END_TIME_BEFORE_START)
+        }
+    }
+
+    private fun addParticipants(schedule: Schedule, groupRoomId: Long, participantIds: List<UUID>) {
+        participantIds.forEach { participantId ->
+            val participantMembership = membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, participantId)
+                .orElseThrow { DigdaException(ErrorCode.INVALID_PARTICIPANT) }
+
+            schedule.addParticipant(
+                ScheduleParticipant(
+                    schedule = schedule,
+                    user = participantMembership.user
+                )
+            )
+        }
+    }
+}

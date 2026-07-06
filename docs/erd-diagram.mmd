@@ -1,0 +1,457 @@
+erDiagram
+    user["user (사용자)"] {
+        binary_16 user_id PK "사용자 UUID"
+        varchar social_id "소셜 고유 ID (nullable — 관리자는 null)"
+        varchar email "이메일 (nullable)"
+        varchar name "소셜 원본 이름 (최대 20자)"
+        varchar display_name "표시 이름 (사용자 지정, nullable)"
+        varchar profile_image "프로필 이미지 URL (nullable)"
+        enum social_provider "제공자 (KAKAO/NAVER/APPLE/ADMIN)"
+        enum role "역할 (USER/ADMIN)"
+        boolean restricted "서비스 이용 제한 여부"
+        datetime created_at "가입일"
+        datetime updated_at "수정일"
+    }
+
+    user_terms["user_terms (약관 동의)"] {
+        bigint user_terms_id PK "약관 동의 ID"
+        binary_16 user_id FK,UK "사용자 UUID"
+        boolean terms_of_service "이용약관 (필수)"
+        boolean privacy_policy "개인정보처리방침 (필수)"
+        boolean age_confirmation "14세 이상 확인"
+        boolean marketing_consent "마케팅 수신 (선택)"
+        boolean push_consent "푸시 알림 (선택)"
+        datetime agreed_at "동의 일시"
+    }
+
+    user_notification_setting["user_notification_setting (알림 설정)"] {
+        bigint user_notification_setting_id PK "알림 설정 ID"
+        binary_16 user_id FK,UK "사용자 UUID"
+        boolean push_enabled "푸시 전체 ON/OFF"
+        boolean schedule_notification "일정 알림"
+        boolean diary_notification "일기 알림"
+        boolean comment_notification "댓글 알림"
+        boolean marketing_consent "마케팅 수신"
+    }
+
+    user_privacy_setting["user_privacy_setting (개인정보 설정)"] {
+        bigint user_privacy_setting_id PK "설정 ID"
+        binary_16 user_id FK,UK "사용자 UUID"
+        boolean profile_public "프로필 공개"
+        boolean activity_visible "활동 표시"
+    }
+
+    group_room["group_room (그룹방)"] {
+        bigint group_room_id PK "그룹방 ID"
+        varchar name "그룹방명 (2~20자)"
+        varchar thumbnail_image "썸네일 URL (nullable)"
+        int max_members "최대 인원"
+        binary_16 owner_id FK "방장 UUID"
+        datetime last_activity_at "마지막 활동"
+        datetime delete_scheduled_at "삭제 예약 (24h)"
+        datetime deleted_at "삭제 일시 (Soft Delete)"
+        datetime created_at "생성일"
+        datetime updated_at "수정일"
+    }
+
+    membership["membership (그룹방 소속)"] {
+        bigint membership_id PK "소속 ID"
+        binary_16 user_id FK "사용자 UUID"
+        bigint group_room_id FK "그룹방 ID"
+        enum role "역할 (OWNER/MEMBER)"
+        varchar color "사용자 색상 (#RRGGBB)"
+        datetime joined_at "가입 일시"
+    }
+
+    invite_code["invite_code (초대 코드)"] {
+        bigint invite_code_id PK "초대 코드 ID"
+        bigint group_room_id FK "그룹방 ID"
+        varchar code UK "초대 코드 (6자리)"
+        datetime expires_at "만료 일시"
+        datetime created_at "생성 일시"
+    }
+
+    schedule["schedule (일정)"] {
+        bigint schedule_id PK "일정 ID"
+        bigint group_room_id FK "그룹방 ID"
+        varchar title "제목 (최대 50자)"
+        varchar color "색상 (#RRGGBB)"
+        date start_date "시작일"
+        date end_date "종료일"
+        time start_time "시작 시간 (nullable)"
+        time end_time "종료 시간 (nullable)"
+        boolean all_day "종일 여부"
+        binary_16 created_by FK "작성자 UUID"
+        datetime created_at "생성일"
+        datetime updated_at "수정일"
+    }
+
+    schedule_participant["schedule_participant (일정 참여자)"] {
+        bigint schedule_participant_id PK "참여자 ID"
+        bigint schedule_id FK "일정 ID"
+        binary_16 user_id FK "사용자 UUID"
+    }
+
+    diary["diary (일기)"] {
+        bigint diary_id PK "일기 ID"
+        bigint group_room_id FK "그룹방 ID"
+        varchar title "제목 (최대 20자)"
+        varchar content "내용 (최대 300자)"
+        date date "일기 날짜"
+        int weather "날씨 (0~3)"
+        int mood "기분 (0~3)"
+        varchar location "위치 표시명 (nullable)"
+        varchar region_key "정규 지역 키 (시그니처 지도, nullable)"
+        varchar region_sido "표시용 시도명 (nullable)"
+        varchar region_sigungu "표시용 시군구명 (nullable)"
+        binary_16 created_by FK "작성자 UUID"
+        datetime created_at "생성일"
+        datetime updated_at "수정일"
+    }
+
+    diary_image["diary_image (일기 이미지)"] {
+        bigint diary_image_id PK "이미지 ID"
+        bigint diary_id FK "일기 ID"
+        varchar url "이미지 URL"
+        int sort_order "정렬 순서 (0..N)"
+        datetime created_at "생성 일시"
+    }
+
+    diary_like["diary_like (일기 좋아요)"] {
+        bigint diary_like_id PK "좋아요 ID"
+        bigint diary_id FK "일기 ID"
+        binary_16 user_id FK "사용자 UUID"
+        datetime created_at "생성 일시"
+    }
+
+    diary_reaction["diary_reaction (일기 이모지 리액션)"] {
+        bigint diary_reaction_id PK "리액션 ID"
+        bigint diary_id FK "일기 ID"
+        binary_16 user_id FK "사용자 UUID"
+        enum reaction_type "리액션 (HEART/CRY/SPARKLE/LAUGH/FIRE)"
+        datetime created_at "생성 일시"
+    }
+
+    group_region_fill["group_region_fill (지역 채움 override)"] {
+        bigint group_region_fill_id PK "채움 ID"
+        bigint group_room_id "그룹방 ID (논리 참조)"
+        varchar region_key "정규 지역 키"
+        datetime created_at "생성일"
+        datetime updated_at "수정일"
+    }
+
+    comment["comment (댓글)"] {
+        bigint comment_id PK "댓글 ID"
+        enum target_type "대상 (SCHEDULE/DIARY)"
+        bigint target_id "대상 ID"
+        varchar text "내용 (최대 200자)"
+        binary_16 created_by FK "작성자 UUID"
+        datetime created_at "작성 일시"
+    }
+
+    todo["todo (할 일)"] {
+        bigint todo_id PK "할 일 ID"
+        bigint group_room_id FK "그룹방 ID"
+        varchar text "내용 (최대 100자)"
+        boolean completed "완료 여부"
+        datetime completed_at "완료 일시 (nullable)"
+        binary_16 completed_by FK "완료자 UUID (nullable)"
+        binary_16 created_by FK "작성자 UUID"
+        datetime created_at "작성 일시"
+    }
+
+    notification["notification (알림)"] {
+        bigint notification_id PK "알림 ID"
+        binary_16 user_id FK "수신자 UUID"
+        enum type "알림 유형 (NotificationType)"
+        varchar title "제목"
+        varchar message "메시지"
+        bigint group_room_id "관련 그룹방 ID (nullable)"
+        varchar group_room_name "관련 그룹방명 (nullable)"
+        bigint related_id "관련 리소스 ID (nullable)"
+        varchar related_type "관련 리소스 유형 (nullable)"
+        boolean is_read "읽음 여부"
+        datetime created_at "생성 일시"
+    }
+
+    device["device (디바이스)"] {
+        bigint device_id PK "디바이스 ID"
+        binary_16 user_id FK "사용자 UUID"
+        varchar token UK "FCM 토큰"
+        enum platform "플랫폼 (IOS/ANDROID)"
+        datetime created_at "등록일"
+        datetime updated_at "수정일"
+    }
+
+    uploaded_image["uploaded_image (업로드 이미지)"] {
+        bigint uploaded_image_id PK "이미지 ID"
+        binary_16 user_id FK "업로더 UUID"
+        varchar url "이미지 URL (S3)"
+        int width "가로 (px)"
+        int height "세로 (px)"
+        enum purpose "용도 (PROFILE/GROUP_THUMBNAIL/DIARY/QUIZ)"
+        datetime created_at "업로드 일시"
+    }
+
+    user_block["user_block (사용자 차단)"] {
+        bigint user_block_id PK "차단 ID"
+        binary_16 blocker_id FK "차단 주체 UUID"
+        binary_16 blocked_id FK "차단 대상 UUID"
+        datetime created_at "차단 일시"
+    }
+
+    content_hide["content_hide (개별 콘텐츠 숨김)"] {
+        bigint content_hide_id PK "숨김 ID"
+        binary_16 user_id "숨긴 주체 UUID (논리 참조)"
+        enum target_type "대상 (DIARY/COMMENT/SCHEDULE)"
+        bigint target_id "대상 ID"
+        enum reason "사유 (REPORTED/HIDDEN)"
+        datetime created_at "숨김 일시"
+    }
+
+    report["report (신고)"] {
+        bigint report_id PK "신고 ID"
+        binary_16 reporter_id FK "신고자 UUID"
+        enum target_type "대상 (DIARY/COMMENT/SCHEDULE/USER)"
+        varchar target_id "대상 ID (Long 또는 UUID)"
+        bigint group_room_id "관련 그룹방 ID (nullable)"
+        enum reason "사유 (SPAM/ABUSE/SEXUAL/VIOLENCE/PRIVACY/ETC)"
+        varchar detail "상세 (nullable)"
+        enum status "상태 (PENDING/RESOLVED/DISMISSED)"
+        datetime created_at "신고 일시"
+        datetime reviewed_at "처리 일시 (nullable)"
+    }
+
+    inquiry["inquiry (고객센터 문의)"] {
+        bigint inquiry_id PK "문의 ID"
+        binary_16 user_id FK "작성자 UUID"
+        varchar content "문의 내용 (최대 1000자)"
+        enum status "상태 (PENDING/ANSWERED)"
+        varchar answer "어드민 답변 (nullable, 최대 2000자)"
+        datetime created_at "작성 일시"
+        datetime answered_at "답변 일시 (nullable)"
+    }
+
+    deletion_request["deletion_request (계정/데이터 삭제 요청)"] {
+        bigint deletion_request_id PK "요청 ID"
+        enum type "유형 (ACCOUNT/DATA)"
+        varchar email "본인 확인 이메일"
+        varchar group_room_name "그룹방명 (DATA일 때, nullable)"
+        varchar content "삭제 데이터 설명 (DATA일 때, nullable)"
+        enum status "상태 (PENDING/DONE)"
+        datetime created_at "접수 일시"
+        datetime handled_at "처리 일시 (nullable)"
+    }
+
+    group_character["group_character (그룹 캐릭터 모찌)"] {
+        bigint group_character_id PK "캐릭터 ID"
+        bigint group_room_id FK,UK "그룹방 ID (1:1)"
+        enum stage "단계 (EGG/SPROUT/BLOOM/BLOSSOM/GLOW/MASTER)"
+        int level "레벨 (1~20)"
+        int exp "현재 레벨 내 경험치"
+        int coin "보유 코인"
+        boolean diko_unlocked "디코 해금 (Lv.10)"
+        boolean master_unlocked "마스터 진화 시험 통과"
+        date ad_reward_date "광고 보상 마지막 적립일 (nullable)"
+        int ad_reward_count "당일 광고 보상 횟수"
+        datetime created_at "생성일"
+        datetime updated_at "수정일"
+    }
+
+    character_quiz["character_quiz (모찌 퀴즈)"] {
+        bigint character_quiz_id PK "퀴즈 ID"
+        bigint group_room_id FK "그룹방 ID"
+        binary_16 author_id FK "작성자 UUID (탈퇴 시 null)"
+        enum category "분류 (PERSONAL/MEMORY/HOBBY/FAVORITE/GENERAL)"
+        varchar question "문제 (최대 200자)"
+        varchar option1 "선택지 1"
+        varchar option2 "선택지 2"
+        varchar option3 "선택지 3"
+        varchar option4 "선택지 4"
+        int correct_index "정답 인덱스"
+        int exp_multiplier "EXP 배수 (1~3)"
+        varchar image_url "이미지 퀴즈 URL (nullable)"
+        datetime created_at "생성 일시"
+    }
+
+    character_quiz_attempt["character_quiz_attempt (퀴즈 응시)"] {
+        bigint character_quiz_attempt_id PK "응시 ID"
+        bigint quiz_id FK "퀴즈 ID"
+        binary_16 user_id FK "응시자 UUID"
+        int selected_index "선택 인덱스"
+        boolean correct "정답 여부"
+        int earned_exp "획득 EXP"
+        int earned_coin "획득 코인"
+        datetime attempted_at "응시 일시"
+    }
+
+    shop_item["shop_item (상점 아이템 마스터)"] {
+        bigint shop_item_id PK "아이템 ID"
+        varchar item_key UK "아이템 키 (식별자)"
+        enum item_type "카테고리 (SKIN/HAT/GLASSES/HAIRPIN/ACCESSORY/MISC)"
+        varchar display_name "표시명"
+        varchar description "설명 (nullable)"
+        int cost "코인 가격"
+        varchar asset_key "렌더 asset 키"
+        varchar accent_color "강조색 (nullable)"
+        int layer_order "z-order"
+        int sort_order "정렬 순서"
+        boolean is_default "기본 지급/장착 여부"
+        boolean enabled "상점 노출 여부"
+        datetime created_at "생성일"
+        datetime updated_at "수정일"
+    }
+
+    group_character_item["group_character_item (그룹 보유 아이템)"] {
+        bigint group_character_item_id PK "보유 ID"
+        bigint group_room_id FK "그룹방 ID"
+        bigint shop_item_id FK "아이템 ID"
+        int price_paid "구매 당시 지불 코인"
+        datetime acquired_at "획득 일시"
+    }
+
+    group_character_equipped["group_character_equipped (그룹 장착 상태)"] {
+        bigint group_character_equipped_id PK "장착 ID"
+        bigint group_room_id FK "그룹방 ID"
+        enum item_type "카테고리 슬롯 (ShopItemType)"
+        bigint shop_item_id FK "장착 아이템 ID"
+        datetime updated_at "수정 일시"
+    }
+
+    title_catalog["title_catalog (칭호 카탈로그)"] {
+        bigint title_catalog_id PK "카탈로그 ID"
+        varchar code UK "칭호 코드"
+        varchar name "이름"
+        varchar description "설명"
+        varchar category "분류 (region/diary/character)"
+        varchar accent_color "강조색"
+        varchar icon_key "아이콘 키"
+        varchar condition_type "획득 조건 종류"
+        varchar condition_value "조건 파라미터 (nullable)"
+        int sort_order "정렬 순서"
+        datetime created_at "생성일"
+        datetime updated_at "수정일"
+    }
+
+    user_title["user_title (획득 칭호)"] {
+        bigint user_title_id PK "보유 칭호 ID"
+        binary_16 user_id "사용자 UUID (논리 참조)"
+        varchar code "칭호 코드"
+        bigint group_room_id "획득 당시 그룹방 ID (nullable)"
+        varchar group_room_name "획득 당시 그룹방명 스냅샷 (nullable)"
+        datetime earned_at "획득 일시"
+        datetime created_at "생성일"
+        datetime updated_at "수정일"
+    }
+
+    group_equipped_title["group_equipped_title (그룹 장착 칭호)"] {
+        bigint group_equipped_title_id PK "장착 ID"
+        bigint group_room_id UK "그룹방 ID (논리 참조)"
+        varchar code "칭호 코드"
+        binary_16 equipped_by "장착자 UUID"
+        datetime created_at "생성일"
+        datetime updated_at "수정일"
+    }
+
+    nickname_exhibit["nickname_exhibit (역대 별명 전시관 카드)"] {
+        bigint nickname_exhibit_id PK "카드 ID"
+        varchar nickname "별명 (최대 100자)"
+        varchar image_url "이미지 URL (nullable)"
+        text history "별명 유래/설명"
+        int sort_order "정렬 순서"
+        datetime created_at "생성일"
+        datetime updated_at "수정일"
+    }
+
+    nickname_exhibit_access["nickname_exhibit_access (전시관 접근 권한)"] {
+        bigint nickname_exhibit_access_id PK "권한 ID"
+        binary_16 user_id FK,UK "사용자 UUID"
+        datetime created_at "생성일"
+        datetime updated_at "수정일"
+    }
+
+    app_config["app_config (앱 운영 설정, 단일 행)"] {
+        bigint app_config_id PK "설정 ID"
+        boolean notice_enabled "대공지 노출"
+        varchar notice_message "대공지 메시지 (최대 200자)"
+        boolean feedback_enabled "피드백 노출"
+        varchar feedback_url "피드백 URL (최대 500자)"
+        datetime created_at "생성일"
+        datetime updated_at "수정일"
+    }
+
+    admin_credential["admin_credential (관리자 자격증명)"] {
+        bigint admin_credential_id PK "자격증명 ID"
+        binary_16 user_id FK,UK "사용자 UUID (role=ADMIN)"
+        varchar email UK "관리자 이메일"
+        varchar password "BCrypt 해시"
+        datetime created_at "생성일"
+        datetime updated_at "수정일"
+    }
+
+    user_action_log["user_action_log (유저 행동 로그)"] {
+        bigint user_action_log_id PK "로그 ID"
+        binary_16 actor_id "행위자 UUID (시스템 로그는 null)"
+        enum action "액션 (UserAction)"
+        varchar target_type "대상 타입 (nullable)"
+        varchar target_id "대상 ID (nullable)"
+        varchar detail "상세 (최대 500자, nullable)"
+        datetime created_at "기록 일시"
+    }
+
+    announcement["announcement (공지 발송 이력)"] {
+        bigint announcement_id PK "공지 ID"
+        varchar title "제목 (최대 100자)"
+        varchar body "본문 (최대 1000자)"
+        enum target_type "대상 (ALL/USER_IDS)"
+        int recipient_count "수신자 수"
+        datetime created_at "발송 일시"
+        datetime updated_at "수정 일시"
+    }
+
+    %% ── 관계 (FK 매핑) ──
+    user ||--o| user_terms : "약관 동의"
+    user ||--o| user_notification_setting : "알림 설정"
+    user ||--o| user_privacy_setting : "개인정보 설정"
+    user ||--o| admin_credential : "관리자 계정"
+    user ||--o| nickname_exhibit_access : "전시관 접근"
+
+    user ||--o{ membership : "그룹방 소속"
+    user ||--o{ device : "디바이스"
+    user ||--o{ notification : "알림 수신"
+    user ||--o{ uploaded_image : "이미지 업로드"
+    user ||--o{ comment : "댓글 작성"
+    user ||--o{ inquiry : "문의 작성"
+    user ||--o{ report : "신고 (reporter)"
+    user ||--o{ diary_like : "좋아요"
+    user ||--o{ diary_reaction : "리액션"
+    user ||--o{ character_quiz : "퀴즈 작성 (author)"
+    user ||--o{ character_quiz_attempt : "퀴즈 응시"
+    user ||--o{ user_block : "차단 (blocker)"
+
+    group_room }o--|| user : "방장 (owner)"
+    group_room ||--o{ membership : "구성원"
+    group_room ||--o{ invite_code : "초대 코드"
+    group_room ||--o{ schedule : "일정"
+    group_room ||--o{ diary : "일기"
+    group_room ||--o{ todo : "할 일"
+    group_room ||--o| group_character : "그룹 캐릭터"
+    group_room ||--o{ character_quiz : "퀴즈"
+    group_room ||--o{ group_character_item : "보유 아이템"
+    group_room ||--o{ group_character_equipped : "장착 슬롯"
+
+    schedule ||--o{ schedule_participant : "참여자"
+    schedule_participant }o--|| user : "참여 사용자"
+    schedule }o--|| user : "작성자"
+
+    diary ||--o{ diary_image : "이미지"
+    diary ||--o{ diary_like : "좋아요"
+    diary ||--o{ diary_reaction : "리액션"
+    diary }o--|| user : "작성자"
+
+    todo }o--|| user : "작성자"
+    todo }o--o| user : "완료자"
+
+    character_quiz ||--o{ character_quiz_attempt : "응시"
+    shop_item ||--o{ group_character_item : "보유"
+    shop_item ||--o{ group_character_equipped : "장착"

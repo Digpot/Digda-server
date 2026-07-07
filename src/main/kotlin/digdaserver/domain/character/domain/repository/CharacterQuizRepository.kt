@@ -25,7 +25,8 @@ interface CharacterQuizRepository : JpaRepository<CharacterQuiz, Long> {
     ): Page<CharacterQuiz>
 
     /**
-     * 자기 작성이 아니고 + 아직 응시하지 않은 퀴즈 목록.
+     * 자기 작성이 아니고 + **아직 아무도 풀지 않은** 퀴즈 목록.
+     * 퀴즈는 한 문제당 한 명만 풀 수 있다 — 누군가 응시한 퀴즈는 후보에서 제외한다.
      * 랜덤 픽은 서비스 계층에서 결과 리스트에 대해 Kotlin random 으로 수행
      * (JPQL/DB 종속 RAND() 회피).
      *
@@ -40,7 +41,7 @@ interface CharacterQuizRepository : JpaRepository<CharacterQuiz, Long> {
           AND (:excludeImageQuiz = false OR q.imageUrl IS NULL)
           AND NOT EXISTS (
             SELECT 1 FROM CharacterQuizAttempt a
-            WHERE a.quiz = q AND a.user.id = :userId
+            WHERE a.quiz = q
           )
         """
     )

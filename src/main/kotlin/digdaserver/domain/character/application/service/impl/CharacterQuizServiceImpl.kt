@@ -229,6 +229,11 @@ class CharacterQuizServiceImpl(
         if (attemptRepository.existsByQuizIdAndUserId(quizId, userId)) {
             throw DigdaException(ErrorCode.QUIZ_ALREADY_ATTEMPTED)
         }
+        // 퀴즈는 한 문제당 한 명만 — 다른 그룹원이 이미 풀었으면 응시 불가
+        // (pickRandom 후보에서도 제외되지만, 목록/딥링크 등 우회 진입 방어).
+        if (attemptRepository.existsByQuizId(quizId)) {
+            throw DigdaException(ErrorCode.QUIZ_ALREADY_SOLVED)
+        }
 
         val correct = selectedIndex == quiz.correctIndex
         val earnedExp = if (correct) EXP_PER_MULTIPLIER_CORRECT * quiz.expMultiplier else EXP_CONSOLATION_WRONG

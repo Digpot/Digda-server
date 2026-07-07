@@ -119,6 +119,7 @@ enum class ErrorCode(
     // ── Character Quiz ──
     QUIZ_NOT_FOUND("QUIZ_NOT_FOUND", "존재하지 않는 퀴즈입니다.", 404),
     QUIZ_ALREADY_ATTEMPTED("QUIZ_ALREADY_ATTEMPTED", "이미 응시한 퀴즈입니다.", 409),
+    QUIZ_ALREADY_SOLVED("QUIZ_ALREADY_SOLVED", "이미 다른 그룹원이 푼 퀴즈예요. 퀴즈는 한 명만 풀 수 있어요.", 409),
     QUIZ_CANNOT_ATTEMPT_OWN("QUIZ_CANNOT_ATTEMPT_OWN", "직접 만든 퀴즈는 응시할 수 없습니다.", 400),
     QUIZ_NO_AVAILABLE("QUIZ_NO_AVAILABLE", "풀 수 있는 퀴즈가 없어요.", 404),
     QUIZ_INVALID_OPTION_COUNT("QUIZ_INVALID_OPTION_COUNT", "선택지는 정확히 4개여야 합니다.", 400),

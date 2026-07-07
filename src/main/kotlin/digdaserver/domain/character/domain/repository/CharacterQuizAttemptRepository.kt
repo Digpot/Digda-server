@@ -11,6 +11,9 @@ import java.util.UUID
 interface CharacterQuizAttemptRepository : JpaRepository<CharacterQuizAttempt, Long> {
     fun existsByQuizIdAndUserId(quizId: Long, userId: UUID): Boolean
 
+    /** 퀴즈당 한 명만 풀 수 있다 — 누군가(본인 포함) 이미 응시했는지. */
+    fun existsByQuizId(quizId: Long): Boolean
+
     /** 특정 유저가 주어진 퀴즈들에 남긴 응시 기록(목록 화면의 정답/오답 표시용). */
     fun findAllByUserIdAndQuizIdIn(userId: UUID, quizIds: List<Long>): List<CharacterQuizAttempt>
 

@@ -115,7 +115,7 @@ class NotificationServiceImpl(
             NotificationPayload(
                 type = NotificationType.MEMBER_JOINED,
                 title = "새 구성원 참여",
-                message = "${joinedUser.name}님이 '${groupRoom.name}' 그룹방에 참여했습니다.",
+                message = "${joinedUser.displayedName()}님이 '${groupRoom.name}' 그룹방에 참여했습니다.",
                 groupRoomId = groupRoomId,
                 groupRoomName = groupRoom.name
             )
@@ -133,7 +133,7 @@ class NotificationServiceImpl(
             NotificationPayload(
                 type = NotificationType.DIARY_WRITTEN,
                 title = "새 일기",
-                message = "${author.name}님이 '$diaryTitle' 일기를 작성했습니다.",
+                message = "${author.displayedName()}님이 '$diaryTitle' 일기를 작성했습니다.",
                 groupRoomId = groupRoomId,
                 groupRoomName = groupRoom.name,
                 relatedId = diaryId,
@@ -163,7 +163,7 @@ class NotificationServiceImpl(
             NotificationPayload(
                 type = NotificationType.SCHEDULE_CREATED,
                 title = "새 일정",
-                message = "${creator.name}님이 '$scheduleTitle' 일정에 회원님을 참가자로 추가했습니다.",
+                message = "${creator.displayedName()}님이 '$scheduleTitle' 일정에 회원님을 참가자로 추가했습니다.",
                 groupRoomId = groupRoomId,
                 groupRoomName = groupRoom.name,
                 relatedId = scheduleId,
@@ -184,7 +184,7 @@ class NotificationServiceImpl(
             NotificationPayload(
                 type = NotificationType.MEMBER_LEFT,
                 title = "구성원 탈퇴",
-                message = "${leaver.name}님이 '${groupRoom.name}' 그룹방에서 나갔습니다.",
+                message = "${leaver.displayedName()}님이 '${groupRoom.name}' 그룹방에서 나갔습니다.",
                 groupRoomId = groupRoomId,
                 groupRoomName = groupRoom.name
             )
@@ -202,7 +202,7 @@ class NotificationServiceImpl(
             NotificationPayload(
                 type = NotificationType.OWNERSHIP_TRANSFERRED,
                 title = "방장 권한 이양",
-                message = "'${groupRoom.name}' 그룹방의 방장이 ${newOwner.name}님으로 변경되었습니다.",
+                message = "'${groupRoom.name}' 그룹방의 방장이 ${newOwner.displayedName()}님으로 변경되었습니다.",
                 groupRoomId = groupRoomId,
                 groupRoomName = groupRoom.name,
                 relatedId = groupRoomId,
@@ -231,7 +231,7 @@ class NotificationServiceImpl(
             NotificationPayload(
                 type = NotificationType.SCHEDULE_UPDATED,
                 title = "일정 참가자 추가",
-                message = "${actor.name}님이 '$scheduleTitle' 일정에 회원님을 참가자로 추가했습니다.",
+                message = "${actor.displayedName()}님이 '$scheduleTitle' 일정에 회원님을 참가자로 추가했습니다.",
                 groupRoomId = groupRoomId,
                 groupRoomName = groupRoom.name,
                 relatedId = scheduleId,
@@ -334,7 +334,7 @@ class NotificationServiceImpl(
             NotificationPayload(
                 type = NotificationType.COMMENT_ON_SCHEDULE,
                 title = "새 댓글",
-                message = "${commenter.name}님이 '$scheduleTitle' 일정에 댓글을 남겼습니다.",
+                message = "${commenter.displayedName()}님이 '$scheduleTitle' 일정에 댓글을 남겼습니다.",
                 groupRoomId = groupRoomId,
                 groupRoomName = groupRoom.name,
                 relatedId = scheduleId,
@@ -360,7 +360,7 @@ class NotificationServiceImpl(
             NotificationPayload(
                 type = NotificationType.COMMENT_ON_DIARY,
                 title = "새 댓글",
-                message = "${commenter.name}님이 '$diaryTitle' 일기에 댓글을 남겼습니다.",
+                message = "${commenter.displayedName()}님이 '$diaryTitle' 일기에 댓글을 남겼습니다.",
                 groupRoomId = groupRoomId,
                 groupRoomName = groupRoom.name,
                 relatedId = diaryId,
@@ -401,7 +401,7 @@ class NotificationServiceImpl(
             NotificationPayload(
                 type = NotificationType.MEMBER_REMOVED,
                 title = "구성원 내보냄",
-                message = "${removedUser.name}님이 '${groupRoom.name}' 그룹방에서 내보내졌습니다.",
+                message = "${removedUser.displayedName()}님이 '${groupRoom.name}' 그룹방에서 내보내졌습니다.",
                 groupRoomId = groupRoomId,
                 groupRoomName = groupRoom.name
             )
@@ -425,7 +425,7 @@ class NotificationServiceImpl(
             NotificationPayload(
                 type = NotificationType.QUIZ_CREATED,
                 title = "새 퀴즈 등록",
-                message = "${author.name}님이 퀴즈를 등록했어요. \"$shortQuestion\"",
+                message = "${author.displayedName()}님이 퀴즈를 등록했어요. \"$shortQuestion\"",
                 groupRoomId = groupRoomId,
                 groupRoomName = groupRoom.name,
                 relatedId = quizId,
@@ -449,9 +449,9 @@ class NotificationServiceImpl(
         // 정답/오답 모두 알림을 보낸다. 오답도 위로 경험치가 있어 모찌 성장에 반영되므로
         // 그룹원이 응시 현황을 알 수 있게 한다.
         val (title, message) = if (correct) {
-            "퀴즈 정답!" to "${solver.name}님이 퀴즈를 맞혔어요! 모찌가 경험치를 얻었어요. 🎉"
+            "퀴즈 정답!" to "${solver.displayedName()}님이 퀴즈를 맞혔어요! 모찌가 경험치를 얻었어요. 🎉"
         } else {
-            "퀴즈 응시" to "${solver.name}님이 퀴즈에 도전했지만 아쉽게 틀렸어요. 😅"
+            "퀴즈 응시" to "${solver.displayedName()}님이 퀴즈에 도전했지만 아쉽게 틀렸어요. 😅"
         }
 
         notify(

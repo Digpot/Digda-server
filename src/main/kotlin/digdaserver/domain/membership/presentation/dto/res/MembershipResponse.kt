@@ -15,7 +15,7 @@ data class MembershipResponse(
     companion object {
         fun from(membership: Membership): MembershipResponse = MembershipResponse(
             userId = membership.user.id,
-            name = membership.user.name,
+            name = membership.user.displayedName(),
             profileImage = membership.user.profileImage,
             color = membership.color,
             role = membership.role.name.lowercase(),

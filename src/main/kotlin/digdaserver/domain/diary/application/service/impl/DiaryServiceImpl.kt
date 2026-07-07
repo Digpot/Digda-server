@@ -21,6 +21,7 @@ import digdaserver.domain.diary.presentation.dto.res.DiaryCalendarEntry
 import digdaserver.domain.diary.presentation.dto.res.DiaryCalendarResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryCalendarStats
 import digdaserver.domain.diary.presentation.dto.res.DiaryCommentResponse
+import digdaserver.domain.diary.presentation.dto.res.DiaryDayResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryDetailResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryLikeResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryListResponse
@@ -232,35 +233,24 @@ class DiaryServiceImpl(
         // 사진 그리드용: 해당 월의 모든 일기를 이미지까지 한 번에 로드.
         val monthDiaries = diaryRepository.findAllWithImagesByGroupRoomIdAndDateBetween(groupRoomId, startDate, endDate)
 
-        // 차단/신고 숨김 — 일기를 지우지 않고 대표 칸만 숨김 표시. "하루 1편" 슬롯이 빈 날로 보이지 않게.
+        // 차단/신고 숨김 — 일기를 지우지 않고 대표 칸만 숨김 표시. 슬롯이 빈 날로 보이지 않게.
         val visibility = contentVisibilityService.forViewer(userId)
 
-        // 날짜별 그룹핑. 같은 날 여러 편이면 최신(createdAt DESC, 쿼리에서 이미 정렬)을 대표로 사용.
+        // 날짜별 그룹핑(쿼리에서 createdAt ASC 정렬). 대표 = 지정 대표 → 없으면 가장 먼저 작성된 일기.
         val byDate = monthDiaries.groupBy { it.date }
         val entries = byDate.entries
             .sortedBy { it.key }
             .map { (date, diaries) ->
-                // 대표는 보이는 일기 우선. 전부 숨김이면 첫 일기를 대표로 두되 숨김 표시(슬롯·count 유지).
-                val visible = diaries.firstOrNull {
-                    visibility.diaryHiddenReason(it.id, it.createdBy.id) == null
-                }
-                val representative = visible ?: diaries.first()
-                val entry = DiaryCalendarEntry(
-                    date = date,
-                    diaryId = representative.id,
-                    thumbnailUrl = representative.images.minByOrNull { it.sortOrder }?.url,
-                    mood = representative.mood,
-                    count = diaries.size
-                )
-                if (visible != null) {
-                    entry
-                } else {
-                    val reason = visibility.diaryHiddenReason(representative.id, representative.createdBy.id)
-                        ?: VisibilityReason.HIDDEN
-                    entry.asHidden(reason)
-                }
+                val entry = buildCalendarEntry(date, diaries, visibility)
+                entry
             }
         val dates = entries.map { it.date }
+
+        // "인당 하루 1편" — 조회자 본인이 쓴 날짜(앱이 작성 가능 여부를 즉시 판정).
+        val myDates = monthDiaries
+            .filter { it.createdBy.id == userId }
+            .map { it.date }
+            .distinct()
 
         // 통계: 편수 / 최다 기분 / 연속 기록.
         val count = monthDiaries.size
@@ -274,7 +264,119 @@ class DiaryServiceImpl(
         return DiaryCalendarResponse(
             dates = dates,
             entries = entries,
-            stats = DiaryCalendarStats(count = count, streak = streak, topMood = topMood)
+            stats = DiaryCalendarStats(count = count, streak = streak, topMood = topMood),
+            myDates = myDates
+        )
+    }
+
+    /**
+     * 한 날짜의 캘린더 칸(대표 일기) 계산.
+     * 우선순위: 지정 대표(representative=true, 보임) → 가장 먼저 작성된 보이는 일기 →
+     * 전부 숨김이면 첫 일기를 대표로 두되 숨김 표시(슬롯·count 유지).
+     * [diaries] 는 createdAt ASC 로 정렬돼 들어온다.
+     */
+    private fun buildCalendarEntry(
+        date: LocalDate,
+        diaries: List<Diary>,
+        visibility: digdaserver.domain.block.application.service.ViewerVisibility
+    ): DiaryCalendarEntry {
+        fun visible(d: Diary) = visibility.diaryHiddenReason(d.id, d.createdBy.id) == null
+        val representative = diaries.firstOrNull { it.representative && visible(it) }
+            ?: diaries.firstOrNull { visible(it) }
+        val chosen = representative ?: diaries.first()
+        val entry = DiaryCalendarEntry(
+            date = date,
+            diaryId = chosen.id,
+            thumbnailUrl = chosen.images.minByOrNull { it.sortOrder }?.url,
+            mood = chosen.mood,
+            count = diaries.size
+        )
+        if (representative != null) return entry
+        val reason = visibility.diaryHiddenReason(chosen.id, chosen.createdBy.id)
+            ?: VisibilityReason.HIDDEN
+        return entry.asHidden(reason)
+    }
+
+    override fun getDiariesByDate(userId: UUID, groupRoomId: Long, date: LocalDate): DiaryDayResponse {
+        ensureMember(userId, groupRoomId)
+        val diaries = diaryRepository.findAllWithImagesByGroupRoomIdAndDate(groupRoomId, date)
+        val visibility = contentVisibilityService.forViewer(userId)
+        return buildDayResponse(date, diaries, userId, visibility)
+    }
+
+    @Transactional
+    override fun setRepresentative(userId: UUID, groupRoomId: Long, diaryId: Long): DiaryDayResponse {
+        ensureMember(userId, groupRoomId)
+        val diary = diaryRepository.findById(diaryId)
+            .orElseThrow { DigdaException(ErrorCode.DIARY_NOT_FOUND) }
+        if (diary.groupRoom.id != groupRoomId) throw DigdaException(ErrorCode.DIARY_NOT_FOUND)
+
+        // 그룹원 누구나 지정 가능 — 같은 날 기존 대표를 내리고 이 일기만 올린다.
+        diaryRepository.clearRepresentativeForDate(groupRoomId, diary.date)
+        diary.representative = true
+        log.info(
+            "action=일기 대표 썸네일 지정, userId={}, groupRoomId={}, diaryId={}, date={}",
+            userId,
+            groupRoomId,
+            diaryId,
+            diary.date
+        )
+
+        val diaries = diaryRepository.findAllWithImagesByGroupRoomIdAndDate(groupRoomId, diary.date)
+        val visibility = contentVisibilityService.forViewer(userId)
+        return buildDayResponse(diary.date, diaries, userId, visibility)
+    }
+
+    /** 날짜별 일기 목록 응답 조립 — 댓글/좋아요 수·숨김 처리·대표/내 일기 id 포함. */
+    private fun buildDayResponse(
+        date: LocalDate,
+        diaries: List<Diary>,
+        userId: UUID,
+        visibility: digdaserver.domain.block.application.service.ViewerVisibility
+    ): DiaryDayResponse {
+        val diaryIds = diaries.map { it.id }
+
+        val commentCountMap: Map<Long, Int> = if (diaryIds.isNotEmpty()) {
+            commentRepository.countByTargetTypeAndTargetIdIn(CommentTargetType.DIARY, diaryIds)
+                .associate { row -> (row[0] as Long) to (row[1] as Long).toInt() }
+        } else {
+            emptyMap()
+        }
+        val likeCountMap: Map<Long, Long> = if (diaryIds.isNotEmpty()) {
+            diaryLikeRepository.countByDiaryIdIn(diaryIds)
+                .associate { row -> (row[0] as Long) to (row[1] as Long) }
+        } else {
+            emptyMap()
+        }
+        val likedByMeSet: Set<Long> = if (diaryIds.isNotEmpty()) {
+            diaryLikeRepository.findLikedDiaryIds(diaryIds, userId).toSet()
+        } else {
+            emptySet()
+        }
+
+        fun visible(d: Diary) = visibility.diaryHiddenReason(d.id, d.createdBy.id) == null
+        // 대표 = 지정 대표 → 가장 먼저 작성된 일기(리스트는 createdAt ASC).
+        val representativeId = (
+            diaries.firstOrNull { it.representative && visible(it) }
+                ?: diaries.firstOrNull { visible(it) }
+                ?: diaries.firstOrNull()
+            )?.id
+        val myDiaryId = diaries.firstOrNull { it.createdBy.id == userId }?.id
+
+        return DiaryDayResponse(
+            date = date,
+            diaries = diaries.map { diary ->
+                val summary = DiarySummaryResponse.from(
+                    diary = diary,
+                    commentCount = commentCountMap[diary.id] ?: 0,
+                    likeCount = likeCountMap[diary.id] ?: 0L,
+                    likedByMe = diary.id in likedByMeSet
+                )
+                val reason = visibility.diaryHiddenReason(diary.id, diary.createdBy.id)
+                if (reason != null) summary.asHidden(reason) else summary
+            },
+            representativeDiaryId = representativeId,
+            myDiaryId = myDiaryId
         )
     }
 
@@ -349,6 +451,13 @@ class DiaryServiceImpl(
         validateWeather(request.weather)
         validateMood(request.mood)
         validateImageCount(request.imageIds.size)
+
+        // 인당 하루 1편 — 같은 그룹·같은 날짜에 '본인' 일기가 이미 있으면 거부.
+        // (2.0.0: 그룹당 1편 → 인당 1편으로 완화. 다른 그룹원이 쓴 날에도 내 일기는 쓸 수 있다.)
+        if (diaryRepository.existsByGroupRoomIdAndCreatedByIdAndDate(groupRoomId, userId, request.date)) {
+            log.info("action=일기 작성 거부(인당 하루 1편), userId={}, groupRoomId={}, date={}", userId, groupRoomId, request.date)
+            throw DigdaException(ErrorCode.DIARY_ALREADY_WRITTEN)
+        }
 
         val user = userRepository.findById(userId)
             .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
@@ -430,10 +539,21 @@ class DiaryServiceImpl(
         request.date?.let {
             if (it.isAfter(todayKst())) throw DigdaException(ErrorCode.FUTURE_DATE_NOT_ALLOWED)
             if (it.isBefore(editableFrom())) throw DigdaException(ErrorCode.DIARY_DATE_TOO_OLD)
+            // 날짜를 옮길 때도 인당 하루 1편 유지 — 옮겨갈 날짜에 내 다른 일기가 있으면 거부.
+            if (it != diary.date &&
+                diaryRepository.existsByGroupRoomIdAndCreatedByIdAndDateAndIdNot(groupRoomId, userId, it, diaryId)
+            ) {
+                throw DigdaException(ErrorCode.DIARY_ALREADY_WRITTEN)
+            }
         }
         request.weather?.let { validateWeather(it) }
         request.mood?.let { validateMood(it) }
         request.imageIds?.let { validateImageCount(it.size) }
+
+        // 날짜를 옮기면 대표 지위는 유지하지 않는다 — 옮겨간 날짜의 기존 대표와 충돌 방지.
+        if (request.date != null && request.date != diary.date) {
+            diary.representative = false
+        }
 
         diary.updateBasics(
             title = request.title,

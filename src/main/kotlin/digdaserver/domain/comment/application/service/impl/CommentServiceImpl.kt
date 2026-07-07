@@ -73,7 +73,13 @@ class CommentServiceImpl(
     }
 
     @Transactional
-    override fun createDiaryComment(userId: UUID, groupRoomId: Long, diaryId: Long, text: String): CreateCommentResponse {
+    override fun createDiaryComment(
+        userId: UUID,
+        groupRoomId: Long,
+        diaryId: Long,
+        text: String,
+        parentCommentId: Long?
+    ): CreateCommentResponse {
         validateGroupRoomMember(groupRoomId, userId)
         validateCommentText(text)
 
@@ -85,12 +91,25 @@ class CommentServiceImpl(
 
         if (user.restricted) throw DigdaException(ErrorCode.USER_RESTRICTED)
 
+        // 대댓글 검증 — 부모가 같은 일기의 최상위 댓글이어야 한다(댓글→대댓글 1단계만 허용).
+        if (parentCommentId != null) {
+            val parent = commentRepository.findById(parentCommentId)
+                .orElseThrow { DigdaException(ErrorCode.COMMENT_NOT_FOUND) }
+            if (parent.targetType != CommentTargetType.DIARY || parent.targetId != diaryId) {
+                throw DigdaException(ErrorCode.COMMENT_NOT_FOUND)
+            }
+            if (parent.parentId != null) {
+                throw DigdaException(ErrorCode.COMMENT_REPLY_DEPTH_EXCEEDED)
+            }
+        }
+
         val comment = commentRepository.save(
             Comment(
                 targetType = CommentTargetType.DIARY,
                 targetId = diaryId,
                 text = text,
-                createdBy = user
+                createdBy = user,
+                parentId = parentCommentId
             )
         )
 
@@ -139,6 +158,10 @@ class CommentServiceImpl(
             throw DigdaException(ErrorCode.FORBIDDEN)
         }
 
+        // 최상위 댓글을 지우면 매달린 대댓글도 함께 삭제(고아 방지 — FK 없이 parent_comment_id 로 매핑).
+        if (comment.parentId == null) {
+            commentRepository.deleteAllByParentId(comment.id)
+        }
         commentRepository.delete(comment)
     }
 

@@ -75,6 +75,14 @@ class Diary(
     @JoinColumn(name = "created_by", nullable = false)
     val createdBy: User,
 
+    /**
+     * 그날(그룹+날짜)의 대표 썸네일 여부. 하루에 최대 1건만 true.
+     * 아무도 지정하지 않은 날은 전부 false 이며, 이때 대표는 "가장 먼저 작성된 일기"로 폴백한다.
+     * prod 는 SchemaAutoMigration 에서 동일 컬럼을 멱등 ADD.
+     */
+    @Column(name = "representative", nullable = false)
+    var representative: Boolean = false,
+
     @OneToMany(mappedBy = "diary", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("sortOrder ASC")
     val images: MutableList<DiaryImage> = mutableListOf()

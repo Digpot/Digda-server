@@ -124,6 +124,35 @@ class SchemaAutoMigration(
             postSql = listOf(
                 "UPDATE group_character SET master_unlocked = b'1' WHERE level >= 20"
             )
+        ),
+        // 2.0.0 그림일기 대댓글 — 부모 댓글 id. NULL 허용이라 추가만으로 충분(기존 댓글=최상위).
+        MissingColumn(
+            table = "comment",
+            column = "parent_comment_id",
+            addSql = "ALTER TABLE comment ADD COLUMN parent_comment_id BIGINT NULL"
+        ),
+        // 2.0.0 그림일기 대표 썸네일 — 하루(그룹+날짜)에 최대 1건 true. 기본 false 면
+        // "가장 먼저 작성된 일기" 폴백이 동작하므로 backfill 불필요.
+        MissingColumn(
+            table = "diary",
+            column = "representative",
+            addSql = "ALTER TABLE diary ADD COLUMN representative BIT(1) NOT NULL DEFAULT b'0'"
+        ),
+        // 2.0.0 강제 업데이트 게이트 — 최소 버전/스토어 URL. 빈 값 기본이라 backfill 불필요.
+        MissingColumn(
+            table = "app_config",
+            column = "min_app_version",
+            addSql = "ALTER TABLE app_config ADD COLUMN min_app_version VARCHAR(20) NOT NULL DEFAULT ''"
+        ),
+        MissingColumn(
+            table = "app_config",
+            column = "store_url_android",
+            addSql = "ALTER TABLE app_config ADD COLUMN store_url_android VARCHAR(500) NOT NULL DEFAULT ''"
+        ),
+        MissingColumn(
+            table = "app_config",
+            column = "store_url_ios",
+            addSql = "ALTER TABLE app_config ADD COLUMN store_url_ios VARCHAR(500) NOT NULL DEFAULT ''"
         )
     )
 

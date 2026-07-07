@@ -15,7 +15,16 @@ data class AppConfigResponse(
     val feedbackEnabled: Boolean,
 
     @field:Schema(description = "피드백 폼 URL")
-    val feedbackUrl: String
+    val feedbackUrl: String,
+
+    @field:Schema(description = "강제 업데이트 최소 버전(semver). 빈 값 = 게이트 끔")
+    val minAppVersion: String = "",
+
+    @field:Schema(description = "안드로이드 스토어 URL(빈 값 = 앱 기본 폴백)")
+    val storeUrlAndroid: String = "",
+
+    @field:Schema(description = "iOS App Store URL(빈 값 = 앱 기본 폴백)")
+    val storeUrlIos: String = ""
 ) {
     companion object {
         val default = AppConfigResponse(
@@ -29,7 +38,10 @@ data class AppConfigResponse(
             noticeEnabled = c.noticeEnabled,
             noticeMessage = c.noticeMessage,
             feedbackEnabled = c.feedbackEnabled,
-            feedbackUrl = c.feedbackUrl
+            feedbackUrl = c.feedbackUrl,
+            minAppVersion = c.minAppVersion,
+            storeUrlAndroid = c.storeUrlAndroid,
+            storeUrlIos = c.storeUrlIos
         )
     }
 }

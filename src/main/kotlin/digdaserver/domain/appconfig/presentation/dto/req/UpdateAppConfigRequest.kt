@@ -7,5 +7,9 @@ data class UpdateAppConfigRequest(
     val noticeEnabled: Boolean = false,
     val noticeMessage: String = "",
     val feedbackEnabled: Boolean = false,
-    val feedbackUrl: String = ""
+    val feedbackUrl: String = "",
+    // 강제 업데이트 게이트 — null 이면 기존 값 유지(구버전 어드민 호환).
+    val minAppVersion: String? = null,
+    val storeUrlAndroid: String? = null,
+    val storeUrlIos: String? = null
 )

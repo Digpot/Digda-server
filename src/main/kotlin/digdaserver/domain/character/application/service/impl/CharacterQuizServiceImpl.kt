@@ -13,6 +13,7 @@ import digdaserver.domain.character.presentation.dto.res.CharacterQuizListRespon
 import digdaserver.domain.character.presentation.dto.res.CharacterQuizResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStateResponse
 import digdaserver.domain.character.presentation.dto.res.QuizAttemptResultResponse
+import digdaserver.domain.character.presentation.dto.res.QuizAttemptSummary
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.domain.notification.application.service.NotificationService
@@ -126,23 +127,25 @@ class CharacterQuizServiceImpl(
         val result =
             quizRepository.findPageByGroupRoomId(groupRoomId, PageRequest.of(safePage, safeSize))
 
-        // 조회자의 응시 기록을 한 번에 가져와 정답/오답 배지를 채운다(퀴즈당 1회 응시라
-        // quizId 로 유일). 미응시 퀴즈는 attempted=false 로 남는다.
+        // 모든 응시 기록을 한 번에 가져와 퀴즈별 "누가 풀었는지" 목록과 조회자 본인의
+        // 정답/오답 배지를 함께 채운다(퀴즈당 1회 응시라 (quiz, user) 유일).
         val quizIds = result.content.map { it.id }
-        val attemptByQuizId = if (quizIds.isEmpty()) {
+        val attemptsByQuizId: Map<Long, List<QuizAttemptSummary>> = if (quizIds.isEmpty()) {
             emptyMap()
         } else {
-            attemptRepository.findAllByUserIdAndQuizIdIn(userId, quizIds)
-                .associateBy({ it.quiz.id }, { it.correct })
+            attemptRepository.findAllWithUserByQuizIdIn(quizIds)
+                .groupBy({ it.quiz.id }, { QuizAttemptSummary.from(it) })
         }
 
         return CharacterQuizListResponse(
             items = result.content.map { quiz ->
-                val attemptCorrect = attemptByQuizId[quiz.id]
+                val attempts = attemptsByQuizId[quiz.id].orEmpty()
+                val mine = attempts.firstOrNull { it.userId == userId }
                 CharacterQuizResponse.from(
                     quiz,
-                    attempted = attemptCorrect != null,
-                    attemptCorrect = attemptCorrect
+                    attempted = mine != null,
+                    attemptCorrect = mine?.correct,
+                    attempts = attempts
                 )
             },
             page = result.number,

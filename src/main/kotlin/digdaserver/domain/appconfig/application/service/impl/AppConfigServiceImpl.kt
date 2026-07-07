@@ -26,7 +26,10 @@ class AppConfigServiceImpl(
             noticeEnabled = request.noticeEnabled,
             noticeMessage = request.noticeMessage.trim(),
             feedbackEnabled = request.feedbackEnabled,
-            feedbackUrl = request.feedbackUrl.trim()
+            feedbackUrl = request.feedbackUrl.trim(),
+            minAppVersion = request.minAppVersion?.trim(),
+            storeUrlAndroid = request.storeUrlAndroid?.trim(),
+            storeUrlIos = request.storeUrlIos?.trim()
         )
         return AppConfigResponse.from(appConfigRepository.save(config))
     }

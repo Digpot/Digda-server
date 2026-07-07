@@ -212,7 +212,7 @@ class GroupRoomServiceImpl(
             .firstOrNull()
 
         return GroupHomeResponse(
-            userName = user.name,
+            userName = user.displayedName(),
             today = TodaySummaryResponse(
                 scheduleCount = scheduleCount,
                 newDiaryCount = newDiaryCount,

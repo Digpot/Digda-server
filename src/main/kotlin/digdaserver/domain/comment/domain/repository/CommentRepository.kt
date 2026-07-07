@@ -36,6 +36,11 @@ interface CommentRepository : JpaRepository<Comment, Long> {
     @Query("DELETE FROM Comment c WHERE c.createdBy.id = :userId")
     fun deleteAllByCreatedById(@Param("userId") userId: UUID)
 
+    /** 최상위 댓글 삭제 시 매달린 대댓글 일괄 삭제. */
+    @Modifying
+    @Query("DELETE FROM Comment c WHERE c.parentId = :parentId")
+    fun deleteAllByParentId(@Param("parentId") parentId: Long): Int
+
     @Modifying
     @Query("DELETE FROM Comment c WHERE c.targetType = :targetType AND c.targetId = :targetId")
     fun deleteAllByTargetTypeAndTargetId(

@@ -75,12 +75,14 @@ enum class ErrorCode(
     FUTURE_DATE_NOT_ALLOWED("FUTURE_DATE_NOT_ALLOWED", "미래 날짜에는 일기를 작성할 수 없습니다.", 400),
     DIARY_DATE_TOO_OLD("DIARY_DATE_TOO_OLD", "3개월 이전 날짜에는 일기를 작성할 수 없습니다.", 400),
     DIARY_EDIT_WINDOW_EXPIRED("DIARY_EDIT_WINDOW_EXPIRED", "작성한 지 3개월이 지난 일기는 수정하거나 삭제할 수 없습니다.", 400),
+    DIARY_ALREADY_WRITTEN("DIARY_ALREADY_WRITTEN", "이 날짜에는 이미 내가 쓴 일기가 있어요. 하루에 한 편만 쓸 수 있어요.", 409),
     INVALID_WEATHER_VALUE("INVALID_WEATHER_VALUE", "날씨 값은 0~3 범위여야 합니다.", 400),
     INVALID_MOOD_VALUE("INVALID_MOOD_VALUE", "기분 값은 0~3 범위여야 합니다.", 400),
 
     // ── Comment ──
     COMMENT_NOT_FOUND("COMMENT_NOT_FOUND", "존재하지 않는 댓글입니다.", 404),
     COMMENT_TOO_LONG("COMMENT_TOO_LONG", "댓글은 200자 이하여야 합니다.", 400),
+    COMMENT_REPLY_DEPTH_EXCEEDED("COMMENT_REPLY_DEPTH_EXCEEDED", "대댓글에는 답글을 달 수 없어요.", 400),
 
     // ── Todo ──
     TODO_NOT_FOUND("TODO_NOT_FOUND", "존재하지 않는 할 일입니다.", 404),

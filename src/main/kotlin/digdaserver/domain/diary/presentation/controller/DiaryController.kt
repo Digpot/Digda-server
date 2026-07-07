@@ -5,6 +5,7 @@ import digdaserver.domain.diary.presentation.dto.req.CreateDiaryRequest
 import digdaserver.domain.diary.presentation.dto.req.ToggleDiaryReactionRequest
 import digdaserver.domain.diary.presentation.dto.req.UpdateDiaryRequest
 import digdaserver.domain.diary.presentation.dto.res.DiaryCalendarResponse
+import digdaserver.domain.diary.presentation.dto.res.DiaryDayResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryDetailResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryLikeResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryListResponse
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import java.time.LocalDate
 import java.time.YearMonth
 import java.util.UUID
 
@@ -81,6 +83,28 @@ class DiaryController(
         @RequestParam(defaultValue = "0") offset: Int
     ): ResponseEntity<DiaryListResponse> {
         val response = diaryService.getDiariesByRegion(UUID.fromString(userId), groupRoomId, regionKey, limit, offset)
+        return ResponseEntity.ok(response)
+    }
+
+    @Operation(summary = "날짜별 일기 목록", description = "특정 날짜의 그룹 일기 전부(먼저 쓴 순)와 대표 썸네일/내 일기 id 를 반환합니다.")
+    @GetMapping("/group-rooms/{groupRoomId}/diaries/by-date")
+    fun getDiariesByDate(
+        @AuthenticationPrincipal userId: String,
+        @PathVariable groupRoomId: Long,
+        @RequestParam date: LocalDate
+    ): ResponseEntity<DiaryDayResponse> {
+        val response = diaryService.getDiariesByDate(UUID.fromString(userId), groupRoomId, date)
+        return ResponseEntity.ok(response)
+    }
+
+    @Operation(summary = "대표 썸네일 지정", description = "해당 일기를 그날의 대표 썸네일로 지정합니다. 그룹원 누구나 가능하며 기존 대표는 해제됩니다.")
+    @PutMapping("/group-rooms/{groupRoomId}/diaries/{diaryId}/representative")
+    fun setRepresentative(
+        @AuthenticationPrincipal userId: String,
+        @PathVariable groupRoomId: Long,
+        @PathVariable diaryId: Long
+    ): ResponseEntity<DiaryDayResponse> {
+        val response = diaryService.setRepresentative(UUID.fromString(userId), groupRoomId, diaryId)
         return ResponseEntity.ok(response)
     }
 

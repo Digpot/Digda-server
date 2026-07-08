@@ -8,11 +8,13 @@ import java.time.LocalDate
  * - [dates] : 일기가 존재하는 날짜 목록(하위호환 — 기존 dot marker 용).
  * - [entries] : 날짜별 대표 일기 요약(사진 그리드용 썸네일/기분/편수).
  * - [stats] : 이번 달 통계 스트립(편수·연속 기록·최다 기분).
+ * - [myDates] : 조회자 본인이 일기를 쓴 날짜 목록 — "인당 하루 1편" 규칙의 작성 가능 여부 판정용.
  */
 data class DiaryCalendarResponse(
     val dates: List<LocalDate>,
     val entries: List<DiaryCalendarEntry> = emptyList(),
-    val stats: DiaryCalendarStats = DiaryCalendarStats()
+    val stats: DiaryCalendarStats = DiaryCalendarStats(),
+    val myDates: List<LocalDate> = emptyList()
 )
 
 /**

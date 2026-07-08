@@ -25,18 +25,46 @@ interface DiaryRepository : JpaRepository<Diary, Long> {
 
     /**
      * 기간 내 모든 일기를 이미지까지 fetch join 으로 한 번에 로드한다.
-     * 캘린더 그리드(날짜별 썸네일/기분)와 통계 계산용. 날짜 오름차순, 같은 날은 최신 작성 우선.
+     * 캘린더 그리드(날짜별 썸네일/기분)와 통계 계산용. 날짜 오름차순, 같은 날은 먼저 쓴 순
+     * (대표 미지정 시 "가장 먼저 작성된 일기"가 기본 대표라 ASC 로 맞춘다).
      */
     @Query(
         "SELECT DISTINCT d FROM Diary d LEFT JOIN FETCH d.images " +
             "WHERE d.groupRoom.id = :groupRoomId AND d.date BETWEEN :startDate AND :endDate " +
-            "ORDER BY d.date ASC, d.createdAt DESC"
+            "ORDER BY d.date ASC, d.createdAt ASC"
     )
     fun findAllWithImagesByGroupRoomIdAndDateBetween(
         groupRoomId: Long,
         startDate: LocalDate,
         endDate: LocalDate
     ): List<Diary>
+
+    /** 인당 하루 1편 검증 — 사용자가 그 그룹·그 날짜에 이미 일기를 썼는지. */
+    fun existsByGroupRoomIdAndCreatedByIdAndDate(groupRoomId: Long, createdById: UUID, date: LocalDate): Boolean
+
+    /** 인당 하루 1편 검증(수정용) — 본인 일기 자신은 제외하고 판정. */
+    fun existsByGroupRoomIdAndCreatedByIdAndDateAndIdNot(
+        groupRoomId: Long,
+        createdById: UUID,
+        date: LocalDate,
+        id: Long
+    ): Boolean
+
+    /** 특정 날짜의 그룹 일기 전부(이미지 포함) — 날짜별 일기 목록 화면용. 먼저 쓴 순. */
+    @Query(
+        "SELECT DISTINCT d FROM Diary d LEFT JOIN FETCH d.images " +
+            "WHERE d.groupRoom.id = :groupRoomId AND d.date = :date " +
+            "ORDER BY d.createdAt ASC"
+    )
+    fun findAllWithImagesByGroupRoomIdAndDate(
+        @Param("groupRoomId") groupRoomId: Long,
+        @Param("date") date: LocalDate
+    ): List<Diary>
+
+    /** 대표 썸네일 재지정 — 같은 날의 기존 대표 플래그를 전부 내린다. */
+    @Modifying
+    @Query("UPDATE Diary d SET d.representative = false WHERE d.groupRoom.id = :groupRoomId AND d.date = :date AND d.representative = true")
+    fun clearRepresentativeForDate(@Param("groupRoomId") groupRoomId: Long, @Param("date") date: LocalDate): Int
 
     @Query(
         """

@@ -16,6 +16,10 @@ import java.time.LocalDateTime
  * [attempted] 는 목록을 조회한 사용자가 이 퀴즈를 이미 응시했는지, [attemptCorrect] 는
  * 응시했다면 정답이었는지(true)/오답이었는지(false)를 나타낸다. 미응시면 각각
  * false/null 이라 목록에서 "정답/오답" 배지를 표시할 수 있다.
+ *
+ * [attempts] 는 이 퀴즈를 푼 사람의 응시 요약 — 퀴즈는 한 문제당 한 명만 풀 수 있어
+ * 보통 0~1건이며(과거 정책의 복수 응시 데이터 호환을 위해 리스트 유지, 응시순),
+ * 목록에서 "누가 풀었고 맞았는지"를 본인 여부와 무관하게 항상 보여준다. 목록 조회에서만 채워진다.
  */
 data class CharacterQuizResponse(
     val id: Long,
@@ -30,14 +34,16 @@ data class CharacterQuizResponse(
     val createdAt: LocalDateTime,
     val remainingCount: Int? = null,
     val attempted: Boolean = false,
-    val attemptCorrect: Boolean? = null
+    val attemptCorrect: Boolean? = null,
+    val attempts: List<QuizAttemptSummary> = emptyList()
 ) {
     companion object {
         fun from(
             quiz: CharacterQuiz,
             remainingCount: Int? = null,
             attempted: Boolean = false,
-            attemptCorrect: Boolean? = null
+            attemptCorrect: Boolean? = null,
+            attempts: List<QuizAttemptSummary> = emptyList()
         ): CharacterQuizResponse {
             return CharacterQuizResponse(
                 id = quiz.id,
@@ -47,12 +53,13 @@ data class CharacterQuizResponse(
                 question = quiz.question,
                 options = quiz.options(),
                 expMultiplier = quiz.expMultiplier,
-                authorName = quiz.author?.name ?: "탈퇴자",
+                authorName = quiz.author?.displayedName() ?: "탈퇴자",
                 imageUrl = quiz.imageUrl,
                 createdAt = quiz.createdAt,
                 remainingCount = remainingCount,
                 attempted = attempted,
-                attemptCorrect = attemptCorrect
+                attemptCorrect = attemptCorrect,
+                attempts = attempts
             )
         }
     }

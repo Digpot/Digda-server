@@ -4,12 +4,14 @@ import digdaserver.domain.diary.presentation.dto.req.CreateDiaryRequest
 import digdaserver.domain.diary.presentation.dto.req.ToggleDiaryReactionRequest
 import digdaserver.domain.diary.presentation.dto.req.UpdateDiaryRequest
 import digdaserver.domain.diary.presentation.dto.res.DiaryCalendarResponse
+import digdaserver.domain.diary.presentation.dto.res.DiaryDayResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryDetailResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryLikeResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryListResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryReactionToggleResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryRegionMapResponse
 import digdaserver.domain.diary.presentation.dto.res.DiaryResponse
+import java.time.LocalDate
 import java.time.YearMonth
 import java.util.UUID
 
@@ -34,6 +36,12 @@ interface DiaryService {
     ): DiaryListResponse
 
     fun getDiaryCalendar(userId: UUID, groupRoomId: Long, month: YearMonth): DiaryCalendarResponse
+
+    /** 특정 날짜의 그룹 일기 전부 — 캘린더 날짜 탭 → 일기 목록 화면용. */
+    fun getDiariesByDate(userId: UUID, groupRoomId: Long, date: LocalDate): DiaryDayResponse
+
+    /** 대표 썸네일 지정 — 그룹원 누구나 가능. 같은 날의 기존 대표는 해제된다. */
+    fun setRepresentative(userId: UUID, groupRoomId: Long, diaryId: Long): DiaryDayResponse
 
     fun getDiaryDetail(userId: UUID, groupRoomId: Long, diaryId: Long): DiaryDetailResponse
 

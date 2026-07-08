@@ -7,7 +7,13 @@ interface CommentService {
 
     fun createScheduleComment(userId: UUID, groupRoomId: Long, scheduleId: Long, text: String): CreateCommentResponse
 
-    fun createDiaryComment(userId: UUID, groupRoomId: Long, diaryId: Long, text: String): CreateCommentResponse
+    fun createDiaryComment(
+        userId: UUID,
+        groupRoomId: Long,
+        diaryId: Long,
+        text: String,
+        parentCommentId: Long? = null
+    ): CreateCommentResponse
 
     fun deleteScheduleComment(userId: UUID, groupRoomId: Long, scheduleId: Long, commentId: Long)
 

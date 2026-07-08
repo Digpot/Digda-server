@@ -41,7 +41,13 @@ class CommentController(
         @PathVariable diaryId: Long,
         @RequestBody request: CreateCommentRequest
     ): ResponseEntity<CreateCommentResponse> {
-        val response = commentService.createDiaryComment(UUID.fromString(userId), groupRoomId, diaryId, request.text)
+        val response = commentService.createDiaryComment(
+            UUID.fromString(userId),
+            groupRoomId,
+            diaryId,
+            request.text,
+            request.parentCommentId
+        )
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 

@@ -37,6 +37,14 @@ class Comment(
     @Column(nullable = false, length = 200)
     val text: String,
 
+    /**
+     * 대댓글의 부모 댓글 id. null 이면 최상위 댓글.
+     * 구조는 댓글 → 대댓글 1단계까지만 허용한다(대대댓글 금지 — 서비스에서 검증).
+     * prod 는 SchemaAutoMigration 에서 동일 컬럼을 멱등 ADD.
+     */
+    @Column(name = "parent_comment_id")
+    val parentId: Long? = null,
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
     val createdBy: User,

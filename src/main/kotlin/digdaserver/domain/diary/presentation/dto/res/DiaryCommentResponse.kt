@@ -8,6 +8,8 @@ data class DiaryCommentResponse(
     val text: String,
     val createdBy: DiaryUserSummary,
     val createdAt: LocalDateTime,
+    /** 대댓글이면 부모 댓글 id. 최상위 댓글은 null. */
+    val parentId: Long? = null,
     /** 차단/신고로 숨겨진 댓글인지. true 면 text 는 비워진 상태. */
     val hidden: Boolean = false,
     val hiddenReason: String? = null
@@ -24,7 +26,8 @@ data class DiaryCommentResponse(
             id = comment.id,
             text = comment.text,
             createdBy = DiaryUserSummary.from(comment.createdBy),
-            createdAt = comment.createdAt
+            createdAt = comment.createdAt,
+            parentId = comment.parentId
         )
     }
 }

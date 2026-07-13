@@ -69,6 +69,8 @@ enum class ErrorCode(
     END_DATE_BEFORE_START("END_DATE_BEFORE_START", "종료일이 시작일보다 이전입니다.", 400),
     END_TIME_BEFORE_START("END_TIME_BEFORE_START", "종료 시간이 시작 시간보다 이전입니다.", 400),
     INVALID_PARTICIPANT("INVALID_PARTICIPANT", "참여자가 그룹 구성원이 아닙니다.", 400),
+    SCHEDULE_COPY_DATES_EMPTY("SCHEDULE_COPY_DATES_EMPTY", "복사할 날짜를 1개 이상 선택해 주세요.", 400),
+    SCHEDULE_COPY_LIMIT_EXCEEDED("SCHEDULE_COPY_LIMIT_EXCEEDED", "일정 복사는 한 번에 최대 31개 날짜까지 가능합니다.", 400),
 
     // ── Diary ──
     DIARY_NOT_FOUND("DIARY_NOT_FOUND", "존재하지 않는 일기입니다.", 404),

@@ -19,6 +19,7 @@ import digdaserver.domain.notification.application.service.NotificationService
 import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -35,8 +36,12 @@ class InviteServiceImpl(
     private val userActionLogService: UserActionLogService
 ) : InviteService {
 
+    private val log = LoggerFactory.getLogger(javaClass)
+
     @Transactional
     override fun regenerateInviteCode(userId: UUID, groupRoomId: Long): InviteCodeResponse {
+        log.info("regenerateInviteCode: userId={}, groupRoomId={}", userId, groupRoomId)
+
         val groupRoom = groupRoomRepository.findById(groupRoomId)
             .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
 
@@ -47,6 +52,23 @@ class InviteServiceImpl(
 
         if (!membership.isOwner) throw DigdaException(ErrorCode.NOT_GROUP_ROOM_OWNER)
 
+        // 유효한(만료 전) 코드가 있으면 그대로 재사용한다. 초대 시트를 열 때마다
+        // 코드가 바뀌면 먼저 코드를 받은 사람이 입장하지 못하므로,
+        // 새 코드는 기존 코드가 24시간 만료된 뒤에만 발급한다.
+        val existing = inviteCodeRepository.findFirstByGroupRoomIdOrderByCreatedAtDesc(groupRoomId)
+        if (existing.isPresent && !existing.get().isExpired) {
+            val current = existing.get()
+            log.info(
+                "regenerateInviteCode: reuse valid code, groupRoomId={}, expiresAt={}",
+                groupRoomId,
+                current.expiresAt
+            )
+            return InviteCodeResponse(
+                code = current.code,
+                expiresAt = current.expiresAt
+            )
+        }
+
         inviteCodeRepository.deleteAllByGroupRoomId(groupRoomId)
         inviteCodeRepository.flush()
 
@@ -56,6 +78,12 @@ class InviteServiceImpl(
                 code = generateInviteCode(),
                 expiresAt = LocalDateTime.now().plusHours(24)
             )
+        )
+
+        log.info(
+            "regenerateInviteCode: issued new code, groupRoomId={}, expiresAt={}",
+            groupRoomId,
+            inviteCode.expiresAt
         )
 
         return InviteCodeResponse(

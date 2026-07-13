@@ -1,6 +1,7 @@
 package digdaserver.domain.schedule.presentation.controller
 
 import digdaserver.domain.schedule.application.service.ScheduleService
+import digdaserver.domain.schedule.presentation.dto.req.CopyScheduleRequest
 import digdaserver.domain.schedule.presentation.dto.req.CreateScheduleRequest
 import digdaserver.domain.schedule.presentation.dto.req.UpdateScheduleRequest
 import digdaserver.domain.schedule.presentation.dto.res.ScheduleDetailResponse
@@ -64,6 +65,21 @@ class ScheduleController(
         @RequestBody request: CreateScheduleRequest
     ): ResponseEntity<ScheduleResponse> {
         val response = scheduleService.createSchedule(UUID.fromString(userId), groupRoomId, request)
+        return ResponseEntity.status(HttpStatus.CREATED).body(response)
+    }
+
+    @Operation(
+        summary = "일정 여러 날짜 복사",
+        description = "일정을 선택한 날짜들에 복사합니다. 기간 일정은 길이를 유지하고, 참여자도 함께 복사됩니다. 한 번에 최대 31개 날짜."
+    )
+    @PostMapping("/group-rooms/{groupRoomId}/schedules/{scheduleId}/copy")
+    fun copySchedule(
+        @AuthenticationPrincipal userId: String,
+        @PathVariable groupRoomId: Long,
+        @PathVariable scheduleId: Long,
+        @RequestBody request: CopyScheduleRequest
+    ): ResponseEntity<ScheduleListResponse> {
+        val response = scheduleService.copySchedule(UUID.fromString(userId), groupRoomId, scheduleId, request)
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 

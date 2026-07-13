@@ -1,5 +1,6 @@
 package digdaserver.domain.schedule.application.service
 
+import digdaserver.domain.schedule.presentation.dto.req.CopyScheduleRequest
 import digdaserver.domain.schedule.presentation.dto.req.CreateScheduleRequest
 import digdaserver.domain.schedule.presentation.dto.req.UpdateScheduleRequest
 import digdaserver.domain.schedule.presentation.dto.res.ScheduleDetailResponse
@@ -15,6 +16,8 @@ interface ScheduleService {
     fun getScheduleDetail(userId: UUID, groupRoomId: Long, scheduleId: Long): ScheduleDetailResponse
 
     fun createSchedule(userId: UUID, groupRoomId: Long, request: CreateScheduleRequest): ScheduleResponse
+
+    fun copySchedule(userId: UUID, groupRoomId: Long, scheduleId: Long, request: CopyScheduleRequest): ScheduleListResponse
 
     fun updateSchedule(userId: UUID, groupRoomId: Long, scheduleId: Long, request: UpdateScheduleRequest): ScheduleResponse
 

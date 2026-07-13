@@ -22,7 +22,10 @@ class InviteController(
     private val inviteService: InviteService
 ) {
 
-    @Operation(summary = "초대 코드 생성 (재발급)", description = "기존 코드를 무효화하고 새 초대 코드를 발급합니다. 방장만 가능합니다.")
+    @Operation(
+        summary = "초대 코드 조회/발급",
+        description = "유효한(만료 전) 초대 코드가 있으면 그대로 반환하고, 없거나 만료된 경우에만 새 코드를 발급합니다. 방장만 가능합니다."
+    )
     @PostMapping("/group-rooms/{groupRoomId}/invites")
     fun regenerateInviteCode(
         @AuthenticationPrincipal userId: String,

@@ -27,7 +27,10 @@ enum class ShopItemType(val displayName: String, val slotOrder: Int) {
     ACCESSORY("액세서리", 4),
 
     /** 캐릭터 옆에 둘러진 잡화(풍선·꽃 등). */
-    MISC("잡화", 5);
+    MISC("잡화", 5),
+
+    /** 캐릭터 뒤에 깔리는 배경 씬(풀밭·밤하늘 등). 항상 1개 장착(default=풀밭). */
+    BACKGROUND("배경", 6);
 
     companion object {
         fun safeValueOf(raw: String): ShopItemType? = entries.firstOrNull { it.name == raw }

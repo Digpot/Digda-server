@@ -41,6 +41,10 @@ class SchemaAutoMigration(
      * - `diary.content`: 초기 VARCHAR(300) 으로 생성됐는데 그림일기 본문 길이 제한을 없애기로
      *    하면서 300 자 초과 입력이 "Data truncated" 로 실패. 서버/DTO 에 별도 길이 검증이
      *    없으므로 TEXT 로 완화해 사실상 무제한 저장을 허용한다.
+     * - `shop_item.item_type` / `group_character_equipped.item_type`: 초기 MySQL ENUM 으로
+     *    생성됐는데 [ShopItemType] 에 BACKGROUND 가 추가되면서 시드/장착이 "Data truncated"
+     *    로 실패. notification.type 과 동일하게 VARCHAR(32, 엔티티 length) 로 일반화해
+     *    이후 enum 값 추가 시 마이그레이션이 필요 없게 한다.
      */
     private val requiredColumns: List<RequiredColumn> = listOf(
         RequiredColumn(
@@ -78,6 +82,22 @@ class SchemaAutoMigration(
             expectedMaxLength = 16,
             nullable = true,
             alterSql = "ALTER TABLE character_quiz MODIFY COLUMN author_id BINARY(16) NULL"
+        ),
+        RequiredColumn(
+            table = "shop_item",
+            column = "item_type",
+            expectedDataType = "varchar",
+            expectedMaxLength = 32,
+            nullable = false,
+            alterSql = "ALTER TABLE shop_item MODIFY COLUMN item_type VARCHAR(32) NOT NULL"
+        ),
+        RequiredColumn(
+            table = "group_character_equipped",
+            column = "item_type",
+            expectedDataType = "varchar",
+            expectedMaxLength = 32,
+            nullable = false,
+            alterSql = "ALTER TABLE group_character_equipped MODIFY COLUMN item_type VARCHAR(32) NOT NULL"
         )
     )
 

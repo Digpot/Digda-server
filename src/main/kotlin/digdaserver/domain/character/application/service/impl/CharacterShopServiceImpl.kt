@@ -155,8 +155,8 @@ class CharacterShopServiceImpl(
         validateGroupMember(groupRoomId, userId)
         val character = loadOrInitCharacter(groupRoomId)
 
-        if (itemType == ShopItemType.SKIN) {
-            // 스킨은 렌더 필수 — default 로 복귀
+        if (itemType == ShopItemType.SKIN || itemType == ShopItemType.BACKGROUND) {
+            // 스킨/배경은 렌더 필수 — default(코랄 스킨/풀밭 배경) 로 복귀
             val default = shopItemRepository.findFirstDefaultByItemType(itemType)
                 ?: throw DigdaException(ErrorCode.SHOP_ITEM_NOT_FOUND)
             ensureOwned(groupRoomId, default)

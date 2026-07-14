@@ -36,8 +36,9 @@ class UploadedImage(
     @Column(nullable = false)
     val height: Int,
 
+    // MySQL 네이티브 ENUM 생성을 막고 VARCHAR 로 고정 — SchemaAutoMigration 의 prod 정정과 일치.
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(64)")
     val purpose: ImagePurpose,
 
     @Column(name = "created_at", nullable = false)

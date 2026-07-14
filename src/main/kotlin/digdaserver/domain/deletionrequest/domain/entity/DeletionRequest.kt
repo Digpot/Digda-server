@@ -33,8 +33,9 @@ class DeletionRequest(
     @Column(name = "deletion_request_id")
     val id: Long = 0L,
 
+    // MySQL 네이티브 ENUM 생성을 막고 VARCHAR 로 고정 — SchemaAutoMigration 의 CREATE TABLE 과 일치.
     @Enumerated(EnumType.STRING)
-    @Column(name = "type", nullable = false, length = 32)
+    @Column(name = "type", nullable = false, columnDefinition = "varchar(32)")
     val type: DeletionRequestType,
 
     @Column(name = "email", nullable = false, length = 255)
@@ -49,7 +50,7 @@ class DeletionRequest(
     val content: String? = null,
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 32)
+    @Column(name = "status", nullable = false, columnDefinition = "varchar(32)")
     var status: DeletionRequestStatus = DeletionRequestStatus.PENDING,
 
     @Column(name = "created_at", nullable = false)

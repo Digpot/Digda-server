@@ -517,6 +517,32 @@ class NotificationServiceImpl(
     }
 
     @Transactional
+    override fun notifyOmokInvite(
+        groupRoomId: Long,
+        inviterUserId: UUID,
+        inviteeUserId: UUID,
+        gameId: Long
+    ) {
+        val groupRoom = findGroupRoom(groupRoomId)
+        val inviter = findUser(inviterUserId)
+        val invitee = findUser(inviteeUserId)
+
+        notify(
+            listOf(invitee),
+            NotificationPayload(
+                type = NotificationType.GAME_INVITE,
+                title = "오목 한 판 어때요? ⚫⚪",
+                message = "${inviter.displayedName()}님이 오목 대결을 신청했어요!",
+                groupRoomId = groupRoomId,
+                groupRoomName = groupRoom.name,
+                relatedId = gameId,
+                relatedType = "OMOK"
+            ),
+            actorUserId = inviterUserId
+        )
+    }
+
+    @Transactional
     override fun sendAnnouncement(
         targetUserIds: List<UUID>?,
         title: String,

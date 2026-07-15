@@ -96,6 +96,14 @@ interface NotificationService {
     /** 디코(조력자) 최초 등장. 그룹 멤버 전원에게 1회만 발송. */
     fun notifyDikoUnlocked(groupRoomId: Long, actorUserId: UUID)
 
+    /** 오목 대국 초대 — 초대받은 사람에게만 발송. relatedId=gameId, relatedType=OMOK. */
+    fun notifyOmokInvite(
+        groupRoomId: Long,
+        inviterUserId: UUID,
+        inviteeUserId: UUID,
+        gameId: Long
+    )
+
     fun sendAnnouncement(
         targetUserIds: List<UUID>?,
         title: String,

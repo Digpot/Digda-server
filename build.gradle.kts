@@ -53,6 +53,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-batch")
+    // 오목 실시간 대전 — STOMP over WebSocket
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
 
     // Spring Cloud
     implementation("org.springframework.cloud:spring-cloud-starter-openfeign")

@@ -150,6 +150,13 @@ enum class ErrorCode(
     // ── Rate Limit ──
     RATE_LIMIT_EXCEEDED("RATE_LIMIT_EXCEEDED", "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.", 429),
 
+    // ── Omok (오목 실시간 대전) ──
+    OMOK_GAME_NOT_FOUND("OMOK_GAME_NOT_FOUND", "존재하지 않거나 만료된 오목 대국입니다.", 404),
+    OMOK_NOT_PARTICIPANT("OMOK_NOT_PARTICIPANT", "이 오목 대국의 참가자가 아닙니다.", 403),
+    OMOK_INVALID_STATE("OMOK_INVALID_STATE", "지금 상태에서는 할 수 없는 요청입니다.", 409),
+    OMOK_INVALID_MOVE("OMOK_INVALID_MOVE", "그 자리에는 둘 수 없습니다.", 400),
+    OMOK_SELF_INVITE("OMOK_SELF_INVITE", "자기 자신은 초대할 수 없습니다.", 400),
+
     // ── Admin ──
     ADMIN_NOT_FOUND("ADMIN_NOT_FOUND", "존재하지 않는 관리자 계정입니다.", 404),
     ADMIN_PASSWORD_MISMATCH("ADMIN_PASSWORD_MISMATCH", "비밀번호가 일치하지 않습니다.", 401),

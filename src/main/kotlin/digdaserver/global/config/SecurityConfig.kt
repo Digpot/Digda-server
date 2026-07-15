@@ -42,7 +42,9 @@ class SecurityConfig(
         "/api/test/**",
         "/actuator/**",
         "/api/callback/**",
-        "/api/test/oauth2/login/**"
+        "/api/test/oauth2/login/**",
+        // WebSocket 핸드셰이크 — 인증은 STOMP CONNECT 프레임의 토큰으로 수행
+        "/ws/**"
     )
 
     @Bean
@@ -96,6 +98,8 @@ class SecurityConfig(
                 .requestMatchers("/api/app/reissue", "/api/web/reissue").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/api/app/public/**", "/api/web/public/**", "/api/test/oauth2/login/**").permitAll()
+                // WebSocket 핸드셰이크 — 이후 STOMP CONNECT 에서 JWT 검증
+                .requestMatchers("/ws/**").permitAll()
                 .anyRequest().authenticated()
         }
 

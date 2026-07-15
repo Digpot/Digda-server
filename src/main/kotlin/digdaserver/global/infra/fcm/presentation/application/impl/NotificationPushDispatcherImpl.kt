@@ -70,6 +70,7 @@ class NotificationPushDispatcherImpl(
             NotificationType.QUIZ_ANSWERED,
             NotificationType.MOCHI_LEVELUP,
             NotificationType.DIKO_UNLOCKED,
+            NotificationType.GAME_INVITE,
             NotificationType.ANNOUNCEMENT -> true
         }
     }

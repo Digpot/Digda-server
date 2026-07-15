@@ -144,6 +144,56 @@ class ShopItemSeeder(
                 sortOrder = 50,
                 isDefault = false
             ),
+            // 캐릭터 패턴 스킨 4종 — 앱 렌더러(mochi_character_view._skinPatches 등)와
+            // assetKey 동기 필수. 판다처럼 바디 톤/무늬/귀 장식이 함께 바뀐다.
+            ItemDef(
+                itemKey = "skin_tiger",
+                itemType = ShopItemType.SKIN,
+                displayName = "호랑이 모찌",
+                description = "어흥! 줄무늬가 늠름한 호랑이 모찌",
+                cost = 350,
+                assetKey = "skin/tiger",
+                accentColor = "#F59E0B",
+                layerOrder = 0,
+                sortOrder = 60,
+                isDefault = false
+            ),
+            ItemDef(
+                itemKey = "skin_cat",
+                itemType = ShopItemType.SKIN,
+                displayName = "고양이 모찌",
+                description = "쫑긋 귀와 수염이 매력적인 고양이 모찌",
+                cost = 300,
+                assetKey = "skin/cat",
+                accentColor = "#B0A8A2",
+                layerOrder = 0,
+                sortOrder = 70,
+                isDefault = false
+            ),
+            ItemDef(
+                itemKey = "skin_bee",
+                itemType = ShopItemType.SKIN,
+                displayName = "꿀벌 모찌",
+                description = "붕붕~ 부지런히 꿀 모으는 꿀벌 모찌",
+                cost = 300,
+                assetKey = "skin/bee",
+                accentColor = "#FCD34D",
+                layerOrder = 0,
+                sortOrder = 80,
+                isDefault = false
+            ),
+            ItemDef(
+                itemKey = "skin_frog",
+                itemType = ShopItemType.SKIN,
+                displayName = "개구리 모찌",
+                description = "개굴개굴 연못에서 온 개구리 모찌",
+                cost = 300,
+                assetKey = "skin/frog",
+                accentColor = "#4ADE80",
+                layerOrder = 0,
+                sortOrder = 90,
+                isDefault = false
+            ),
             // ─── BACKGROUND ─────────────────────────────────────────
             // 배경 씬은 렌더 필수 슬롯 — 풀밭 언덕이 default 로 항상 장착된다.
             // layerOrder 는 렌더러가 배경을 별도 레이어로 그려 실사용되지 않지만,

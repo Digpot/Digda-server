@@ -3,6 +3,7 @@ package digdaserver.domain.minigame.presentation
 import digdaserver.domain.catchmind.application.CatchmindGameManager
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.membership.domain.repository.MembershipRepository
+import digdaserver.domain.molebattle.application.MoleBattleGameManager
 import digdaserver.domain.omok.application.OmokGameManager
 import digdaserver.domain.tapbattle.application.TapBattleGameManager
 import digdaserver.global.infra.exception.error.DigdaException
@@ -30,6 +31,7 @@ class GameInviteController(
     private val omokGameManager: OmokGameManager,
     private val catchmindGameManager: CatchmindGameManager,
     private val tapBattleGameManager: TapBattleGameManager,
+    private val moleBattleGameManager: MoleBattleGameManager,
     private val groupRoomRepository: GroupRoomRepository,
     private val membershipRepository: MembershipRepository
 ) {
@@ -99,6 +101,18 @@ class GameInviteController(
                     )
                 )
             }
+            moleBattleGameManager.pendingInvitesFor(uid, groupRoomId).forEach {
+                add(
+                    GameInviteItem(
+                        gameType = "MOLE_BATTLE",
+                        gameId = it.id,
+                        groupRoomId = it.groupRoomId,
+                        title = it.inviterName,
+                        createdAtEpochMs = it.createdAt.toEpochMilli(),
+                        playerCount = 2
+                    )
+                )
+            }
         }.sortedByDescending { it.createdAtEpochMs }
 
         val active = buildList {
@@ -130,6 +144,18 @@ class GameInviteController(
                 add(
                     GameInviteItem(
                         gameType = "TAP_BATTLE",
+                        gameId = it.id,
+                        groupRoomId = it.groupRoomId,
+                        title = if (it.inviterId == uid) it.inviteeName else it.inviterName,
+                        createdAtEpochMs = it.createdAt.toEpochMilli(),
+                        playerCount = 2
+                    )
+                )
+            }
+            moleBattleGameManager.activeGamesFor(uid, groupRoomId).forEach {
+                add(
+                    GameInviteItem(
+                        gameType = "MOLE_BATTLE",
                         gameId = it.id,
                         groupRoomId = it.groupRoomId,
                         title = if (it.inviterId == uid) it.inviteeName else it.inviterName,

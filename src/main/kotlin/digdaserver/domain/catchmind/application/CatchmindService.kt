@@ -41,7 +41,9 @@ class CatchmindService(
     fun createGame(
         hostId: UUID,
         groupRoomId: Long,
-        inviteeIds: List<UUID>
+        inviteeIds: List<UUID>,
+        roundSeconds: Int,
+        totalRounds: Int
     ): CatchmindGameResponse {
         val distinct = inviteeIds.distinct().filter { it != hostId }
         if (distinct.isEmpty()) throw DigdaException(ErrorCode.MINIGAME_NOT_ENOUGH_PLAYERS)
@@ -56,7 +58,9 @@ class CatchmindService(
             groupRoomId = groupRoomId,
             hostId = hostId,
             hostName = host.displayedName(),
-            invitees = invitees
+            invitees = invitees,
+            roundSeconds = roundSeconds,
+            totalRounds = totalRounds
         )
         notificationService.notifyMinigameInvite(
             groupRoomId = groupRoomId,

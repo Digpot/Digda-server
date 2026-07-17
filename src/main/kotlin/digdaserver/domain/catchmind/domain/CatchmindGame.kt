@@ -24,14 +24,30 @@ class CatchmindGame(
     val hostId: UUID,
     val hostName: String,
     invitees: Map<UUID, String>,
+    roundSeconds: Int,
+    configuredRounds: Int,
     private val wordPicker: () -> String
 ) {
     companion object {
-        const val ROUNDS_PER_PLAYER = 2
         const val MIN_PLAYERS = 2
         const val MAX_STROKES = 600
-        val ROUND_TIME: Duration = Duration.ofSeconds(90)
+        const val MIN_ROUND_SECONDS = 30
+        const val MAX_ROUND_SECONDS = 300
+        const val MIN_ROUNDS = 1
+        const val MAX_ROUNDS = 20
+        const val DEFAULT_ROUND_SECONDS = 90
+        const val DEFAULT_ROUNDS = 10
     }
+
+    /** 방장이 방 생성 시 고른 라운드 제한시간 — 30초~5분 클램프. */
+    val roundTime: Duration =
+        Duration.ofSeconds(
+            roundSeconds.coerceIn(MIN_ROUND_SECONDS, MAX_ROUND_SECONDS).toLong()
+        )
+
+    /** 방장이 고른 총 라운드 수 — 1~20 클램프. 출제자는 참가자 순환. */
+    val configuredTotalRounds: Int =
+        configuredRounds.coerceIn(MIN_ROUNDS, MAX_ROUNDS)
 
     enum class Status { WAITING, ACTIVE, FINISHED, CANCELED, EXPIRED }
 
@@ -129,7 +145,7 @@ class CatchmindGame(
         }
         status = Status.ACTIVE
         drawerOrder = joined.map { it.userId }.shuffled()
-        totalRounds = drawerOrder.size * ROUNDS_PER_PLAYER
+        totalRounds = configuredTotalRounds
         advanceRound()
     }
 
@@ -148,7 +164,7 @@ class CatchmindGame(
         }
         drawerId = drawerOrder[roundIndex % drawerOrder.size]
         word = pickWord()
-        roundDeadline = Instant.now().plus(ROUND_TIME)
+        roundDeadline = Instant.now().plus(roundTime)
         return true
     }
 

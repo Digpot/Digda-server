@@ -42,7 +42,9 @@ class OmokService(
 
     // ── 초대 (REST) ─────────────────────────────────────────────
 
-    @Transactional(readOnly = true)
+    // 초대 알림(notifyOmokInvite)이 notification 테이블에 INSERT 하므로 readOnly 불가.
+    // readOnly=true 였을 때 초대 시점에 "Connection is read-only" 로 초대가 통째로 실패했다.
+    @Transactional
     fun createGame(inviterId: UUID, groupRoomId: Long, inviteeId: UUID): OmokGameResponse {
         if (inviterId == inviteeId) throw DigdaException(ErrorCode.OMOK_SELF_INVITE)
         validateGroupMember(groupRoomId, inviterId)

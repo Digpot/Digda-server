@@ -13,6 +13,9 @@ interface GroupCharacterEquippedRepository : JpaRepository<GroupCharacterEquippe
 
     fun findAllByGroupRoomId(groupRoomId: Long): List<GroupCharacterEquipped>
 
+    /** 특정 아이템을 장착 중인 모든 그룹 조회 — 아이템 retire 시 기본템 복귀용. */
+    fun findAllByShopItemId(shopItemId: Long): List<GroupCharacterEquipped>
+
     fun findByGroupRoomIdAndItemType(
         groupRoomId: Long,
         itemType: ShopItemType

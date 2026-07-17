@@ -104,6 +104,19 @@ interface NotificationService {
         gameId: Long
     )
 
+    /**
+     * 미니게임(캐치마인드/탭배틀) 초대 — 초대받은 사람들에게 발송.
+     * relatedId=gameId, relatedType=[gameType]("CATCHMIND"/"TAP_BATTLE").
+     */
+    fun notifyMinigameInvite(
+        groupRoomId: Long,
+        inviterUserId: UUID,
+        inviteeUserIds: List<UUID>,
+        gameId: Long,
+        gameType: String,
+        gameDisplayName: String
+    )
+
     fun sendAnnouncement(
         targetUserIds: List<UUID>?,
         title: String,

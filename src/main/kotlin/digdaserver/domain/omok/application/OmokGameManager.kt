@@ -55,6 +55,22 @@ class OmokGameManager {
     fun get(gameId: Long): OmokGame =
         games[gameId] ?: throw DigdaException(ErrorCode.OMOK_GAME_NOT_FOUND)
 
+    /** [groupRoomId] 그룹에서 [userId] 가 초대받고 아직 응답 안 한 대기 대국 목록. */
+    fun pendingInvitesFor(userId: UUID, groupRoomId: Long): List<OmokGame> =
+        games.values.filter {
+            it.groupRoomId == groupRoomId &&
+                it.status == OmokGame.Status.WAITING &&
+                it.inviteeId == userId
+        }.sortedByDescending { it.createdAt }
+
+    /** [groupRoomId] 그룹에서 [userId] 가 참여 중인 진행(ACTIVE) 대국 목록 — 재입장용. */
+    fun activeGamesFor(userId: UUID, groupRoomId: Long): List<OmokGame> =
+        games.values.filter {
+            it.groupRoomId == groupRoomId &&
+                it.status == OmokGame.Status.ACTIVE &&
+                it.isParticipant(userId)
+        }.sortedByDescending { it.lastActivityAt }
+
     /** 만료 대상(대기 [waitingTtl] 초과 / 진행 [activeTtl] 방치) 대국 목록. */
     fun expireCandidates(
         waitingTtl: Duration,

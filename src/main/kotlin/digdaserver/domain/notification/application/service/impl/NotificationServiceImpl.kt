@@ -543,6 +543,35 @@ class NotificationServiceImpl(
     }
 
     @Transactional
+    override fun notifyMinigameInvite(
+        groupRoomId: Long,
+        inviterUserId: UUID,
+        inviteeUserIds: List<UUID>,
+        gameId: Long,
+        gameType: String,
+        gameDisplayName: String
+    ) {
+        if (inviteeUserIds.isEmpty()) return
+        val groupRoom = findGroupRoom(groupRoomId)
+        val inviter = findUser(inviterUserId)
+        val invitees = userRepository.findAllById(inviteeUserIds).toList()
+
+        notify(
+            invitees,
+            NotificationPayload(
+                type = NotificationType.GAME_INVITE,
+                title = "$gameDisplayName 초대장이 왔어요! 🎮",
+                message = "${inviter.displayedName()}님이 $gameDisplayName 대결을 신청했어요!",
+                groupRoomId = groupRoomId,
+                groupRoomName = groupRoom.name,
+                relatedId = gameId,
+                relatedType = gameType
+            ),
+            actorUserId = inviterUserId
+        )
+    }
+
+    @Transactional
     override fun sendAnnouncement(
         targetUserIds: List<UUID>?,
         title: String,

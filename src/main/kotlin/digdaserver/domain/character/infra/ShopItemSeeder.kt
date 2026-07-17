@@ -2,6 +2,7 @@ package digdaserver.domain.character.infra
 
 import digdaserver.domain.character.domain.entity.ShopItem
 import digdaserver.domain.character.domain.entity.ShopItemType
+import digdaserver.domain.character.domain.repository.GroupCharacterEquippedRepository
 import digdaserver.domain.character.domain.repository.ShopItemRepository
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationReadyEvent
@@ -18,7 +19,8 @@ import org.springframework.transaction.annotation.Transactional
  */
 @Component
 class ShopItemSeeder(
-    private val shopItemRepository: ShopItemRepository
+    private val shopItemRepository: ShopItemRepository,
+    private val groupCharacterEquippedRepository: GroupCharacterEquippedRepository
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -26,6 +28,7 @@ class ShopItemSeeder(
     @EventListener(ApplicationReadyEvent::class)
     @Transactional
     fun seed() {
+        retireRemovedItems()
         var created = 0
         var updated = 0
         SeedCatalog.all.forEach { def ->
@@ -66,6 +69,27 @@ class ShopItemSeeder(
         log.info("action=shop_item_seed_done, created={}, updated={}", created, updated)
     }
 
+    /**
+     * 카탈로그에서 뺀 아이템 정리 — 행 삭제 대신 enabled=false 로 상점/장착 경로만 차단하고,
+     * 이미 장착 중인 그룹은 같은 타입의 default 아이템으로 되돌린다. (구매 이력 행은 보존)
+     */
+    private fun retireRemovedItems() {
+        SeedCatalog.retiredKeys.forEach { key ->
+            val item = shopItemRepository.findByItemKey(key) ?: return@forEach
+            if (!item.enabled) return@forEach
+            item.enabled = false
+            val default = shopItemRepository.findFirstDefaultByItemType(item.itemType)
+            var reverted = 0
+            if (default != null && default.id != item.id) {
+                groupCharacterEquippedRepository.findAllByShopItemId(item.id).forEach { equipped ->
+                    equipped.replaceWith(default)
+                    reverted += 1
+                }
+            }
+            log.info("action=shop_item_retired, itemKey={}, revertedEquips={}", key, reverted)
+        }
+    }
+
     data class ItemDef(
         val itemKey: String,
         val itemType: ShopItemType,
@@ -80,6 +104,9 @@ class ShopItemSeeder(
     )
 
     object SeedCatalog {
+        /** 판매 종료 아이템 — 부팅 시 enabled=false 처리 + 장착 그룹은 default 복귀. */
+        val retiredKeys: Set<String> = setOf("skin_mint", "skin_lavender", "skin_sky")
+
         val all: List<ItemDef> = listOf(
             // ─── SKIN ───────────────────────────────────────────────
             ItemDef(
@@ -106,42 +133,17 @@ class ShopItemSeeder(
                 sortOrder = 20,
                 isDefault = false
             ),
-            // 신규 스킨 — 산뜻한 민트 톤. 배경 squircle 색만 바뀌므로 별도 아트워크 불필요.
+            // 두더지 스킨 — 디그팟 상징 캐릭터. 앱 렌더러(skin/mole 패치)와 assetKey 동기 필수.
             ItemDef(
-                itemKey = "skin_mint",
+                itemKey = "skin_mole",
                 itemType = ShopItemType.SKIN,
-                displayName = "민트 모찌",
-                description = "산뜻한 민트 톤의 모찌",
-                cost = 250,
-                assetKey = "skin/mint",
-                accentColor = "#5AD0B8",
+                displayName = "두더지 모찌",
+                description = "디그팟의 상징! 땅파기 장인 두더지 모찌",
+                cost = 350,
+                assetKey = "skin/mole",
+                accentColor = "#8B6547",
                 layerOrder = 0,
                 sortOrder = 30,
-                isDefault = false
-            ),
-            // 신규 파스텔 스킨 2종 — 기본 배경(풀밭)의 하늘 톤이 스킨색을 따라간다.
-            ItemDef(
-                itemKey = "skin_lavender",
-                itemType = ShopItemType.SKIN,
-                displayName = "라벤더 모찌",
-                description = "은은한 라벤더 톤의 모찌",
-                cost = 250,
-                assetKey = "skin/lavender",
-                accentColor = "#A78BFA",
-                layerOrder = 0,
-                sortOrder = 40,
-                isDefault = false
-            ),
-            ItemDef(
-                itemKey = "skin_sky",
-                itemType = ShopItemType.SKIN,
-                displayName = "하늘 모찌",
-                description = "맑은 하늘색 톤의 모찌",
-                cost = 250,
-                assetKey = "skin/sky",
-                accentColor = "#60A5FA",
-                layerOrder = 0,
-                sortOrder = 50,
                 isDefault = false
             ),
             // 캐릭터 패턴 스킨 4종 — 앱 렌더러(mochi_character_view._skinPatches 등)와

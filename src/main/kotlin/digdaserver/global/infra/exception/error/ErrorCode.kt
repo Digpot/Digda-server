@@ -157,6 +157,14 @@ enum class ErrorCode(
     OMOK_INVALID_MOVE("OMOK_INVALID_MOVE", "그 자리에는 둘 수 없습니다.", 400),
     OMOK_SELF_INVITE("OMOK_SELF_INVITE", "자기 자신은 초대할 수 없습니다.", 400),
 
+    // ── Minigame (캐치마인드/탭배틀 실시간 게임) ──
+    MINIGAME_NOT_FOUND("MINIGAME_NOT_FOUND", "존재하지 않거나 만료된 게임입니다.", 404),
+    MINIGAME_NOT_PARTICIPANT("MINIGAME_NOT_PARTICIPANT", "이 게임의 참가자가 아닙니다.", 403),
+    MINIGAME_INVALID_STATE("MINIGAME_INVALID_STATE", "지금 상태에서는 할 수 없는 요청입니다.", 409),
+    MINIGAME_SELF_INVITE("MINIGAME_SELF_INVITE", "자기 자신은 초대할 수 없습니다.", 400),
+    MINIGAME_NOT_ENOUGH_PLAYERS("MINIGAME_NOT_ENOUGH_PLAYERS", "게임을 시작하려면 참가자가 더 필요합니다.", 400),
+    MINIGAME_NOT_DRAWER("MINIGAME_NOT_DRAWER", "지금은 출제자만 그릴 수 있습니다.", 403),
+
     // ── Admin ──
     ADMIN_NOT_FOUND("ADMIN_NOT_FOUND", "존재하지 않는 관리자 계정입니다.", 404),
     ADMIN_PASSWORD_MISMATCH("ADMIN_PASSWORD_MISMATCH", "비밀번호가 일치하지 않습니다.", 401),

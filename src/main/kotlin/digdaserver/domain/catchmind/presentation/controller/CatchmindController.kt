@@ -44,7 +44,13 @@ class CatchmindController(
             request.inviteeUserIds.size
         )
         return ResponseEntity.ok(
-            catchmindService.createGame(UUID.fromString(userId), groupRoomId, request.inviteeUserIds)
+            catchmindService.createGame(
+                hostId = UUID.fromString(userId),
+                groupRoomId = groupRoomId,
+                inviteeIds = request.inviteeUserIds,
+                roundSeconds = request.roundSeconds,
+                totalRounds = request.totalRounds
+            )
         )
     }
 

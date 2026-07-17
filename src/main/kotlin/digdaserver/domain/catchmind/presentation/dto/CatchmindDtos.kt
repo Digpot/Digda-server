@@ -3,9 +3,14 @@ package digdaserver.domain.catchmind.presentation.dto
 import digdaserver.domain.catchmind.domain.CatchmindGame
 import java.util.UUID
 
-/** 방 생성 요청 — 같은 그룹의 초대 대상 목록(방장 제외, 1명 이상). */
+/**
+ * 방 생성 요청 — 같은 그룹의 초대 대상 목록(방장 제외, 1명 이상)
+ * + 방장이 고르는 게임 설정(서버에서 30~300초 / 1~20라운드로 클램프).
+ */
 data class CreateCatchmindRequest(
-    val inviteeUserIds: List<UUID>
+    val inviteeUserIds: List<UUID>,
+    val roundSeconds: Int = CatchmindGame.DEFAULT_ROUND_SECONDS,
+    val totalRounds: Int = CatchmindGame.DEFAULT_ROUNDS
 )
 
 /** 추리 채팅 (STOMP `/app/catchmind/{gameId}/guess`). */
@@ -60,6 +65,8 @@ data class CatchmindGameResponse(
     val players: List<CatchmindPlayerDto>,
     val roundIndex: Int,
     val totalRounds: Int,
+    /** 방장이 고른 라운드 제한시간(초) — 로비 표시용. */
+    val roundSeconds: Int,
     val drawerUserId: UUID?,
     val word: String?,
     val wordLength: Int?,
@@ -79,7 +86,13 @@ data class CatchmindGameResponse(
             hostName = game.hostName,
             players = game.players.values.map { CatchmindPlayerDto.from(it, game.hostId) },
             roundIndex = game.roundIndex,
-            totalRounds = game.totalRounds,
+            // 시작 전엔 설정값을 보여준다(시작 시 totalRounds 로 확정).
+            totalRounds = if (game.totalRounds > 0) {
+                game.totalRounds
+            } else {
+                game.configuredTotalRounds
+            },
+            roundSeconds = game.roundTime.seconds.toInt(),
             drawerUserId = game.drawerId,
             word = if (forUserId != null && forUserId == game.drawerId) game.word else null,
             wordLength = game.word?.length,

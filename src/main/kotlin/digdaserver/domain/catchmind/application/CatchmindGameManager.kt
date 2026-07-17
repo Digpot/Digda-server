@@ -29,7 +29,9 @@ class CatchmindGameManager {
         groupRoomId: Long,
         hostId: UUID,
         hostName: String,
-        invitees: Map<UUID, String>
+        invitees: Map<UUID, String>,
+        roundSeconds: Int,
+        totalRounds: Int
     ): CatchmindGame {
         val game = CatchmindGame(
             id = idGen.incrementAndGet(),
@@ -37,6 +39,8 @@ class CatchmindGameManager {
             hostId = hostId,
             hostName = hostName,
             invitees = invitees,
+            roundSeconds = roundSeconds,
+            configuredRounds = totalRounds,
             wordPicker = { WORDS[Random.nextInt(WORDS.size)] }
         )
         games[game.id] = game

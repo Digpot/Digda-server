@@ -3,9 +3,9 @@ package digdaserver.domain.minigame.presentation
 import digdaserver.domain.catchmind.application.CatchmindGameManager
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.membership.domain.repository.MembershipRepository
-import digdaserver.domain.molebattle.application.MoleBattleGameManager
 import digdaserver.domain.omok.application.OmokGameManager
 import digdaserver.domain.tapbattle.application.TapBattleGameManager
+import digdaserver.domain.wordchain.application.WordChainGameManager
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
 import io.swagger.v3.oas.annotations.Operation
@@ -31,7 +31,7 @@ class GameInviteController(
     private val omokGameManager: OmokGameManager,
     private val catchmindGameManager: CatchmindGameManager,
     private val tapBattleGameManager: TapBattleGameManager,
-    private val moleBattleGameManager: MoleBattleGameManager,
+    private val wordChainGameManager: WordChainGameManager,
     private val groupRoomRepository: GroupRoomRepository,
     private val membershipRepository: MembershipRepository
 ) {
@@ -101,15 +101,15 @@ class GameInviteController(
                     )
                 )
             }
-            moleBattleGameManager.pendingInvitesFor(uid, groupRoomId).forEach {
+            wordChainGameManager.pendingInvitesFor(uid, groupRoomId).forEach {
                 add(
                     GameInviteItem(
-                        gameType = "MOLE_BATTLE",
+                        gameType = "WORD_CHAIN",
                         gameId = it.id,
                         groupRoomId = it.groupRoomId,
-                        title = it.inviterName,
+                        title = it.hostName,
                         createdAtEpochMs = it.createdAt.toEpochMilli(),
-                        playerCount = 2
+                        playerCount = it.joinedPlayers().size
                     )
                 )
             }
@@ -152,15 +152,15 @@ class GameInviteController(
                     )
                 )
             }
-            moleBattleGameManager.activeGamesFor(uid, groupRoomId).forEach {
+            wordChainGameManager.activeGamesFor(uid, groupRoomId).forEach {
                 add(
                     GameInviteItem(
-                        gameType = "MOLE_BATTLE",
+                        gameType = "WORD_CHAIN",
                         gameId = it.id,
                         groupRoomId = it.groupRoomId,
-                        title = if (it.inviterId == uid) it.inviteeName else it.inviterName,
+                        title = it.hostName,
                         createdAtEpochMs = it.createdAt.toEpochMilli(),
-                        playerCount = 2
+                        playerCount = it.joinedPlayers().size
                     )
                 )
             }

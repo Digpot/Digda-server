@@ -1,5 +1,6 @@
 package digdaserver.domain.minigame.presentation
 
+import digdaserver.domain.alkkagi.application.AlkkagiGameManager
 import digdaserver.domain.catchmind.application.CatchmindGameManager
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.membership.domain.repository.MembershipRepository
@@ -32,6 +33,7 @@ class GameInviteController(
     private val catchmindGameManager: CatchmindGameManager,
     private val tapBattleGameManager: TapBattleGameManager,
     private val wordChainGameManager: WordChainGameManager,
+    private val alkkagiGameManager: AlkkagiGameManager,
     private val groupRoomRepository: GroupRoomRepository,
     private val membershipRepository: MembershipRepository
 ) {
@@ -113,6 +115,18 @@ class GameInviteController(
                     )
                 )
             }
+            alkkagiGameManager.pendingInvitesFor(uid, groupRoomId).forEach {
+                add(
+                    GameInviteItem(
+                        gameType = "ALKKAGI",
+                        gameId = it.id,
+                        groupRoomId = it.groupRoomId,
+                        title = it.inviterName,
+                        createdAtEpochMs = it.createdAt.toEpochMilli(),
+                        playerCount = 2
+                    )
+                )
+            }
         }.sortedByDescending { it.createdAtEpochMs }
 
         val active = buildList {
@@ -161,6 +175,18 @@ class GameInviteController(
                         title = it.hostName,
                         createdAtEpochMs = it.createdAt.toEpochMilli(),
                         playerCount = it.joinedPlayers().size
+                    )
+                )
+            }
+            alkkagiGameManager.activeGamesFor(uid, groupRoomId).forEach {
+                add(
+                    GameInviteItem(
+                        gameType = "ALKKAGI",
+                        gameId = it.id,
+                        groupRoomId = it.groupRoomId,
+                        title = if (it.inviterId == uid) it.inviteeName else it.inviterName,
+                        createdAtEpochMs = it.createdAt.toEpochMilli(),
+                        playerCount = 2
                     )
                 )
             }

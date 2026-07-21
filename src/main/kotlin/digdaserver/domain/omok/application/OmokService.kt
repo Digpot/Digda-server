@@ -123,6 +123,23 @@ class OmokService(
         broadcast(game, OmokEvent.Type.FINISHED)
     }
 
+    // ── 턴 제한시간 (30초 + 통신 지연 그레이스) ──────────────────
+
+    /**
+     * 30초 안에 두지 않은 턴을 상대에게 넘기고 TIMEOUT 을 브로드캐스트한다.
+     * 그레이스 2초 — 마감 직전에 보낸 착수가 네트워크 지연으로 밀려 억울하게
+     * 타임아웃되지 않게 클라이언트 표시(30초)보다 살짝 늦게 판정한다.
+     */
+    @Scheduled(fixedDelay = 3_000, initialDelay = 10_000)
+    fun enforceTurnLimit() {
+        gameManager.allActive().forEach { game ->
+            if (game.timeoutTurnIfExpired(TURN_LIMIT_WITH_GRACE)) {
+                log.info("action=omok_turn_timeout, gameId={}", game.id)
+                broadcast(game, OmokEvent.Type.TIMEOUT)
+            }
+        }
+    }
+
     // ── 만료 정리 ───────────────────────────────────────────────
 
     @Scheduled(fixedDelay = 60_000, initialDelay = 60_000)
@@ -165,5 +182,7 @@ class OmokService(
         private val WAITING_TTL: Duration = Duration.ofMinutes(10)
         private val ACTIVE_TTL: Duration = Duration.ofMinutes(60)
         private val FINISHED_RETENTION: Duration = Duration.ofMinutes(30)
+        private val TURN_LIMIT_WITH_GRACE: Duration =
+            Duration.ofSeconds(OmokGame.TURN_LIMIT_SECONDS + 2)
     }
 }

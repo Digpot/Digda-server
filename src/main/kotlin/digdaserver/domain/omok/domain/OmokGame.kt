@@ -27,6 +27,9 @@ class OmokGame(
         const val BOARD_SIZE = 15
         const val BLACK = 1
         const val WHITE = 2
+
+        /** 한 수 제한시간(초) — 초과 시 서버가 턴을 상대에게 넘긴다. */
+        const val TURN_LIMIT_SECONDS = 30L
     }
 
     enum class Status { WAITING, ACTIVE, FINISHED, DECLINED, CANCELED, EXPIRED }
@@ -57,6 +60,10 @@ class OmokGame(
     var lastActivityAt: Instant = Instant.now()
         private set
 
+    /** 현재 턴이 시작된 시각 — 30초 제한시간 판정 기준. */
+    var turnStartedAt: Instant = Instant.now()
+        private set
+
     private var stoneCount = 0
 
     fun isParticipant(userId: UUID): Boolean = userId == inviterId || userId == inviteeId
@@ -70,6 +77,7 @@ class OmokGame(
         if (userId != inviteeId) throw DigdaException(ErrorCode.OMOK_NOT_PARTICIPANT)
         if (status != Status.WAITING) throw DigdaException(ErrorCode.OMOK_INVALID_STATE)
         status = Status.ACTIVE
+        turnStartedAt = Instant.now()
         touch()
     }
 
@@ -122,7 +130,22 @@ class OmokGame(
             return MoveOutcome(stone = stone, finished = true)
         }
         currentTurnId = opponentOf(userId)
+        turnStartedAt = Instant.now()
         return MoveOutcome(stone = stone, finished = false)
+    }
+
+    /**
+     * 현재 턴이 [limit] 을 초과했으면 턴을 상대에게 넘긴다(시간 초과 판정).
+     * 방치된 대국이 lastActivityAt 를 갱신해 만료(60분)를 피하지 못하도록
+     * touch() 는 하지 않는다. 넘겼으면 true.
+     */
+    @Synchronized
+    fun timeoutTurnIfExpired(limit: java.time.Duration): Boolean {
+        if (status != Status.ACTIVE) return false
+        if (java.time.Duration.between(turnStartedAt, Instant.now()) <= limit) return false
+        currentTurnId = opponentOf(currentTurnId)
+        turnStartedAt = Instant.now()
+        return true
     }
 
     /** [userId] 기권 — 상대 승리로 즉시 종료. */

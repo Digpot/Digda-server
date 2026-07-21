@@ -29,6 +29,8 @@ data class OmokGameResponse(
     /** 15×15, 0=빈칸 / 1=흑(초대자) / 2=백(수락자). board[y][x]. */
     val board: List<List<Int>>,
     val currentTurnUserId: UUID?,
+    /** 현재 턴 마감 시각(epoch ms) — 30초 제한. ACTIVE 가 아니면 null. */
+    val turnDeadlineEpochMs: Long?,
     val winnerUserId: UUID?,
     val finishReason: OmokGame.FinishReason?,
     val winningLine: List<List<Int>>
@@ -45,6 +47,12 @@ data class OmokGameResponse(
             board = game.board.map { it.toList() },
             currentTurnUserId =
             if (game.status == OmokGame.Status.ACTIVE) game.currentTurnId else null,
+            turnDeadlineEpochMs =
+            if (game.status == OmokGame.Status.ACTIVE) {
+                game.turnStartedAt.plusSeconds(OmokGame.TURN_LIMIT_SECONDS).toEpochMilli()
+            } else {
+                null
+            },
             winnerUserId = game.winnerId,
             finishReason = game.finishReason,
             winningLine = game.winningLine
@@ -62,5 +70,5 @@ data class OmokEvent(
     /** MOVE 이벤트의 마지막 착수 — [x, y, stone]. 그 외 null. */
     val lastMove: List<Int>? = null
 ) {
-    enum class Type { ACCEPTED, DECLINED, CANCELED, MOVE, FINISHED, EXPIRED }
+    enum class Type { ACCEPTED, DECLINED, CANCELED, MOVE, TIMEOUT, FINISHED, EXPIRED }
 }

@@ -25,7 +25,8 @@ class AlkkagiGame(
     val inviterName: String,
     val inviteeId: UUID,
     val inviteeName: String,
-    stoneCountRequested: Int
+    stoneCountRequested: Int,
+    val inviterFormation: Formation
 ) {
     companion object {
         const val MIN_STONES = 1
@@ -33,8 +34,28 @@ class AlkkagiGame(
         const val INVITER = 1
         const val INVITEE = 2
 
+        /**
+         * 보드 세로 길이 — 가로(=1) 기준 비율. 세로로 긴 직사각 판이라 좌표는
+         * x ∈ [0,1], y ∈ [0, BOARD_HEIGHT]. 클라이언트 렌더/낙사 판정과 공유 상수.
+         */
+        const val BOARD_HEIGHT = 1.35
+
         /** 한 수 제한시간(초) — 초과 시 서버가 턴을 상대에게 넘긴다. */
         const val TURN_LIMIT_SECONDS = 30L
+    }
+
+    /** 시작 대형 — 초대자·수락자가 각자 자기 진영 대형을 고른다. */
+    enum class Formation {
+        LINE, // 일렬 횡대(앞줄 5 + 뒷줄)
+        DOUBLE, // 이열 종대
+        WEDGE, // 쐐기(V자)
+        DIAMOND, // 다이아몬드(원형)
+        SIDES; // 양 날개
+
+        companion object {
+            fun of(raw: String?): Formation =
+                entries.firstOrNull { it.name == raw?.uppercase() } ?: LINE
+        }
     }
 
     enum class Status { WAITING, ACTIVE, FINISHED, DECLINED, CANCELED, EXPIRED }
@@ -59,7 +80,13 @@ class AlkkagiGame(
     var status: Status = Status.WAITING
         private set
 
-    val stones: MutableList<Stone> = buildInitialStones(stoneCount)
+    var inviteeFormation: Formation = Formation.LINE
+        private set
+
+    /** 초대자 돌은 생성 시, 수락자 돌은 수락 시(대형 선택 후) 배치된다. */
+    val stones: MutableList<Stone> =
+        buildFormation(INVITER, inviterFormation, stoneCount, startId = 0)
+            .toMutableList()
 
     var currentTurnId: UUID = inviterId
         private set
@@ -86,9 +113,13 @@ class AlkkagiGame(
     fun opponentOf(userId: UUID): UUID = if (userId == inviterId) inviteeId else inviterId
 
     @Synchronized
-    fun accept(userId: UUID) {
+    fun accept(userId: UUID, formation: Formation) {
         if (userId != inviteeId) throw DigdaException(ErrorCode.MINIGAME_NOT_PARTICIPANT)
         if (status != Status.WAITING) throw DigdaException(ErrorCode.MINIGAME_INVALID_STATE)
+        inviteeFormation = formation
+        stones.addAll(
+            buildFormation(INVITEE, formation, stoneCount, startId = stones.size)
+        )
         status = Status.ACTIVE
         turnStartedAt = Instant.now()
         touch()
@@ -132,7 +163,7 @@ class AlkkagiGame(
         stones.forEach { stone ->
             val u = byId[stone.id] ?: return@forEach
             stone.x = u.x.coerceIn(-0.5, 1.5)
-            stone.y = u.y.coerceIn(-0.5, 1.5)
+            stone.y = u.y.coerceIn(-0.5, BOARD_HEIGHT + 0.5)
             // 죽은 돌은 되살릴 수 없다 — 그 외에는 클라 시뮬 결과를 신뢰.
             if (stone.alive) stone.alive = u.alive
         }
@@ -196,27 +227,83 @@ class AlkkagiGame(
         lastActivityAt = Instant.now()
     }
 
-    private fun buildInitialStones(count: Int): MutableList<Stone> {
-        val stones = mutableListOf<Stone>()
-        var nextId = 0
+    /**
+     * [owner] 진영에 [formation] 대형으로 [count]개 돌을 배치한다.
+     *
+     * 대형은 (x ∈ [0,1], depth ∈ [0,1]) 로컬 좌표로 정의한다 — depth 0 이 중앙(상대)
+     * 쪽 앞줄, 1 이 내 진영 끝. 초대자는 보드 아래쪽 대역, 수락자는 위쪽 대역에
+     * 대칭으로 투영된다.
+     */
+    private fun buildFormation(
+        owner: Int,
+        formation: Formation,
+        count: Int,
+        startId: Int
+    ): List<Stone> {
+        val local = formationPoints(formation, count)
+        // 진영 대역: 앞줄(중앙 쪽) BOARD_HEIGHT*0.60 ~ 뒤 BOARD_HEIGHT*0.93.
+        val frontY = BOARD_HEIGHT * 0.60
+        val backY = BOARD_HEIGHT * 0.93
+        return local.mapIndexed { i, (x, depth) ->
+            val y = frontY + (backY - frontY) * depth
+            if (owner == INVITER) {
+                Stone(id = startId + i, owner = owner, x = x, y = y)
+            } else {
+                // 수락자는 점대칭(180도) — 보드 위쪽 대역.
+                Stone(id = startId + i, owner = owner, x = 1 - x, y = BOARD_HEIGHT - y)
+            }
+        }
+    }
 
-        // 한 줄 최대 5개 — 6개 이상이면 두 번째 줄을 판 가장자리 쪽에 깐다.
-        fun layRows(owner: Int, frontY: Double, backY: Double) {
+    /** 대형별 로컬 배치 좌표 (x, depth). 돌 반지름(0.045) 두 배 이상 간격 유지. */
+    private fun formationPoints(
+        formation: Formation,
+        count: Int
+    ): List<Pair<Double, Double>> = when (formation) {
+        Formation.LINE -> buildList {
             val front = minOf(count, 5)
             val back = count - front
             fun rowXs(k: Int): List<Double> =
-                (0 until k).map { 0.5 + (it - (k - 1) / 2.0) * 0.13 }
-            rowXs(front).forEach { x ->
-                stones.add(Stone(id = nextId++, owner = owner, x = x, y = frontY))
+                (0 until k).map { 0.5 + (it - (k - 1) / 2.0) * 0.14 }
+            rowXs(front).forEach { add(it to 0.25) }
+            rowXs(back).forEach { add(it to 0.75) }
+        }
+        Formation.DOUBLE -> buildList {
+            val leftCol = (count + 1) / 2
+            val rightCol = count - leftCol
+            fun colDepths(k: Int): List<Double> =
+                (0 until k).map { if (k == 1) 0.5 else it / (k - 1.0) }
+            colDepths(leftCol).forEach { add(0.36 to it) }
+            colDepths(rightCol).forEach { add(0.64 to it) }
+        }
+        Formation.WEDGE -> buildList {
+            add(0.5 to 0.0)
+            var k = 1
+            while (size < count && k <= 4) {
+                add((0.5 - 0.1 * k) to 0.22 * k)
+                if (size < count) add((0.5 + 0.1 * k) to 0.22 * k)
+                k += 1
             }
-            if (back > 0) {
-                rowXs(back).forEach { x ->
-                    stones.add(Stone(id = nextId++, owner = owner, x = x, y = backY))
+            // 10개째 — V자 안쪽 중앙에 배치.
+            if (size < count) add(0.5 to 0.55)
+        }
+        Formation.DIAMOND -> buildList {
+            if (count == 1) {
+                add(0.5 to 0.5)
+            } else {
+                for (i in 0 until count) {
+                    val a = 2 * Math.PI * i / count - Math.PI / 2
+                    add((0.5 + 0.24 * Math.cos(a)) to (0.5 + 0.46 * Math.sin(a)))
                 }
             }
         }
-        layRows(INVITER, frontY = 0.82, backY = 0.92)
-        layRows(INVITEE, frontY = 0.18, backY = 0.08)
-        return stones
+        Formation.SIDES -> buildList {
+            val leftCol = (count + 1) / 2
+            val rightCol = count - leftCol
+            fun colDepths(k: Int): List<Double> =
+                (0 until k).map { if (k == 1) 0.5 else it / (k - 1.0) }
+            colDepths(leftCol).forEach { add(0.14 to it) }
+            colDepths(rightCol).forEach { add(0.86 to it) }
+        }
     }
 }

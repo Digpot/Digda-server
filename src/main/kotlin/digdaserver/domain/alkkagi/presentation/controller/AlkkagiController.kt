@@ -1,6 +1,8 @@
 package digdaserver.domain.alkkagi.presentation.controller
 
 import digdaserver.domain.alkkagi.application.AlkkagiService
+import digdaserver.domain.alkkagi.domain.AlkkagiGame
+import digdaserver.domain.alkkagi.presentation.dto.AcceptAlkkagiGameRequest
 import digdaserver.domain.alkkagi.presentation.dto.AlkkagiGameResponse
 import digdaserver.domain.alkkagi.presentation.dto.CreateAlkkagiGameRequest
 import io.swagger.v3.oas.annotations.Operation
@@ -53,7 +55,8 @@ class AlkkagiController(
                 inviterId = UUID.fromString(userId),
                 groupRoomId = groupRoomId,
                 inviteeId = request.inviteeUserId,
-                stoneCount = request.stoneCount
+                stoneCount = request.stoneCount,
+                formation = AlkkagiGame.Formation.of(request.formation)
             )
         )
     }
@@ -68,14 +71,29 @@ class AlkkagiController(
         return ResponseEntity.ok(alkkagiService.getGame(UUID.fromString(userId), gameId))
     }
 
-    @Operation(summary = "초대 수락", description = "대국이 시작되고 양쪽에 ACCEPTED 이벤트가 브로드캐스트됩니다.")
+    @Operation(
+        summary = "초대 수락",
+        description = "수락자 대형을 함께 보내면 그 대형으로 배치됩니다. 대국이 시작되고 양쪽에 ACCEPTED 이벤트가 브로드캐스트됩니다."
+    )
     @PostMapping("/games/{gameId}/accept")
     fun accept(
         @AuthenticationPrincipal userId: String,
-        @PathVariable gameId: Long
+        @PathVariable gameId: Long,
+        @RequestBody(required = false) request: AcceptAlkkagiGameRequest?
     ): ResponseEntity<AlkkagiGameResponse> {
-        log.info("api=POST /alkkagi/games/{}/accept, userId={}", gameId, userId)
-        return ResponseEntity.ok(alkkagiService.accept(UUID.fromString(userId), gameId))
+        log.info(
+            "api=POST /alkkagi/games/{}/accept, userId={}, formation={}",
+            gameId,
+            userId,
+            request?.formation
+        )
+        return ResponseEntity.ok(
+            alkkagiService.accept(
+                userId = UUID.fromString(userId),
+                gameId = gameId,
+                formation = AlkkagiGame.Formation.of(request?.formation)
+            )
+        )
     }
 
     @Operation(summary = "초대 거절")

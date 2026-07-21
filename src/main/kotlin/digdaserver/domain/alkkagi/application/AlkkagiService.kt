@@ -49,7 +49,8 @@ class AlkkagiService(
         inviterId: UUID,
         groupRoomId: Long,
         inviteeId: UUID,
-        stoneCount: Int
+        stoneCount: Int,
+        formation: AlkkagiGame.Formation
     ): AlkkagiGameResponse {
         if (inviterId == inviteeId) throw DigdaException(ErrorCode.MINIGAME_SELF_INVITE)
         validateGroupMember(groupRoomId, inviterId)
@@ -66,7 +67,8 @@ class AlkkagiService(
             inviterName = inviter.displayedName(),
             inviteeId = inviteeId,
             inviteeName = invitee.displayedName(),
-            stoneCount = stoneCount
+            stoneCount = stoneCount,
+            inviterFormation = formation
         )
         notificationService.notifyMinigameInvite(
             groupRoomId = groupRoomId,
@@ -87,10 +89,19 @@ class AlkkagiService(
         return AlkkagiGameResponse.from(game)
     }
 
-    fun accept(userId: UUID, gameId: Long): AlkkagiGameResponse {
+    fun accept(
+        userId: UUID,
+        gameId: Long,
+        formation: AlkkagiGame.Formation
+    ): AlkkagiGameResponse {
         val game = gameManager.get(gameId)
-        game.accept(userId)
-        log.info("action=alkkagi_accept, gameId={}, userId={}", gameId, userId)
+        game.accept(userId, formation)
+        log.info(
+            "action=alkkagi_accept, gameId={}, userId={}, formation={}",
+            gameId,
+            userId,
+            formation
+        )
         return broadcast(game, AlkkagiEvent.Type.ACCEPTED)
     }
 

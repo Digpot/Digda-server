@@ -3,10 +3,19 @@ package digdaserver.domain.alkkagi.presentation.dto
 import digdaserver.domain.alkkagi.domain.AlkkagiGame
 import java.util.UUID
 
-/** 알까기 초대 생성 요청 — 같은 그룹의 상대 1명 + 돌 개수(1~10, 초대자가 설정). */
+/**
+ * 알까기 초대 생성 요청 — 같은 그룹의 상대 1명 + 돌 개수(1~10) + 내 시작 대형.
+ * [formation] 은 LINE/DOUBLE/WEDGE/DIAMOND/SIDES 중 하나(기본 LINE).
+ */
 data class CreateAlkkagiGameRequest(
     val inviteeUserId: UUID,
-    val stoneCount: Int = 5
+    val stoneCount: Int = 5,
+    val formation: String? = null
+)
+
+/** 초대 수락 요청 — 수락자 자신의 시작 대형(기본 LINE). */
+data class AcceptAlkkagiGameRequest(
+    val formation: String? = null
 )
 
 /** 돌 스냅샷/업데이트 공용 표현 — 좌표는 0..1 정규화. */
@@ -55,6 +64,8 @@ data class AlkkagiGameResponse(
     val inviteeName: String,
     /** 한 쪽당 돌 개수(1~10) — 초대자가 설정. */
     val stoneCount: Int,
+    /** 보드 세로 길이(가로=1 기준) — 클라 렌더/낙사 판정 공유 상수. */
+    val boardHeight: Double,
     val stones: List<AlkkagiStoneDto>,
     val currentTurnUserId: UUID?,
     /** 현재 턴 마감 시각(epoch ms) — 30초 제한. ACTIVE 가 아니면 null. */
@@ -72,6 +83,7 @@ data class AlkkagiGameResponse(
             inviteeUserId = game.inviteeId,
             inviteeName = game.inviteeName,
             stoneCount = game.stoneCount,
+            boardHeight = AlkkagiGame.BOARD_HEIGHT,
             stones = game.stones.map { AlkkagiStoneDto.from(it) },
             currentTurnUserId =
             if (game.status == AlkkagiGame.Status.ACTIVE) game.currentTurnId else null,

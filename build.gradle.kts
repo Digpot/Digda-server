@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "digdaserver"
-version = "0.0.1-SNAPSHOT"
+version = "2.1.0"
 
 java {
     toolchain {

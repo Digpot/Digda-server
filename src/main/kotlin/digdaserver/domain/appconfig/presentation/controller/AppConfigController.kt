@@ -5,7 +5,6 @@ import digdaserver.domain.appconfig.presentation.dto.res.AppConfigResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.ResponseEntity
-import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
@@ -18,9 +17,8 @@ class AppConfigController(
     private val appConfigService: AppConfigService
 ) {
 
-    @Operation(summary = "앱 운영 설정 조회", description = "대공지 노출/메시지 + 피드백 노출/URL")
+    // 점검 모드 게이트가 로그인 전에도 조회해야 해서 인증 없이 열려 있다(SecurityConfig permitAll).
+    @Operation(summary = "앱 운영 설정 조회", description = "대공지 노출/메시지 + 피드백 노출/URL + 점검 모드")
     @GetMapping
-    fun get(
-        @AuthenticationPrincipal userId: String
-    ): ResponseEntity<AppConfigResponse> = ResponseEntity.ok(appConfigService.get())
+    fun get(): ResponseEntity<AppConfigResponse> = ResponseEntity.ok(appConfigService.get())
 }

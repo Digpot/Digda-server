@@ -95,6 +95,8 @@ class SecurityConfig(
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/favicon.ico", "/api/region").permitAll()
+                // 점검 모드 게이트 — 로그인 전에도 앱이 운영 설정을 읽어야 한다(GET 전용 컨트롤러)
+                .requestMatchers("/app-config").permitAll()
                 .requestMatchers("/api/app/reissue", "/api/web/reissue").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/api/app/public/**", "/api/web/public/**", "/api/test/oauth2/login/**").permitAll()

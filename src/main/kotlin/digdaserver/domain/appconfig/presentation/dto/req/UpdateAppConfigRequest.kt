@@ -11,5 +11,8 @@ data class UpdateAppConfigRequest(
     // 강제 업데이트 게이트 — null 이면 기존 값 유지(구버전 어드민 호환).
     val minAppVersion: String? = null,
     val storeUrlAndroid: String? = null,
-    val storeUrlIos: String? = null
+    val storeUrlIos: String? = null,
+    // 서버 점검 모드 — null 이면 기존 값 유지(구버전 어드민 호환).
+    val maintenanceEnabled: Boolean? = null,
+    val maintenanceMessage: String? = null
 )

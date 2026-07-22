@@ -29,7 +29,8 @@ class AlkkagiGameManager {
         inviterName: String,
         inviteeId: UUID,
         inviteeName: String,
-        stoneCount: Int
+        stoneCount: Int,
+        inviterFormation: AlkkagiGame.Formation
     ): AlkkagiGame {
         val game = AlkkagiGame(
             id = idGen.incrementAndGet(),
@@ -38,16 +39,18 @@ class AlkkagiGameManager {
             inviterName = inviterName,
             inviteeId = inviteeId,
             inviteeName = inviteeName,
-            stoneCountRequested = stoneCount
+            stoneCountRequested = stoneCount,
+            inviterFormation = inviterFormation
         )
         games[game.id] = game
         log.info(
-            "action=alkkagi_game_created, gameId={}, groupRoomId={}, inviterId={}, inviteeId={}, stoneCount={}",
+            "action=alkkagi_game_created, gameId={}, groupRoomId={}, inviterId={}, inviteeId={}, stoneCount={}, formation={}",
             game.id,
             groupRoomId,
             inviterId,
             inviteeId,
-            game.stoneCount
+            game.stoneCount,
+            inviterFormation
         )
         return game
     }

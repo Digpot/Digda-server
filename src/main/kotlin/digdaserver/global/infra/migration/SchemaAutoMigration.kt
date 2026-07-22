@@ -173,6 +173,17 @@ class SchemaAutoMigration(
             table = "app_config",
             column = "store_url_ios",
             addSql = "ALTER TABLE app_config ADD COLUMN store_url_ios VARCHAR(500) NOT NULL DEFAULT ''"
+        ),
+        // 서버 점검 모드 — 켜면 앱이 로그인 여부와 무관하게 전 기능을 차단. 기본 꺼짐이라 backfill 불필요.
+        MissingColumn(
+            table = "app_config",
+            column = "maintenance_enabled",
+            addSql = "ALTER TABLE app_config ADD COLUMN maintenance_enabled BIT(1) NOT NULL DEFAULT b'0'"
+        ),
+        MissingColumn(
+            table = "app_config",
+            column = "maintenance_message",
+            addSql = "ALTER TABLE app_config ADD COLUMN maintenance_message VARCHAR(300) NOT NULL DEFAULT ''"
         )
     )
 

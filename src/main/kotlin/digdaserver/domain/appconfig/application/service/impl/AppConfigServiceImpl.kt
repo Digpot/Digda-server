@@ -29,7 +29,9 @@ class AppConfigServiceImpl(
             feedbackUrl = request.feedbackUrl.trim(),
             minAppVersion = request.minAppVersion?.trim(),
             storeUrlAndroid = request.storeUrlAndroid?.trim(),
-            storeUrlIos = request.storeUrlIos?.trim()
+            storeUrlIos = request.storeUrlIos?.trim(),
+            maintenanceEnabled = request.maintenanceEnabled,
+            maintenanceMessage = request.maintenanceMessage?.trim()
         )
         return AppConfigResponse.from(appConfigRepository.save(config))
     }

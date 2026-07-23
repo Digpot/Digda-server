@@ -47,7 +47,15 @@ class AppConfig(
 
     /** iOS App Store URL. 빈 값이면 앱이 안내 문구만 노출. */
     @Column(name = "store_url_ios", nullable = false, length = 500)
-    var storeUrlIos: String = ""
+    var storeUrlIos: String = "",
+
+    /** 서버 점검(업데이트) 모드 — 켜면 앱이 로그인 여부와 무관하게 전 기능을 차단한다. */
+    @Column(name = "maintenance_enabled", nullable = false)
+    var maintenanceEnabled: Boolean = false,
+
+    /** 점검 안내 문구. 빈 값이면 앱이 기본 문구를 노출. */
+    @Column(name = "maintenance_message", nullable = false, length = 300)
+    var maintenanceMessage: String = ""
 
 ) : BaseTimeEntity() {
 
@@ -62,7 +70,9 @@ class AppConfig(
         feedbackUrl: String,
         minAppVersion: String? = null,
         storeUrlAndroid: String? = null,
-        storeUrlIos: String? = null
+        storeUrlIos: String? = null,
+        maintenanceEnabled: Boolean? = null,
+        maintenanceMessage: String? = null
     ) {
         this.noticeEnabled = noticeEnabled
         this.noticeMessage = noticeMessage
@@ -71,5 +81,7 @@ class AppConfig(
         minAppVersion?.let { this.minAppVersion = it }
         storeUrlAndroid?.let { this.storeUrlAndroid = it }
         storeUrlIos?.let { this.storeUrlIos = it }
+        maintenanceEnabled?.let { this.maintenanceEnabled = it }
+        maintenanceMessage?.let { this.maintenanceMessage = it }
     }
 }

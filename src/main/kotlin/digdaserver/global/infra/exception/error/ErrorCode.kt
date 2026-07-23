@@ -69,6 +69,8 @@ enum class ErrorCode(
     END_DATE_BEFORE_START("END_DATE_BEFORE_START", "종료일이 시작일보다 이전입니다.", 400),
     END_TIME_BEFORE_START("END_TIME_BEFORE_START", "종료 시간이 시작 시간보다 이전입니다.", 400),
     INVALID_PARTICIPANT("INVALID_PARTICIPANT", "참여자가 그룹 구성원이 아닙니다.", 400),
+    SCHEDULE_COPY_DATES_EMPTY("SCHEDULE_COPY_DATES_EMPTY", "복사할 날짜를 1개 이상 선택해 주세요.", 400),
+    SCHEDULE_COPY_LIMIT_EXCEEDED("SCHEDULE_COPY_LIMIT_EXCEEDED", "일정 복사는 한 번에 최대 31개 날짜까지 가능합니다.", 400),
 
     // ── Diary ──
     DIARY_NOT_FOUND("DIARY_NOT_FOUND", "존재하지 않는 일기입니다.", 404),
@@ -147,6 +149,21 @@ enum class ErrorCode(
 
     // ── Rate Limit ──
     RATE_LIMIT_EXCEEDED("RATE_LIMIT_EXCEEDED", "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.", 429),
+
+    // ── Omok (오목 실시간 대전) ──
+    OMOK_GAME_NOT_FOUND("OMOK_GAME_NOT_FOUND", "존재하지 않거나 만료된 오목 대국입니다.", 404),
+    OMOK_NOT_PARTICIPANT("OMOK_NOT_PARTICIPANT", "이 오목 대국의 참가자가 아닙니다.", 403),
+    OMOK_INVALID_STATE("OMOK_INVALID_STATE", "지금 상태에서는 할 수 없는 요청입니다.", 409),
+    OMOK_INVALID_MOVE("OMOK_INVALID_MOVE", "그 자리에는 둘 수 없습니다.", 400),
+    OMOK_SELF_INVITE("OMOK_SELF_INVITE", "자기 자신은 초대할 수 없습니다.", 400),
+
+    // ── Minigame (캐치마인드/탭배틀 실시간 게임) ──
+    MINIGAME_NOT_FOUND("MINIGAME_NOT_FOUND", "존재하지 않거나 만료된 게임입니다.", 404),
+    MINIGAME_NOT_PARTICIPANT("MINIGAME_NOT_PARTICIPANT", "이 게임의 참가자가 아닙니다.", 403),
+    MINIGAME_INVALID_STATE("MINIGAME_INVALID_STATE", "지금 상태에서는 할 수 없는 요청입니다.", 409),
+    MINIGAME_SELF_INVITE("MINIGAME_SELF_INVITE", "자기 자신은 초대할 수 없습니다.", 400),
+    MINIGAME_NOT_ENOUGH_PLAYERS("MINIGAME_NOT_ENOUGH_PLAYERS", "게임을 시작하려면 참가자가 더 필요합니다.", 400),
+    MINIGAME_NOT_DRAWER("MINIGAME_NOT_DRAWER", "지금은 출제자만 그릴 수 있습니다.", 403),
 
     // ── Admin ──
     ADMIN_NOT_FOUND("ADMIN_NOT_FOUND", "존재하지 않는 관리자 계정입니다.", 404),

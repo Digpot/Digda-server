@@ -35,8 +35,9 @@ class Notification(
     @JoinColumn(name = "user_id", nullable = false)
     val user: User,
 
+    // MySQL 네이티브 ENUM 생성을 막고 VARCHAR 로 고정 — SchemaAutoMigration 의 prod 정정과 일치.
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(64)")
     val type: NotificationType,
 
     @Column(nullable = false)

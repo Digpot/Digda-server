@@ -45,8 +45,9 @@ class GroupCharacterEquipped(
     @JoinColumn(name = "group_room_id", nullable = false)
     val groupRoom: GroupRoom,
 
+    // MySQL 네이티브 ENUM 생성을 막고 VARCHAR 로 고정 — enum 값 추가 시 마이그레이션 불필요.
     @Enumerated(EnumType.STRING)
-    @Column(name = "item_type", nullable = false, length = 32)
+    @Column(name = "item_type", nullable = false, columnDefinition = "varchar(32)")
     val itemType: ShopItemType,
 
     @ManyToOne(fetch = FetchType.LAZY)

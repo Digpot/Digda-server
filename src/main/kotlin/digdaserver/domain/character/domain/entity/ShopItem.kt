@@ -38,8 +38,9 @@ class ShopItem(
     @Column(name = "item_key", nullable = false, length = 64)
     val itemKey: String,
 
+    // MySQL 네이티브 ENUM 생성을 막고 VARCHAR 로 고정 — enum 값 추가 시 마이그레이션 불필요.
     @Enumerated(EnumType.STRING)
-    @Column(name = "item_type", nullable = false, length = 32)
+    @Column(name = "item_type", nullable = false, columnDefinition = "varchar(32)")
     val itemType: ShopItemType,
 
     @Column(name = "display_name", nullable = false, length = 64)

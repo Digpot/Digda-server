@@ -12,6 +12,7 @@ import digdaserver.domain.schedule.application.service.ScheduleService
 import digdaserver.domain.schedule.domain.entity.Schedule
 import digdaserver.domain.schedule.domain.entity.ScheduleParticipant
 import digdaserver.domain.schedule.domain.repository.ScheduleRepository
+import digdaserver.domain.schedule.presentation.dto.req.CopyScheduleRequest
 import digdaserver.domain.schedule.presentation.dto.req.CreateScheduleRequest
 import digdaserver.domain.schedule.presentation.dto.req.UpdateScheduleRequest
 import digdaserver.domain.schedule.presentation.dto.res.CommentResponse
@@ -21,9 +22,11 @@ import digdaserver.domain.schedule.presentation.dto.res.ScheduleResponse
 import digdaserver.domain.user.domain.repository.UserRepository
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 @Service
@@ -38,6 +41,13 @@ class ScheduleServiceImpl(
     private val userActionLogService: UserActionLogService,
     private val contentVisibilityService: ContentVisibilityService
 ) : ScheduleService {
+
+    private val log = LoggerFactory.getLogger(javaClass)
+
+    companion object {
+        // 한 번의 복사 요청으로 만들 수 있는 최대 날짜 수 (한 달치).
+        const val MAX_COPY_DATES = 31
+    }
 
     override fun getSchedules(userId: UUID, groupRoomId: Long, startDate: LocalDate, endDate: LocalDate): ScheduleListResponse {
         val groupRoom = groupRoomRepository.findById(groupRoomId)
@@ -161,6 +171,77 @@ class ScheduleServiceImpl(
         )
 
         return ScheduleResponse.from(schedule, 0)
+    }
+
+    @Transactional
+    override fun copySchedule(userId: UUID, groupRoomId: Long, scheduleId: Long, request: CopyScheduleRequest): ScheduleListResponse {
+        log.info("copySchedule: userId={}, groupRoomId={}, scheduleId={}, dates={}", userId, groupRoomId, scheduleId, request.dates.size)
+
+        val groupRoom = groupRoomRepository.findById(groupRoomId)
+            .orElseThrow { DigdaException(ErrorCode.GROUP_ROOM_NOT_FOUND) }
+
+        if (groupRoom.deletedAt != null) throw DigdaException(ErrorCode.GROUP_ROOM_ALREADY_DELETED)
+
+        membershipRepository.findByGroupRoomIdAndUserId(groupRoomId, userId)
+            .orElseThrow { DigdaException(ErrorCode.NOT_GROUP_ROOM_MEMBER) }
+
+        val dates = request.dates.distinct()
+        if (dates.isEmpty()) throw DigdaException(ErrorCode.SCHEDULE_COPY_DATES_EMPTY)
+        if (dates.size > MAX_COPY_DATES) throw DigdaException(ErrorCode.SCHEDULE_COPY_LIMIT_EXCEEDED)
+
+        val source = scheduleRepository.findById(scheduleId)
+            .orElseThrow { DigdaException(ErrorCode.SCHEDULE_NOT_FOUND) }
+
+        if (source.groupRoom.id != groupRoomId) throw DigdaException(ErrorCode.SCHEDULE_NOT_FOUND)
+
+        // 차단/신고로 내게 숨겨진 일정은 복사 원본으로 쓸 수 없다 (직접 접근 방어).
+        val visibility = contentVisibilityService.forViewer(userId)
+        if (visibility.scheduleHiddenReason(source.id, source.createdBy.id) != null) {
+            throw DigdaException(ErrorCode.SCHEDULE_NOT_FOUND)
+        }
+
+        val user = userRepository.findById(userId)
+            .orElseThrow { DigdaException(ErrorCode.USER_NOT_FOUND) }
+
+        if (user.restricted) throw DigdaException(ErrorCode.USER_RESTRICTED)
+
+        // 기간 일정은 길이를 유지한 채 선택 날짜를 시작일로 복사한다.
+        val durationDays = ChronoUnit.DAYS.between(source.startDate, source.endDate)
+        val participantIds = source.participants.map { it.user.id }
+
+        val copies = dates.sorted().map { date ->
+            val copy = scheduleRepository.save(
+                Schedule(
+                    groupRoom = groupRoom,
+                    title = source.title,
+                    color = source.color,
+                    startDate = date,
+                    endDate = date.plusDays(durationDays),
+                    startTime = source.startTime,
+                    endTime = source.endTime,
+                    allDay = source.allDay,
+                    createdBy = user
+                )
+            )
+            addParticipants(copy, groupRoomId, participantIds)
+            copy
+        }
+
+        groupRoom.updateLastActivity()
+
+        // 복사는 최대 31건이 한 번에 생성되므로, 참여자 알림은 건별로 보내지 않는다
+        // (생성 알림 31개 스팸 방지). 액션 로그도 요청 단위로 1건만 남긴다.
+        userActionLogService.record(
+            actorId = userId,
+            action = UserAction.CREATE_SCHEDULE,
+            targetType = "SCHEDULE",
+            targetId = source.id.toString(),
+            detail = "groupRoomId=$groupRoomId, title=${source.title}, copiedTo=${dates.size} dates"
+        )
+
+        return ScheduleListResponse(
+            schedules = copies.map { ScheduleResponse.from(it, 0) }
+        )
     }
 
     @Transactional

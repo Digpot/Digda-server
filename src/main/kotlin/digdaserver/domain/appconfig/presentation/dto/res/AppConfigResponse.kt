@@ -24,7 +24,13 @@ data class AppConfigResponse(
     val storeUrlAndroid: String = "",
 
     @field:Schema(description = "iOS App Store URL(빈 값 = 앱 기본 폴백)")
-    val storeUrlIos: String = ""
+    val storeUrlIos: String = "",
+
+    @field:Schema(description = "서버 점검 모드 — true 면 앱이 전 기능을 차단")
+    val maintenanceEnabled: Boolean = false,
+
+    @field:Schema(description = "점검 안내 문구(빈 값 = 앱 기본 문구)")
+    val maintenanceMessage: String = ""
 ) {
     companion object {
         val default = AppConfigResponse(
@@ -41,7 +47,9 @@ data class AppConfigResponse(
             feedbackUrl = c.feedbackUrl,
             minAppVersion = c.minAppVersion,
             storeUrlAndroid = c.storeUrlAndroid,
-            storeUrlIos = c.storeUrlIos
+            storeUrlIos = c.storeUrlIos,
+            maintenanceEnabled = c.maintenanceEnabled,
+            maintenanceMessage = c.maintenanceMessage
         )
     }
 }

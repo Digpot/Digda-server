@@ -117,6 +117,9 @@ interface NotificationService {
         gameDisplayName: String
     )
 
+    /** 고객센터 문의에 어드민 답변이 등록됨 — 문의 작성자에게만 발송. relatedId=inquiryId. */
+    fun notifyInquiryAnswered(userId: UUID, inquiryId: Long)
+
     fun sendAnnouncement(
         targetUserIds: List<UUID>?,
         title: String,

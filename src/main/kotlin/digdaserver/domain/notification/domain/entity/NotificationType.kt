@@ -21,6 +21,7 @@ enum class NotificationType {
     MOCHI_LEVELUP,
     DIKO_UNLOCKED,
     GAME_INVITE,
+    INQUIRY_ANSWERED,
     ANNOUNCEMENT;
 
     @JsonValue

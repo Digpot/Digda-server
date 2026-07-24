@@ -572,6 +572,23 @@ class NotificationServiceImpl(
     }
 
     @Transactional
+    override fun notifyInquiryAnswered(userId: UUID, inquiryId: Long) {
+        val recipient = findUser(userId)
+
+        // 그룹방과 무관한 1:1 운영성 알림이라 groupRoom 정보 없이 발송.
+        notify(
+            listOf(recipient),
+            NotificationPayload(
+                type = NotificationType.INQUIRY_ANSWERED,
+                title = "문의 답변 도착 ✉️",
+                message = "문의하신 내용에 답변이 등록되었어요. 마이페이지에서 확인해보세요.",
+                relatedId = inquiryId,
+                relatedType = "INQUIRY"
+            )
+        )
+    }
+
+    @Transactional
     override fun sendAnnouncement(
         targetUserIds: List<UUID>?,
         title: String,

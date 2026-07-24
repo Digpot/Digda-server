@@ -71,6 +71,7 @@ class NotificationPushDispatcherImpl(
             NotificationType.MOCHI_LEVELUP,
             NotificationType.DIKO_UNLOCKED,
             NotificationType.GAME_INVITE,
+            NotificationType.INQUIRY_ANSWERED,
             NotificationType.ANNOUNCEMENT -> true
         }
     }

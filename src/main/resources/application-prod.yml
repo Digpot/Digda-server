@@ -121,3 +121,23 @@ logging:
     root: INFO
     digdaserver: INFO
     org.springframework.web: ERROR
+
+  # 파일 로그. 컨테이너의 /logs 는 호스트 /home/ubuntu/digda/logs 로 마운트됨(docker-compose.yml).
+  # 현재 로그는 항상 digda.log, 자정(KST)에 digda.YYYY-MM-DD.0.log 로 롤오버된다.
+  file:
+    name: /logs/digda.log
+
+  logback:
+    rollingpolicy:
+      # .gz 확장자를 주면 롤오버 시 자동 압축된다(평문 대비 약 1/10).
+      # 오늘 로그(digda.log)는 평문이라 tail -f 그대로 되고, 지난 날짜만 압축 → zgrep/zcat 으로 조회.
+      file-name-pattern: /logs/digda.%d{yyyy-MM-dd}.%i.log.gz
+      # 30일 슬라이딩. 7/25 면 6/26~7/25 가 남고, 7/26 이 되면 6/26 이 자동 삭제된다.
+      max-history: 30
+      # 하루 로그가 커지면 .0/.1 로 쪼갠다(%i). 없으면 무제한 단일 파일.
+      max-file-size: 100MB
+      # 보관분(압축본) 총량 상한 — EC2 EBS 보호용 최후 방어선.
+      # 30일이 이 값을 넘으면 오래된 것부터 먼저 지워진다.
+      total-size-cap: 1GB
+      # 컨테이너가 며칠 죽어 있었어도 재기동 시 오래된 파일을 정리.
+      clean-history-on-start: true

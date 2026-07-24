@@ -13,6 +13,17 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
       - redis
+    volumes:
+      # 앱이 /logs 에 날짜별 파일을 쓴다(application-prod.yml). 컨테이너가 재생성돼도
+      # 호스트에 남도록 마운트 — 배포 때마다 컨테이너를 지우므로 필수.
+      - ./logs:/logs
+    logging:
+      # stdout 로그(docker logs)는 /logs 파일 로그와 완전히 중복이라 최소한만 유지.
+      # 설정 안 하면 json-file 이 무한히 커져 디스크를 먹는다(기존 상태). 상한 = 20MB.
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
 
   redis:
     image: redis
@@ -23,4 +34,9 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     volumes:
       - ./redis-data:/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
 

@@ -59,6 +59,8 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             mkdir -p /home/ubuntu/digda
+            # 로그 볼륨 마운트 지점. 미리 만들어 둬야 도커가 root 소유로 생성하지 않는다.
+            mkdir -p /home/ubuntu/digda/logs
 
       # (10) docker-compose.yml 업로드
       - name: Copy docker-compose.yml to AWS EC2 Instance

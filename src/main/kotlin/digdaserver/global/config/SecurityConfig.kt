@@ -15,6 +15,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.filter.CorsFilter
 
@@ -37,12 +38,7 @@ class SecurityConfig(
         "/api/oauth2/callback/**",
         "/api/healthcheck",
         "/api/admin/auth/login",
-        // WARNING: /api/test/** is permitted without authentication.
-        // This path must NOT be exposed in production. Restrict or remove before prod deploy.
-        "/api/test/**",
-        "/actuator/**",
         "/api/callback/**",
-        "/api/test/oauth2/login/**",
         // WebSocket 핸드셰이크 — 인증은 STOMP CONNECT 프레임의 토큰으로 수행
         "/ws/**"
     )
@@ -74,6 +70,15 @@ class SecurityConfig(
             }
         }
 
+        // 응답 보안 헤더 — API 응답이 다른 사이트 iframe 에 실리거나, 캐시·리퍼러로 새지 않게.
+        http.headers { headers ->
+            headers.frameOptions { it.deny() }
+            headers.contentTypeOptions { }
+            headers.referrerPolicy { it.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER) }
+            headers.httpStrictTransportSecurity { it.includeSubDomains(true).maxAgeInSeconds(31_536_000) }
+            headers.cacheControl { }
+        }
+
         http.sessionManagement {
             it.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
         }
@@ -89,8 +94,8 @@ class SecurityConfig(
                 .requestMatchers("/api/healthcheck").permitAll()
                 .requestMatchers("/auth/login", "/auth/refresh").permitAll()
                 .requestMatchers("/api/oauth2/login/**").permitAll()
-                // WARNING: /api/test/** is open without authentication — dev-only endpoint, must not reach production
-                .requestMatchers("/api/oauth2/callback/**", "/api/test/**", "/api/callback/**").permitAll()
+                // /api/test/** 는 열어두지 않는다 — 테스트용 경로가 운영에서 인증 없이 열려 있었다.
+                .requestMatchers("/api/oauth2/callback/**", "/api/callback/**").permitAll()
                 .requestMatchers("/api/admin/auth/login").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
@@ -98,8 +103,7 @@ class SecurityConfig(
                 // 점검 모드 게이트 — 로그인 전에도 앱이 운영 설정을 읽어야 한다(GET 전용 컨트롤러)
                 .requestMatchers("/app-config").permitAll()
                 .requestMatchers("/api/app/reissue", "/api/web/reissue").permitAll()
-                .requestMatchers("/actuator/**").permitAll()
-                .requestMatchers("/api/app/public/**", "/api/web/public/**", "/api/test/oauth2/login/**").permitAll()
+                .requestMatchers("/api/app/public/**", "/api/web/public/**").permitAll()
                 // WebSocket 핸드셰이크 — 이후 STOMP CONNECT 에서 JWT 검증
                 .requestMatchers("/ws/**").permitAll()
                 .anyRequest().authenticated()

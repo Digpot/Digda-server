@@ -182,5 +182,8 @@ enum class ErrorCode(
     ADMIN_PK_VALUE_MISSING("ADMIN_PK_VALUE_MISSING", "PK 값이 누락되었습니다.", 400),
     ADMIN_ROW_NOT_FOUND("ADMIN_ROW_NOT_FOUND", "해당 PK의 행을 찾을 수 없습니다.", 404),
     ADMIN_ROW_AFFECTED_INVALID("ADMIN_ROW_AFFECTED_INVALID", "행 수정/삭제에서 1행이 아닌 결과가 발생했습니다.", 500),
-    ADMIN_NO_FIELDS_TO_UPDATE("ADMIN_NO_FIELDS_TO_UPDATE", "수정할 컬럼이 없습니다.", 400);
+    ADMIN_NO_FIELDS_TO_UPDATE("ADMIN_NO_FIELDS_TO_UPDATE", "수정할 컬럼이 없습니다.", 400),
+    ADMIN_LOGIN_FAILED("ADMIN_LOGIN_FAILED", "이메일 또는 비밀번호가 올바르지 않습니다.", 401),
+    PII_REVEAL_PASSWORD_MISMATCH("PII_REVEAL_PASSWORD_MISMATCH", "비밀번호가 일치하지 않습니다.", 400),
+    TOO_MANY_ATTEMPTS("TOO_MANY_ATTEMPTS", "시도 횟수를 초과했습니다. 10분 뒤 다시 시도해 주세요.", 429);
 }

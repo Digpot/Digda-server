@@ -6,7 +6,9 @@ ENV TZ=Asia/Seoul
 
 ARG JAR_FILE=build/libs/*.jar
 COPY ${JAR_FILE} /app.jar
-COPY env/prod.env /env/prod.env
+# 운영 비밀값(env/prod.env)은 이미지에 굽지 않는다. 이미지는 DockerHub 에 올라가므로
+# 이미지 안에 있으면 pull 한 누구나 DB 비밀번호·JWT 시크릿·AWS 키를 꺼낼 수 있다.
+# 서버의 /home/ubuntu/digda/env/prod.env 를 docker-compose 가 /env/prod.env 로 읽기 전용 마운트한다.
 
 EXPOSE 8080
 # 908MB 박스에 MySQL 이 같이 올라가므로 JVM 이 알아서 크게 잡지 못하게 못박는다.

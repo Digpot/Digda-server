@@ -24,5 +24,8 @@ data class AdminTableRowsResponse(
     val totalPages: Int,
 
     @Schema(description = "행 데이터 목록. 각 행은 컬럼명 → 값")
-    val rows: List<Map<String, Any?>>
+    val rows: List<Map<String, Any?>>,
+
+    @Schema(description = "마스킹된 컬럼(개인정보·비밀값). 원문은 /api/admin/pii/reveal(DB_ROW) 로만")
+    val maskedColumns: List<String> = emptyList()
 )

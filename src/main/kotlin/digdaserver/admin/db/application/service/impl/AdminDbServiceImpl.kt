@@ -111,7 +111,8 @@ class AdminDbServiceImpl(
             size = safeSize,
             totalElements = totalElements,
             totalPages = totalPages,
-            rows = rows
+            rows = rows,
+            maskedColumns = columns.filter { maskTypes.getValue(it) != DbMaskType.NONE }
         )
     }
 

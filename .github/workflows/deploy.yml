@@ -65,15 +65,22 @@ jobs:
             # uid 999 로 초기화하므로 소유권은 건드리지 않는다.
             mkdir -p /home/ubuntu/digda/mysql-data
             mkdir -p /home/ubuntu/digda/backup
+            # 운영 비밀값 파일 자리. 이미지에 굽지 않고 여기 두고 컨테이너에 마운트한다.
+            mkdir -p /home/ubuntu/digda/env
+            chmod 700 /home/ubuntu/digda/env
 
-      # (10) docker-compose.yml 업로드
-      - name: Copy docker-compose.yml to AWS EC2 Instance
+      # (10) docker-compose.yml + 운영 비밀값 업로드
+      #
+      # env/prod.env 는 예전엔 Dockerfile COPY 로 이미지에 구웠다. 이미지가 DockerHub 에
+      # 올라가므로 pull 하는 누구에게나 비밀값이 새는 구조였다. 이제 서버에만 둔다.
+      # scp-action 은 소스 경로 구조를 유지하므로 target 아래 env/prod.env 로 정확히 떨어진다.
+      - name: Copy docker-compose.yml and env to AWS EC2 Instance
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "docker-compose.yml"
+          source: "docker-compose.yml,env/prod.env"
           target: "/home/ubuntu/digda"
 
       # (11) 컨테이너 실행
@@ -82,7 +89,7 @@ jobs:
       # scp-action 은 소스의 경로 구조를 유지한 채 target 디렉터리 안에 넣으므로
       # 서버에 .env/env/prod.env 라는 '디렉터리' 가 생겼고, docker-compose 는 .env 를
       # 파일로만 읽으므로 ${MYSQL_ROOT_PASSWORD} 같은 값이 전부 빈 문자열이 됐다.
-      # 앱이 쓰는 prod.env 는 Dockerfile 의 COPY 로 이미 이미지 안에 들어가므로
+      # 앱이 쓰는 prod.env 는 (10) 에서 env/prod.env 로 올려 컨테이너에 마운트하므로
       # 이 복사는 원래 필요 없었다. compose 용 .env(= MySQL/Redis 비밀번호)는
       # 서버에서 직접 관리한다.
       - name: Deploy on AWS EC2 Instance
@@ -93,6 +100,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd /home/ubuntu/digda
+            chmod 600 env/prod.env
             # mysql/redis 는 건드리지 않고 app 컨테이너만 교체한다.
             # 예전처럼 `docker-compose down` 을 치면 DB 가 매 배포마다 내려갔다 오고,
             # 쓰기 도중에 죽으면 InnoDB 복구가 돌거나 최악엔 데이터가 깨진다.

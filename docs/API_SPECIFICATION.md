@@ -13,7 +13,7 @@
 | 서버 | Spring Boot (Kotlin) + JPA(MySQL) + Redis |
 | 인증 방식 | 소셜 로그인(카카오·네이버·애플) + 관리자 계정 + JWT (Access/Refresh) |
 | API 스타일 | RESTful JSON |
-| Base URL | 호스트 직하 (context-path 없음). 예: `https://api.digda.app` |
+| Base URL | 호스트 직하 (context-path 없음). 예: `https://<API_HOST>` (실제 도메인은 서버 .env / 앱 .env 로만 관리) |
 | 날짜 형식 | ISO 8601 (`LocalDate` `2026-06-17`, `LocalTime` `09:00`, `LocalDateTime`) |
 | 식별자 | 사용자 = UUID(BINARY16), 그 외 도메인 = Long(auto-increment) |
 | 에러 응답 | `ErrorCode` 기반 `{ code, message }` (HTTP status 동봉) |

@@ -295,6 +295,42 @@ class SchemaAutoMigration(
                         FOREIGN KEY (created_by) REFERENCES `user` (user_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """.trimIndent()
+        ),
+        // 2.5.0 시즌 이벤트 — 모찌 경험치 배수 설정(app_config 처럼 단일 행 운영).
+        MissingTable(
+            table = "exp_event",
+            createSql = """
+                CREATE TABLE IF NOT EXISTS exp_event (
+                    exp_event_id BIGINT NOT NULL AUTO_INCREMENT,
+                    enabled BIT(1) NOT NULL DEFAULT b'0',
+                    title VARCHAR(100) NOT NULL DEFAULT '',
+                    multiplier DOUBLE NOT NULL DEFAULT 1.0,
+                    start_at DATETIME(6) NULL,
+                    end_at DATETIME(6) NULL,
+                    created_at DATETIME(6) NOT NULL,
+                    updated_at DATETIME(6) NOT NULL,
+                    PRIMARY KEY (exp_event_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """.trimIndent()
+        ),
+        // 2.5.0 시즌 이벤트 — 코인 일괄 지급 이력. 지급은 group_character 벌크 UPDATE 라
+        // 이력이 없으면 중복 지급을 알아챌 방법이 없어 실행마다 한 행을 남긴다.
+        MissingTable(
+            table = "coin_grant",
+            createSql = """
+                CREATE TABLE IF NOT EXISTS coin_grant (
+                    coin_grant_id BIGINT NOT NULL AUTO_INCREMENT,
+                    amount INT NOT NULL,
+                    reason VARCHAR(200) NOT NULL DEFAULT '',
+                    target_count INT NOT NULL DEFAULT 0,
+                    notified BIT(1) NOT NULL DEFAULT b'0',
+                    granted_by VARCHAR(64) NOT NULL DEFAULT '-',
+                    created_at DATETIME(6) NOT NULL,
+                    updated_at DATETIME(6) NOT NULL,
+                    PRIMARY KEY (coin_grant_id),
+                    KEY idx_coin_grant_created (created_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """.trimIndent()
         )
     )
 

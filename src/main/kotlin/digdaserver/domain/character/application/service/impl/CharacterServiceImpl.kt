@@ -11,6 +11,7 @@ import digdaserver.domain.character.presentation.dto.res.CharacterStageInfo
 import digdaserver.domain.character.presentation.dto.res.CharacterStageTreeResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStateResponse
 import digdaserver.domain.character.presentation.dto.res.MasterGameRewardResponse
+import digdaserver.domain.event.application.service.ExpEventService
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.domain.notification.application.service.NotificationService
@@ -31,6 +32,7 @@ class CharacterServiceImpl(
     private val gearInitializer: CharacterGearInitializer,
     private val groupRoomRepository: GroupRoomRepository,
     private val membershipRepository: MembershipRepository,
+    private val expEventService: ExpEventService,
     @Lazy private val notificationService: NotificationService
 ) : CharacterService {
 
@@ -64,13 +66,17 @@ class CharacterServiceImpl(
 
         validateGroupMember(groupRoomId, userId)
         val character = loadOrCreate(groupRoomId)
-        val result = character.gainExp(amount)
+
+        // 시즌 이벤트(경험치 N배)가 열려 있으면 적립 직전에 배수를 적용한다. 코인은 배수 대상이 아니다.
+        val boost = expEventService.boost(amount)
+
+        val result = character.gainExp(boost.grantedExp)
         if (coinDelta > 0) character.addCoin(coinDelta)
 
         log.info(
-            "action=character_gain_exp, userId={}, groupRoomId={}, amount={}, coinDelta={}, " +
-                "source={}, level={}, stage={}, levelGained={}, stageChanged={}",
-            UserLogKeyRegistry.of(userId), groupRoomId, amount, coinDelta, source,
+            "action=character_gain_exp, userId={}, groupRoomId={}, amount={}, expMultiplier={}, " +
+                "grantedExp={}, coinDelta={}, source={}, level={}, stage={}, levelGained={}, stageChanged={}",
+            UserLogKeyRegistry.of(userId), groupRoomId, amount, boost.multiplier, boost.grantedExp, coinDelta, source,
             character.level, character.stage, result.levelGained, result.stageChanged
         )
 
@@ -108,7 +114,14 @@ class CharacterServiceImpl(
         }
 
         val equipped = groupCharacterEquippedRepository.findAllByGroupRoomId(groupRoomId)
-        return AddExpResponse.from(character, result, coinDelta, equipped)
+        return AddExpResponse.from(
+            character = character,
+            result = result,
+            coinDelta = coinDelta,
+            equipped = equipped,
+            expMultiplier = boost.multiplier,
+            bonusExp = boost.bonusExp
+        )
     }
 
     @Transactional

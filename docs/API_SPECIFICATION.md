@@ -64,9 +64,10 @@ Authorization: Bearer {accessToken}
 | 19 | Inquiry | 2 | 고객센터 문의 작성/목록 |
 | 20 | NicknameExhibit | 2 | 역대 별명 전시관 접근/목록 |
 | 21 | AppConfig | 1 | 앱 운영 설정 조회 |
-| 22 | Public(DeletionRequest) | 2 | 비로그인 계정/데이터 삭제 요청 |
-| 23 | Infra | 2 | 헬스체크, 인증 체크 |
-| | **앱 합계** | **84** | (테스트 전용 3개 별도) |
+| 22 | Event | 1 | 시즌 이벤트(모찌 경험치 배수) 조회 |
+| 23 | Public(DeletionRequest) | 2 | 비로그인 계정/데이터 삭제 요청 |
+| 24 | Infra | 2 | 헬스체크, 인증 체크 |
+| | **앱 합계** | **85** | (테스트 전용 3개 별도) |
 
 ### 어드민 도메인 (`/api/admin/**`, `ROLE_ADMIN`)
 
@@ -90,9 +91,10 @@ Authorization: Bearer {accessToken}
 | A16 | RegionMap | 4 | 시그니처 지도 채움 관리 |
 | A17 | DB | 6 | 테이블/컬럼/행 조회·수정·삭제 |
 | A18 | Log | 1 | 유저 행동 로그 조회 |
-| | **어드민 합계** | **50** | |
+| A19 | Event | 4 | 경험치 배수 이벤트 설정 + 코인 전체 지급/이력 |
+| | **어드민 합계** | **54** | |
 
-> **전체 ~134개 엔드포인트** (앱 84 + 어드민 50, 테스트 3 별도).
+> **전체 ~139개 엔드포인트** (앱 85 + 어드민 54, 테스트 3 별도).
 
 ---
 
@@ -477,7 +479,20 @@ Authorization: Bearer {accessToken}
 
 ---
 
-### 🌐 22. Public — DeletionRequest (`/api/web/public`, 비로그인)
+### 🎁 22. Event (`/events`)
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/events/exp` | 진행 중인 모찌 경험치 배수 이벤트 조회 (배너용) |
+
+**응답**: `enabled`(설정 스위치), `active`(지금 배수가 먹는 중인지), `title`(배너 문구), `multiplier`(설정 배수), `appliedMultiplier`(현재 적용 배수 · 비활성이면 1.0), `startAt`, `endAt`
+
+> `active=true` 인 동안 일기 작성·퀴즈 정답 경험치에 배수가 곱해진다. 코인은 배수 대상이 아니다.
+> 경험치 적립 응답(`POST /character/{groupRoomId}/exp`, 퀴즈 응시)에는 `expMultiplier`·`bonusExp` 가 함께 내려간다.
+
+---
+
+### 🌐 23. Public — DeletionRequest (`/api/web/public`, 비로그인)
 
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
@@ -488,7 +503,7 @@ Authorization: Bearer {accessToken}
 
 ---
 
-### 🩺 23. Infra (`/api`)
+### 🩺 24. Infra (`/api`)
 
 | 메서드 | 경로 | 인증 | 설명 |
 |--------|------|:---:|------|
@@ -529,6 +544,10 @@ Authorization: Bearer {accessToken}
 | Notification | GET | `/api/admin/notifications` | 알림 목록 (type/groupRoomId/keyword 필터) |
 | AppConfig | GET | `/api/admin/app-config` | 운영 설정 조회 |
 | AppConfig | PUT | `/api/admin/app-config` | 운영 설정 수정 (`UpdateAppConfigRequest`) |
+| Event | GET | `/api/admin/events/exp` | 경험치 배수 이벤트 조회 |
+| Event | PUT | `/api/admin/events/exp` | 경험치 배수 이벤트 설정 (`enabled`, `title`, `multiplier` 1.0~10.0, `startAt`, `endAt`) |
+| Event | POST | `/api/admin/events/coin-grants` | 코인 전체 지급 (그룹당 `amount`, 최대 100,000 · 되돌릴 수 없음, `notify` 시 전체 공지 동시 발송) |
+| Event | GET | `/api/admin/events/coin-grants` | 코인 지급 이력 (최신순) |
 | Title | GET | `/api/admin/titles/catalog` | 칭호 카탈로그 |
 | Title | GET | `/api/admin/titles/users/{userId}` | 사용자 보유 칭호 |
 | Title | POST | `/api/admin/titles/grant` | 칭호 부여 (멱등) |

@@ -14,6 +14,7 @@ import digdaserver.domain.character.presentation.dto.res.CharacterQuizResponse
 import digdaserver.domain.character.presentation.dto.res.CharacterStateResponse
 import digdaserver.domain.character.presentation.dto.res.QuizAttemptResultResponse
 import digdaserver.domain.character.presentation.dto.res.QuizAttemptSummary
+import digdaserver.domain.event.application.service.ExpEventService
 import digdaserver.domain.group_room.domain.repository.GroupRoomRepository
 import digdaserver.domain.membership.domain.repository.MembershipRepository
 import digdaserver.domain.notification.application.service.NotificationService
@@ -39,6 +40,7 @@ class CharacterQuizServiceImpl(
     private val groupRoomRepository: GroupRoomRepository,
     private val membershipRepository: MembershipRepository,
     private val userRepository: UserRepository,
+    private val expEventService: ExpEventService,
     @Lazy private val notificationService: NotificationService
 ) : CharacterQuizService {
 
@@ -237,8 +239,13 @@ class CharacterQuizServiceImpl(
         }
 
         val correct = selectedIndex == quiz.correctIndex
-        val earnedExp = if (correct) EXP_PER_MULTIPLIER_CORRECT * quiz.expMultiplier else EXP_CONSOLATION_WRONG
+        val baseExp = if (correct) EXP_PER_MULTIPLIER_CORRECT * quiz.expMultiplier else EXP_CONSOLATION_WRONG
         val earnedCoin = if (correct) COIN_PER_MULTIPLIER_CORRECT * quiz.expMultiplier else 0
+
+        // 시즌 이벤트(경험치 N배) 적용 — 문제 배점(quiz.expMultiplier) 위에 한 번 더 곱한다.
+        // 코인은 이벤트 대상이 아니다.
+        val boost = expEventService.boost(baseExp)
+        val earnedExp = boost.grantedExp
 
         // 보상은 그룹 캐릭터에 누적 (응시자 개인이 아닌 그룹 공용)
         val character = loadOrCreateGroupCharacter(quiz.groupRoom.id)
@@ -260,9 +267,11 @@ class CharacterQuizServiceImpl(
 
         log.info(
             "action=character_quiz_attempt, userId={}, groupRoomId={}, quizId={}, selected={}, " +
-                "correct={}, earnedExp={}, earnedCoin={}, levelGained={}, stageChanged={}",
+                "correct={}, baseExp={}, expMultiplier={}, earnedExp={}, earnedCoin={}, " +
+                "levelGained={}, stageChanged={}",
             UserLogKeyRegistry.of(userId), quiz.groupRoom.id, quizId, selectedIndex,
-            correct, earnedExp, earnedCoin, gain.levelGained, gain.stageChanged
+            correct, baseExp, boost.multiplier, earnedExp, earnedCoin,
+            gain.levelGained, gain.stageChanged
         )
 
         try {
@@ -308,7 +317,9 @@ class CharacterQuizServiceImpl(
             stageBefore = gain.stageBefore,
             stageAfter = gain.stageAfter,
             stageChanged = gain.stageChanged,
-            dikoJustUnlocked = gain.dikoJustUnlocked
+            dikoJustUnlocked = gain.dikoJustUnlocked,
+            expMultiplier = boost.multiplier,
+            bonusExp = boost.bonusExp
         )
     }
 

@@ -405,6 +405,28 @@ erDiagram
         datetime updated_at "수정일"
     }
 
+    exp_event["exp_event (경험치 배수 이벤트, 단일 행)"] {
+        bigint exp_event_id PK "이벤트 ID"
+        boolean enabled "이벤트 스위치"
+        varchar title "앱 배너 문구 (최대 100자)"
+        double multiplier "경험치 배수 (1.0 ~ 10.0)"
+        datetime start_at "시작 시각 (NULL=제한 없음)"
+        datetime end_at "종료 시각 (NULL=제한 없음)"
+        datetime created_at "생성일"
+        datetime updated_at "수정일"
+    }
+
+    coin_grant["coin_grant (코인 일괄 지급 이력)"] {
+        bigint coin_grant_id PK "지급 이력 ID"
+        int amount "그룹당 지급 코인"
+        varchar reason "운영 메모 (최대 200자)"
+        int target_count "코인이 들어간 모찌 수"
+        boolean notified "전체 공지 동시 발송 여부"
+        varchar granted_by "실행 어드민 (로그 식별자)"
+        datetime created_at "지급 시각"
+        datetime updated_at "수정일"
+    }
+
     admin_credential["admin_credential (관리자 자격증명)"] {
         bigint admin_credential_id PK "자격증명 ID"
         binary_16 user_id FK,UK "사용자 UUID (role=ADMIN)"
@@ -572,6 +594,8 @@ erDiagram
 | 32 | `nickname_exhibit` | 역대 별명 전시관 카드 | (독립) |
 | 33 | `nickname_exhibit_access` | 전시관 접근 권한 | user 1:1 |
 | 34 | `app_config` | 앱 운영 설정 (단일 행, 대공지/피드백) | (독립) |
+| 34-1 | `exp_event` | 모찌 경험치 배수 이벤트 설정 (단일 행) | (독립) |
+| 34-2 | `coin_grant` | 코인 일괄 지급 이력 (group_character 벌크 UPDATE 기록) | (독립) |
 | 35 | `announcement` | 관리자 공지 발송 이력 | (독립) |
 | 36 | `user_action_log` | 유저 행동 감사 로그 | user (논리 참조, actor) |
 

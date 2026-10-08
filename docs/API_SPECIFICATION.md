@@ -516,7 +516,8 @@ Authorization: Bearer {accessToken}
 
 | 도메인 | 메서드 | 경로 | 설명 |
 |--------|--------|------|------|
-| Auth | POST | `/api/admin/auth/login` | 관리자 로그인 (이메일/비밀번호, 비인증 허용) |
+| Auth | POST | `/api/admin/auth/login` | 관리자 로그인 (이메일/비밀번호, 비인증 허용). 5회 실패 시 10분 잠금(429), 실패 사유는 구분하지 않음(`ADMIN_LOGIN_FAILED`) |
+| PII | POST | `/api/admin/pii/reveal` | 개인정보 원문 열람 — 관리자 비밀번호 재확인 (`password`, `targetType` USER/DELETION_REQUEST/DB_ROW, `targetId` 또는 `table`+`pk`). 5회 실패 시 10분 잠금, 열람 이력은 `user_action_log`(targetType=PII_REVEAL) |
 | Dashboard | GET | `/api/admin/dashboard/summary` | 요약 통계 (사용자/그룹방/일기/일정/댓글/할일) |
 | User | GET | `/api/admin/users` | 사용자 목록 (키워드/권한 필터, 페이징) |
 | User | GET | `/api/admin/users/{userId}` | 사용자 상세 |
@@ -565,13 +566,15 @@ Authorization: Bearer {accessToken}
 | RegionMap | DELETE | `/api/admin/region-map?groupRoomId=` | 그룹 채움 전체 해제 |
 | DB | GET | `/api/admin/db/tables` | 테이블 목록 |
 | DB | GET | `/api/admin/db/tables/{name}/columns` | 컬럼 정보 |
-| DB | GET | `/api/admin/db/tables/{name}/rows` | 행 조회 (페이징·정렬, size≤200) |
+| DB | GET | `/api/admin/db/tables/{name}/rows` | 행 조회 (페이징·정렬, size≤200). 개인정보 컬럼은 마스킹, 비밀번호·토큰 컬럼은 `[REDACTED]` |
 | DB | POST | `/api/admin/db/tables/{name}/rows` | 행 추가 |
 | DB | PATCH | `/api/admin/db/tables/{name}/rows` | 행 수정 (PK 매칭, 1행 강제) |
 | DB | DELETE | `/api/admin/db/tables/{name}/rows` | 행 삭제 (PK 매칭, 1행 강제) |
 | Log | GET | `/api/admin/logs` | 유저 행동 로그 (actor/action/기간/키워드 필터) |
 
-**관련 어드민 에러**: `ADMIN_NOT_FOUND`, `ADMIN_PASSWORD_MISMATCH`, `NOT_ADMIN_USER`, `INVALID_ROLE`, `USER_RESTRICTED`, `ADMIN_TABLE_NOT_ALLOWED`, `ADMIN_TABLE_NOT_FOUND`, `ADMIN_COLUMN_NOT_ALLOWED`, `ADMIN_PK_NOT_FOUND`, `ADMIN_PK_VALUE_MISSING`, `ADMIN_ROW_NOT_FOUND`, `ADMIN_ROW_AFFECTED_INVALID`, `ADMIN_NO_FIELDS_TO_UPDATE`
+**개인정보 마스킹**: 어드민 응답의 사용자 이름(`name`, `authorName`, `ownerName`, `reporterName`, `userName` …)과 이메일은 서버가 마스킹해 내려준다 (홍길동→홍*동, chltm517@naver.com→ch******@naver.com). 원문은 `/api/admin/pii/reveal` 로만.
+
+**관련 어드민 에러**: `ADMIN_LOGIN_FAILED`, `PII_REVEAL_PASSWORD_MISMATCH`, `TOO_MANY_ATTEMPTS`, `NOT_ADMIN_USER`, `INVALID_ROLE`, `USER_RESTRICTED`, `ADMIN_TABLE_NOT_ALLOWED`, `ADMIN_TABLE_NOT_FOUND`, `ADMIN_COLUMN_NOT_ALLOWED`, `ADMIN_PK_NOT_FOUND`, `ADMIN_PK_VALUE_MISSING`, `ADMIN_ROW_NOT_FOUND`, `ADMIN_ROW_AFFECTED_INVALID`, `ADMIN_NO_FIELDS_TO_UPDATE`
 
 ---
 

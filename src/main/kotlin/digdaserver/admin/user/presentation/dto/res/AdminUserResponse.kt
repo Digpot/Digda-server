@@ -1,6 +1,9 @@
 package digdaserver.admin.user.presentation.dto.res
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import digdaserver.domain.user.domain.entity.User
+import digdaserver.global.common.masking.MaskedEmail
+import digdaserver.global.common.masking.MaskedName
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
@@ -11,9 +14,11 @@ data class AdminUserResponse(
     val userId: String,
 
     @Schema(description = "이메일")
+    @get:JsonSerialize(using = MaskedEmail::class)
     val email: String?,
 
     @Schema(description = "이름")
+    @get:JsonSerialize(using = MaskedName::class)
     val name: String,
 
     @Schema(description = "프로필 이미지 URL")

@@ -4,6 +4,9 @@ import digdaserver.admin.db.application.service.AdminDbService
 import digdaserver.admin.db.presentation.dto.res.AdminColumnInfoResponse
 import digdaserver.admin.db.presentation.dto.res.AdminTableInfoResponse
 import digdaserver.admin.db.presentation.dto.res.AdminTableRowsResponse
+import digdaserver.global.common.masking.DbColumnMaskPolicy
+import digdaserver.global.common.masking.DbMaskType
+import digdaserver.global.common.masking.PiiMasker
 import digdaserver.global.infra.exception.error.DigdaException
 import digdaserver.global.infra.exception.error.ErrorCode
 import org.springframework.jdbc.core.JdbcTemplate
@@ -93,8 +96,10 @@ class AdminDbServiceImpl(
         ) ?: 0L
 
         val rowsSql = "SELECT * FROM `$safeTable`$orderClause LIMIT ? OFFSET ?"
+        // 개인정보 컬럼은 마스킹, 비밀번호·토큰은 통째로 가려서 내려준다. 원문은 /api/admin/pii/reveal 로만.
+        val maskTypes = columns.associateWith { DbColumnMaskPolicy.typeOf(safeTable, it) }
         val rows = jdbcTemplate.query(rowsSql, { rs, _ ->
-            columns.associateWith { col -> rs.getObject(col) }
+            columns.associateWith { col -> DbColumnMaskPolicy.mask(maskTypes.getValue(col), rs.getObject(col)) }
         }, safeSize, offset)
 
         val totalPages = if (totalElements == 0L) 0 else ((totalElements + safeSize - 1) / safeSize).toInt()
@@ -148,13 +153,20 @@ class AdminDbServiceImpl(
             .mapKeys { (k, _) -> requireKnownColumn(k, columnTypes) }
             .filterKeys { it !in pkColumns }
 
-        if (updateValues.isEmpty()) throw DigdaException(ErrorCode.ADMIN_NO_FIELDS_TO_UPDATE)
+        // 화면엔 마스킹된 값이 떠 있다. 그 값이 그대로 돌아오면 "안 고친 칸" 이므로 버린다 —
+        // 안 그러면 ch******@naver.com 이 원래 이메일을 덮어쓴다.
+        val current = selectRowByPk(safeTable, pkColumns, columnTypes, pkValues)
+        val effectiveValues = updateValues.filterNot { (col, value) ->
+            isUntouchedMaskedValue(safeTable, col, value, current[col])
+        }
 
-        val setClause = updateValues.keys.joinToString(", ") { "`$it` = ?" }
+        if (effectiveValues.isEmpty()) throw DigdaException(ErrorCode.ADMIN_NO_FIELDS_TO_UPDATE)
+
+        val setClause = effectiveValues.keys.joinToString(", ") { "`$it` = ?" }
         val whereClause = pkColumns.joinToString(" AND ") { "`$it` = ?" }
         val sql = "UPDATE `$safeTable` SET $setClause WHERE $whereClause"
 
-        val setParams = updateValues.entries.map { (col, raw) -> convertValue(raw, columnTypes.getValue(col)) }
+        val setParams = effectiveValues.entries.map { (col, raw) -> convertValue(raw, columnTypes.getValue(col)) }
         val whereParams = pkColumns.map { convertValue(pkValues.getValue(it), columnTypes.getValue(it)) }
         val affected = jdbcTemplate.update(sql, *(setParams + whereParams).toTypedArray())
 
@@ -181,7 +193,45 @@ class AdminDbServiceImpl(
         return verifySingleRow(affected)
     }
 
+    override fun revealRow(tableName: String, pkValues: Map<String, String>): Map<String, Any?> {
+        val safeTable = validateIdentifier(tableName, ErrorCode.ADMIN_TABLE_NOT_ALLOWED)
+        ensureTableExists(safeTable)
+
+        val pkColumns = fetchPrimaryKeyColumns(safeTable)
+        if (pkColumns.isEmpty()) throw DigdaException(ErrorCode.ADMIN_PK_NOT_FOUND)
+
+        val columnTypes = fetchColumnTypes(safeTable)
+        validatePkValues(pkColumns, pkValues)
+
+        // 마스킹된 컬럼만 돌려준다 — 원래 보이던 값까지 다시 실어 보낼 이유가 없다.
+        val row = selectRowByPk(safeTable, pkColumns, columnTypes, pkValues)
+        return row.entries
+            .map { (col, value) -> Triple(col, DbColumnMaskPolicy.typeOf(safeTable, col), value) }
+            .filter { (_, type, _) -> type != DbMaskType.NONE }
+            .associate { (col, type, value) -> col to DbColumnMaskPolicy.reveal(type, value)?.toString() }
+    }
+
     // ---- helpers ----
+
+    private fun selectRowByPk(
+        table: String,
+        pkColumns: List<String>,
+        columnTypes: Map<String, String>,
+        pkValues: Map<String, String>
+    ): Map<String, Any?> {
+        val whereClause = pkColumns.joinToString(" AND ") { "`$it` = ?" }
+        val params = pkColumns.map { convertValue(pkValues.getValue(it), columnTypes.getValue(it)) }
+        val rows = jdbcTemplate.queryForList("SELECT * FROM `$table` WHERE $whereClause LIMIT 2", *params.toTypedArray())
+        if (rows.size != 1) throw DigdaException(ErrorCode.ADMIN_ROW_NOT_FOUND)
+        return rows.first()
+    }
+
+    private fun isUntouchedMaskedValue(table: String, column: String, incoming: String?, current: Any?): Boolean {
+        val type = DbColumnMaskPolicy.typeOf(table, column)
+        if (type == DbMaskType.NONE || incoming == null) return false
+        if (incoming == PiiMasker.REDACTED) return true
+        return current != null && incoming == DbColumnMaskPolicy.mask(type, current)?.toString()
+    }
 
     private fun validateIdentifier(value: String, errorCode: ErrorCode): String {
         if (!IDENTIFIER_REGEX.matches(value)) throw DigdaException(errorCode)

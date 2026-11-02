@@ -17,5 +17,8 @@ data class AdminGenerateHighlightRequest(
     val regenerate: Boolean = false,
 
     @Schema(description = "새로 만든 그룹에 알림을 보낼지(regenerate=true 면 무시)")
-    val notify: Boolean = true
+    val notify: Boolean = true,
+
+    @Schema(description = "true 면 생성은 하지 않고, 이미 있는 하이라이트의 알림만 다시 보낸다(created=발송 그룹 수)")
+    val resendOnly: Boolean = false
 )

@@ -47,6 +47,9 @@ class AdminHighlightController(
             request.groupRoomId,
             request.regenerate
         )
+        if (request.resendOnly) {
+            return ResponseEntity.ok(scheduler.resendNotifications(month, request.groupRoomId))
+        }
         val result = scheduler.execute(
             month = month,
             groupId = request.groupRoomId,

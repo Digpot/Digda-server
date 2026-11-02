@@ -110,6 +110,28 @@ class MonthlyHighlightScheduler(
         return HighlightRunResult(month.toString(), targets.size, created, skipped, failed)
     }
 
+    /**
+     * 이미 만들어진 하이라이트의 알림만 다시 보낸다(어드민). 새로 생성하지 않는다.
+     * 삭제됐거나 하이라이트가 없는 그룹은 건너뛴다.
+     */
+    fun resendNotifications(month: YearMonth, groupId: Long?): HighlightRunResult {
+        val existing = highlightRepository.findGroupIdsByTargetMonth(month.toString())
+        val targets = if (groupId != null) existing.filter { it == groupId } else existing
+        var sent = 0
+        var failed = 0
+        targets.forEach {
+            try {
+                notificationService.notifyMonthlyHighlight(it, month.toString())
+                sent++
+            } catch (e: Exception) {
+                failed++
+                log.error("action=월간 하이라이트 알림 재발송 실패, groupId={}, month={}", it, month, e)
+            }
+        }
+        log.info("action=월간 하이라이트 알림 재발송, month={}, sent={}, failed={}", month, sent, failed)
+        return HighlightRunResult(month.toString(), targets.size, sent, 0, failed)
+    }
+
     private fun notifySafely(groupId: Long, month: YearMonth) {
         try {
             notificationService.notifyMonthlyHighlight(groupId, month.toString())

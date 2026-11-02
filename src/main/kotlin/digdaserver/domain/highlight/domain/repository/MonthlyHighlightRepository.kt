@@ -15,6 +15,10 @@ interface MonthlyHighlightRepository : JpaRepository<MonthlyHighlight, Long> {
 
     fun findByGroupRoomIdAndTargetMonth(groupRoomId: Long, targetMonth: String): MonthlyHighlight?
 
+    /** 해당 월 하이라이트가 이미 있는 그룹 id - 어드민 알림 재발송용. */
+    @Query("SELECT h.groupRoomId FROM MonthlyHighlight h WHERE h.targetMonth = :targetMonth")
+    fun findGroupIdsByTargetMonth(@Param("targetMonth") targetMonth: String): List<Long>
+
     fun findAllByGroupRoomIdOrderByTargetMonthDesc(groupRoomId: Long): List<MonthlyHighlight>
 
     /** 기간 내 일기가 있는 (삭제되지 않은) 모든 그룹 id - 어드민 재생성용. */

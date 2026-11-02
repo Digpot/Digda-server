@@ -89,6 +89,7 @@ enum class ErrorCode(
 
     // ── Highlight ──
     HIGHLIGHT_NOT_FOUND("HIGHLIGHT_NOT_FOUND", "해당 월의 하이라이트가 없어요.", 404),
+    HIGHLIGHT_FUTURE_MONTH("HIGHLIGHT_FUTURE_MONTH", "이번 달 이후의 하이라이트는 만들 수 없어요.", 400),
 
     // ── Comment ──
     COMMENT_NOT_FOUND("COMMENT_NOT_FOUND", "존재하지 않는 댓글입니다.", 404),

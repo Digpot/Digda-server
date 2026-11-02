@@ -58,7 +58,8 @@ class NotificationPushDispatcherImpl(
             NotificationType.SCHEDULE_UPDATED,
             NotificationType.SCHEDULE_DAY_BEFORE,
             NotificationType.SCHEDULE_TODAY -> setting.scheduleNotification
-            NotificationType.DIARY_WRITTEN -> setting.diaryNotification
+            NotificationType.DIARY_WRITTEN,
+            NotificationType.MONTHLY_HIGHLIGHT -> setting.diaryNotification
             NotificationType.COMMENT_ON_SCHEDULE,
             NotificationType.COMMENT_ON_DIARY -> setting.commentNotification
             // 모찌(캐릭터) 알림 — 게임(GAME_INVITE)을 제외한 캐릭터 관련 푸시.

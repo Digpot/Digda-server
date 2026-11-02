@@ -69,6 +69,9 @@ interface NotificationService {
         diaryTitle: String
     )
 
+    /** 월간 하이라이트 생성 완료 — 그룹 전원에게 발송. relatedType=HIGHLIGHT, relatedId=yyyyMM(예: 202610). */
+    fun notifyMonthlyHighlight(groupRoomId: Long, targetMonth: String)
+
     fun notifyMemberRemoved(groupRoomId: Long, actorUserId: UUID, removedUserId: UUID)
 
     fun notifyQuizCreated(

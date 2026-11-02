@@ -87,6 +87,9 @@ enum class ErrorCode(
     INVALID_WEATHER_VALUE("INVALID_WEATHER_VALUE", "날씨 값은 0~3 범위여야 합니다.", 400),
     INVALID_MOOD_VALUE("INVALID_MOOD_VALUE", "기분 값은 0~3 범위여야 합니다.", 400),
 
+    // ── Highlight ──
+    HIGHLIGHT_NOT_FOUND("HIGHLIGHT_NOT_FOUND", "해당 월의 하이라이트가 없어요.", 404),
+
     // ── Comment ──
     COMMENT_NOT_FOUND("COMMENT_NOT_FOUND", "존재하지 않는 댓글입니다.", 404),
     COMMENT_TOO_LONG("COMMENT_TOO_LONG", "댓글은 200자 이하여야 합니다.", 400),

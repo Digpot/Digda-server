@@ -331,6 +331,24 @@ class SchemaAutoMigration(
                     KEY idx_coin_grant_created (created_at)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """.trimIndent()
+        ),
+        // 2.6.0 월간 하이라이트 — 그룹별·월별 1행. (group_room_id, target_month) 유니크가 중복 생성 방지선.
+        MissingTable(
+            table = "monthly_highlight",
+            createSql = """
+                CREATE TABLE IF NOT EXISTS monthly_highlight (
+                    monthly_highlight_id BIGINT NOT NULL AUTO_INCREMENT,
+                    group_room_id BIGINT NOT NULL,
+                    target_month VARCHAR(7) NOT NULL,
+                    status VARCHAR(16) NOT NULL,
+                    total_diary_count INT NOT NULL,
+                    cover_image_url VARCHAR(500) NULL,
+                    payload TEXT NOT NULL,
+                    generated_at DATETIME(6) NOT NULL,
+                    PRIMARY KEY (monthly_highlight_id),
+                    UNIQUE KEY uk_monthly_highlight_group_month (group_room_id, target_month)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """.trimIndent()
         )
     )
 

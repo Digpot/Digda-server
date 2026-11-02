@@ -7,7 +7,8 @@ data class CommentResponse(
     val id: Long,
     val text: String,
     val createdBy: UserSummary,
-    val createdAt: LocalDateTime,
+    /** 아주 오래된 댓글은 작성일시가 NULL 일 수 있어 nullable. 앱은 null 이면 날짜를 숨긴다. */
+    val createdAt: LocalDateTime?,
     /** 차단/신고로 숨겨진 댓글인지. true 면 text 는 비워진 상태. */
     val hidden: Boolean = false,
     val hiddenReason: String? = null

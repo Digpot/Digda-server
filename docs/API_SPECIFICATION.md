@@ -702,3 +702,18 @@ Authorization: Bearer {accessToken}
 DB 구조는 [`ERD.md`](./ERD.md) 참고 — **39개 MySQL 테이블 + 2개 Redis 엔티티**.
 주요 도메인: 사용자/인증, 그룹방·일정·일기·할일·댓글, 그룹 캐릭터(모찌)·퀴즈·상점, 칭호,
 신고/차단/숨김, 문의, 삭제 요청, 어드민(자격증명·공지·감사 로그·앱 설정).
+
+---
+
+## 월간 하이라이트 (v2.6.0)
+
+매월 1일 00:00(KST) 스케줄러가 지난달 일기를 그룹별로 집계해 `monthly_highlight` 에 저장하고, 앱은 저장된 결과만 조회한다. 지난달 일기가 없는 그룹은 만들지 않는다. (group_room_id, target_month) 유니크로 중복 생성 방지.
+
+| Method | Path | 설명 |
+|---|---|---|
+| GET | `/group-rooms/{groupRoomId}/highlights` | 생성된 하이라이트 목록(최신 월 먼저). `{highlights:[{month,year,monthValue,title,totalDiaryCount,coverImageUrl,generatedAt}]}` |
+| GET | `/group-rooms/{groupRoomId}/highlights/{month}` | 상세. `month`=`yyyy-MM`. 없으면 404 `HIGHLIGHT_NOT_FOUND` |
+
+상세 응답: `month, year, monthValue, title, groupRoomName, generatedAt, totalDiaryCount, activeDays, daysInMonth, members[{userId,name,profileImage,diaryCount}], topWriters[], coverImageUrl?, photos[], featuredDiaries[{diaryId,title,excerpt,date,authorName,imageUrl?,likeCount,reactionCount,commentCount}], topLocation?, busiestWeekday?(1=월~7=일), summary, closingMessage`
+
+알림: `MONTHLY_HIGHLIGHT` (relatedType=`HIGHLIGHT`, relatedId=`yyyyMM`). 일정 댓글 `createdAt` 은 NULL 가능(nullable).

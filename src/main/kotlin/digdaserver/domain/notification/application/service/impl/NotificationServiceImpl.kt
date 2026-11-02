@@ -522,6 +522,26 @@ class NotificationServiceImpl(
     }
 
     @Transactional
+    override fun notifyMonthlyHighlight(groupRoomId: Long, targetMonth: String) {
+        val groupRoom = findGroupRoom(groupRoomId)
+        val ym = java.time.YearMonth.parse(targetMonth)
+        val recipients = membershipRepository.findAllByGroupRoomId(groupRoomId).map { it.user }
+
+        notify(
+            recipients,
+            NotificationPayload(
+                type = NotificationType.MONTHLY_HIGHLIGHT,
+                title = "${ym.monthValue}월의 디그팟 하이라이트 📖",
+                message = "${groupRoom.name}의 지난달 추억이 도착했어요. 함께 돌아볼까요?",
+                groupRoomId = groupRoomId,
+                groupRoomName = groupRoom.name,
+                relatedId = (ym.year * 100 + ym.monthValue).toLong(),
+                relatedType = "HIGHLIGHT"
+            )
+        )
+    }
+
+    @Transactional
     override fun notifyOmokInvite(
         groupRoomId: Long,
         inviterUserId: UUID,

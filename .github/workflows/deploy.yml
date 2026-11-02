@@ -8,6 +8,10 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      # DockerHub 이미지 이름. 예전엔 secrets.DOCKERFILE_REPO_NAME 이었는데 시크릿 값에 따라
+      # docker-compose.yml 의 image 와 어긋날 수 있어 코드에 고정한다.
+      IMAGE_NAME: digpot-server
 
     steps:
       # (1) 깃 체크아웃
@@ -38,7 +42,7 @@ jobs:
       # (6) Docker 이미지 빌드
       - name: Build Docker Image
         run: |
-          docker build -t ${{ secrets.DOCKERFILE_USERNAME }}/${{ secrets.DOCKERFILE_REPO_NAME }}:latest .
+          docker build -t ${{ secrets.DOCKERFILE_USERNAME }}/${{ env.IMAGE_NAME }}:latest .
 
       # (7) DockerHub 로그인
       - name: DockerHub Login
@@ -48,7 +52,7 @@ jobs:
       # (8) Docker 이미지 푸시
       - name: Push Docker Image
         run: |
-          docker push ${{ secrets.DOCKERFILE_USERNAME }}/${{ secrets.DOCKERFILE_REPO_NAME }}:latest
+          docker push ${{ secrets.DOCKERFILE_USERNAME }}/${{ env.IMAGE_NAME }}:latest
 
       # (9) 서버에 history 디렉토리 생성
       - name: Create directory on AWS EC2 Instance
@@ -104,7 +108,7 @@ jobs:
             # mysql/redis 는 건드리지 않고 app 컨테이너만 교체한다.
             # 예전처럼 `docker-compose down` 을 치면 DB 가 매 배포마다 내려갔다 오고,
             # 쓰기 도중에 죽으면 InnoDB 복구가 돌거나 최악엔 데이터가 깨진다.
-            docker pull ${{ secrets.DOCKERFILE_USERNAME }}/${{ secrets.DOCKERFILE_REPO_NAME }}:latest
+            docker pull ${{ secrets.DOCKERFILE_USERNAME }}/${{ env.IMAGE_NAME }}:latest
             docker-compose up -d --no-deps --force-recreate app
             # -a 를 빼서 실행 중이 아닌 mysql/redis 이미지까지 날리지 않게 한다.
             docker image prune -f

@@ -8,7 +8,7 @@ version: '2.4'
 
 services:
   app:
-    image: chltmdgh522/digda:latest
+    image: chltmdgh522/digpot-server:latest
     container_name: digda
     ports:
       - "8080:8080"

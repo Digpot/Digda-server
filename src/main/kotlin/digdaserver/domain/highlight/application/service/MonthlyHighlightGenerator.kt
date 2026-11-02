@@ -33,6 +33,13 @@ class MonthlyHighlightGenerator(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
+    /** 기존 하이라이트를 지우고 다시 만든다(어드민 수동 재생성). 대상 일기가 없으면 기존 것만 지워진다. */
+    @Transactional
+    fun regenerate(groupRoomId: Long, month: YearMonth): Boolean {
+        highlightRepository.deleteByGroupAndMonth(groupRoomId, month.toString())
+        return generate(groupRoomId, month)
+    }
+
     /** @return 새로 만들었으면 true. 이미 있거나 대상 일기가 없으면 false. */
     @Transactional
     fun generate(groupRoomId: Long, month: YearMonth): Boolean {

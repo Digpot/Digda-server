@@ -12,8 +12,17 @@ import org.springframework.stereotype.Component
 import java.time.YearMonth
 import java.time.ZoneId
 
+/** 한 번의 하이라이트 생성 실행 결과. */
+data class HighlightRunResult(
+    val month: String,
+    val targetGroups: Int,
+    val created: Int,
+    val skipped: Int,
+    val failed: Int
+)
+
 /**
- * 매월 1일 00:00(KST) 에 지난달 하이라이트를 그룹별로 생성하는 잡.
+ * 매월 1일 00:00(KST) 에 지난달 하이라이트를 그룹별로 생성하는 잡. 어드민 수동 실행도 [execute] 를 공유한다.
  *
  * - 대상: 지난달에 일기가 있고 아직 하이라이트가 없는 그룹만. 일기가 없는 그룹은 만들지 않는다.
  * - 중복 방지: ① 대상 쿼리가 이미 있는 그룹을 제외 ② 생성기가 한 번 더 확인 ③ DB 유니크 제약.
@@ -31,43 +40,74 @@ class MonthlyHighlightScheduler(
     private val log = LoggerFactory.getLogger(javaClass)
 
     @Scheduled(cron = "0 0 0 1 * *", zone = KST)
-    fun generateOnFirstOfMonth() = runJob("cron")
+    fun generateOnFirstOfMonth() {
+        execute(lastMonth(), groupId = null, regenerate = false, notify = true, trigger = "cron")
+    }
 
     @EventListener(ApplicationReadyEvent::class)
-    fun catchUpOnStartup() = runJob("startup")
+    fun catchUpOnStartup() {
+        execute(lastMonth(), groupId = null, regenerate = false, notify = true, trigger = "startup")
+    }
 
-    fun runJob(trigger: String) {
-        val lastMonth = YearMonth.now(ZoneId.of(KST)).minusMonths(1)
+    fun lastMonth(): YearMonth = YearMonth.now(ZoneId.of(KST)).minusMonths(1)
+
+    /**
+     * @param groupId 지정하면 그 그룹만, null 이면 전체.
+     * @param regenerate true 면 이미 있는 하이라이트도 지우고 다시 만든다(알림은 보내지 않는다).
+     * @param notify 새로 만든 그룹에 알림을 보낼지.
+     */
+    fun execute(
+        month: YearMonth,
+        groupId: Long?,
+        regenerate: Boolean,
+        notify: Boolean,
+        trigger: String
+    ): HighlightRunResult {
+        val start = month.atDay(1)
+        val end = month.atEndOfMonth()
         val targets = try {
-            highlightRepository.findGroupIdsPendingHighlight(
-                lastMonth.atDay(1),
-                lastMonth.atEndOfMonth(),
-                lastMonth.toString()
-            )
+            when {
+                groupId != null -> listOf(groupId)
+                regenerate -> highlightRepository.findGroupIdsWithDiaries(start, end)
+                else -> highlightRepository.findGroupIdsPendingHighlight(start, end, month.toString())
+            }
         } catch (e: Exception) {
-            log.error("action=월간 하이라이트 대상 조회 실패, trigger={}, month={}", trigger, lastMonth, e)
-            return
+            log.error("action=월간 하이라이트 대상 조회 실패, trigger={}, month={}", trigger, month, e)
+            return HighlightRunResult(month.toString(), 0, 0, 0, 1)
         }
-        if (targets.isEmpty()) return
+        if (targets.isEmpty()) return HighlightRunResult(month.toString(), 0, 0, 0, 0)
 
-        log.info("action=월간 하이라이트 생성 시작, trigger={}, month={}, groups={}", trigger, lastMonth, targets.size)
+        log.info("action=월간 하이라이트 생성 시작, trigger={}, month={}, groups={}", trigger, month, targets.size)
         var created = 0
+        var skipped = 0
         var failed = 0
-        targets.forEach { groupId ->
+        targets.forEach { id ->
             try {
-                if (generator.generate(groupId, lastMonth)) {
+                val made = if (regenerate) generator.regenerate(id, month) else generator.generate(id, month)
+                if (made) {
                     created++
-                    notifySafely(groupId, lastMonth)
+                    if (notify && !regenerate) notifySafely(id, month)
+                } else {
+                    skipped++
                 }
             } catch (e: DataIntegrityViolationException) {
                 // 다른 인스턴스/동시 실행이 먼저 만들었다 — 정상 경합.
-                log.info("action=월간 하이라이트 이미 생성됨(경합), groupId={}, month={}", groupId, lastMonth)
+                skipped++
+                log.info("action=월간 하이라이트 이미 생성됨(경합), groupId={}, month={}", id, month)
             } catch (e: Exception) {
                 failed++
-                log.error("action=월간 하이라이트 생성 실패, groupId={}, month={}", groupId, lastMonth, e)
+                log.error("action=월간 하이라이트 생성 실패, groupId={}, month={}", id, month, e)
             }
         }
-        log.info("action=월간 하이라이트 생성 완료, month={}, created={}, failed={}", lastMonth, created, failed)
+        log.info(
+            "action=월간 하이라이트 생성 완료, trigger={}, month={}, created={}, skipped={}, failed={}",
+            trigger,
+            month,
+            created,
+            skipped,
+            failed
+        )
+        return HighlightRunResult(month.toString(), targets.size, created, skipped, failed)
     }
 
     private fun notifySafely(groupId: Long, month: YearMonth) {

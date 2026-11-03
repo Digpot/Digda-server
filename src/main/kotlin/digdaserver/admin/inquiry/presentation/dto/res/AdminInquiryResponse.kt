@@ -1,7 +1,9 @@
 package digdaserver.admin.inquiry.presentation.dto.res
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import digdaserver.domain.inquiry.domain.entity.Inquiry
 import digdaserver.domain.inquiry.domain.entity.InquiryStatus
+import digdaserver.global.common.masking.MaskedName
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
@@ -15,6 +17,7 @@ data class AdminInquiryResponse(
     val userId: String,
 
     @Schema(description = "작성자 이름")
+    @get:JsonSerialize(using = MaskedName::class)
     val userName: String,
 
     @Schema(description = "문의 내용")

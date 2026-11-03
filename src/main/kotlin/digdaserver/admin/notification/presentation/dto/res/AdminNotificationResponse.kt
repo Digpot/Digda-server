@@ -1,7 +1,9 @@
 package digdaserver.admin.notification.presentation.dto.res
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import digdaserver.domain.notification.domain.entity.Notification
 import digdaserver.domain.notification.domain.entity.NotificationType
+import digdaserver.global.common.masking.MaskedName
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
@@ -15,6 +17,7 @@ data class AdminNotificationResponse(
     val recipientUserId: String,
 
     @Schema(description = "수신자 이름")
+    @get:JsonSerialize(using = MaskedName::class)
     val recipientName: String,
 
     @Schema(description = "알림 타입")

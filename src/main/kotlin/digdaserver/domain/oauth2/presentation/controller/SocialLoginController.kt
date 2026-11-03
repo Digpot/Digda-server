@@ -53,7 +53,7 @@ class SocialLoginController(
         @PathVariable provider: SocialProvider,
         @RequestParam("code") code: String
     ): ResponseEntity<LoginToken> {
-        log.info("소셜 로그인: provider={}, code={}", provider, code)
+        log.info("소셜 로그인: provider={}", provider)
         val loginToken = socialLoginService.loginWithCode(provider, code)
         return ResponseEntity.ok(loginToken)
     }

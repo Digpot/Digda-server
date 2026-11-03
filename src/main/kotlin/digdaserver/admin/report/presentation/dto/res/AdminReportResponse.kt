@@ -1,9 +1,11 @@
 package digdaserver.admin.report.presentation.dto.res
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import digdaserver.domain.report.domain.entity.Report
 import digdaserver.domain.report.domain.entity.ReportReason
 import digdaserver.domain.report.domain.entity.ReportStatus
 import digdaserver.domain.report.domain.entity.ReportTargetType
+import digdaserver.global.common.masking.MaskedName
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
@@ -17,6 +19,7 @@ data class AdminReportResponse(
     val reporterId: String,
 
     @Schema(description = "신고자 이름")
+    @get:JsonSerialize(using = MaskedName::class)
     val reporterName: String,
 
     @Schema(description = "대상 종류")
@@ -29,6 +32,7 @@ data class AdminReportResponse(
     val reportedUserId: String?,
 
     @Schema(description = "피신고자 이름. 해석 불가 시 null")
+    @get:JsonSerialize(using = MaskedName::class)
     val reportedUserName: String?,
 
     @Schema(description = "피신고자의 현재 이용 제한 상태. 해석 불가 시 null")

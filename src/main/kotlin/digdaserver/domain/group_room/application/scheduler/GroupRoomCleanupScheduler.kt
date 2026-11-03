@@ -171,14 +171,18 @@ class GroupRoomChildPurger(
         val notification =
             run("DELETE FROM Notification n WHERE n.groupRoomId = :gid", "gid" to groupRoomId)
 
+        // 월간 하이라이트 — group_room 과 FK 가 없어 직접 정리.
+        val highlight =
+            run("DELETE FROM MonthlyHighlight h WHERE h.groupRoomId = :gid", "gid" to groupRoomId)
+
         // 직전 bulk delete 들이 본체 cascade 삭제보다 먼저 DB 에 반영되도록 flush.
         em.flush()
         log.info(
             "action=그룹방 자식 데이터 정리, groupRoomId={}, quizAttempt={}, quiz={}, equipped={}, " +
                 "ownedItem={}, character={}, diaryLike={}, diaryReaction={}, diaryComment={}, " +
-                "scheduleComment={}, expense={}, notification={}",
+                "scheduleComment={}, expense={}, notification={}, highlight={}",
             groupRoomId, quizAttempt, quiz, equipped, ownedItem, character,
-            diaryLike, diaryReaction, diaryComment, scheduleComment, expense, notification
+            diaryLike, diaryReaction, diaryComment, scheduleComment, expense, notification, highlight
         )
     }
 }

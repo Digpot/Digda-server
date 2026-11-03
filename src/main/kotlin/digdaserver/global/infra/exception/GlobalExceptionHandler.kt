@@ -130,7 +130,7 @@ class GlobalExceptionHandler {
                     .body(
                         ErrorResponse.of(
                             ErrorCode.PARAMETER_GRAMMAR_ERROR,
-                            root?.message ?: "잘못된 요청입니다."
+                            "요청 본문 형식이 올바르지 않습니다."
                         )
                     )
             }

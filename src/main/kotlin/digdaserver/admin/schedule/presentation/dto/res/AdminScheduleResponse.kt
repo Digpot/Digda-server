@@ -1,6 +1,8 @@
 package digdaserver.admin.schedule.presentation.dto.res
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import digdaserver.domain.schedule.domain.entity.Schedule
+import digdaserver.global.common.masking.MaskedName
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -22,6 +24,7 @@ data class AdminScheduleResponse(
     val createdBy: String,
 
     @Schema(description = "작성자 이름")
+    @get:JsonSerialize(using = MaskedName::class)
     val authorName: String,
 
     @Schema(description = "제목")

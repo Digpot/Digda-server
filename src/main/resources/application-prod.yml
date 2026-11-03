@@ -141,3 +141,12 @@ logging:
       total-size-cap: 1GB
       # 컨테이너가 며칠 죽어 있었어도 재기동 시 오래된 파일을 정리.
       clean-history-on-start: true
+
+
+# API 문서(Swagger)는 운영에서 끈다 — 엔드포인트 목록·DTO 구조가 통째로 공개돼 있었다.
+# 필요할 때만 서버 .env 에 SWAGGER_ENABLED=true 를 넣고 재기동한다.
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}

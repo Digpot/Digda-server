@@ -87,6 +87,10 @@ enum class ErrorCode(
     INVALID_WEATHER_VALUE("INVALID_WEATHER_VALUE", "날씨 값은 0~3 범위여야 합니다.", 400),
     INVALID_MOOD_VALUE("INVALID_MOOD_VALUE", "기분 값은 0~3 범위여야 합니다.", 400),
 
+    // ── Highlight ──
+    HIGHLIGHT_NOT_FOUND("HIGHLIGHT_NOT_FOUND", "해당 월의 하이라이트가 없어요.", 404),
+    HIGHLIGHT_FUTURE_MONTH("HIGHLIGHT_FUTURE_MONTH", "이번 달 이후의 하이라이트는 만들 수 없어요.", 400),
+
     // ── Comment ──
     COMMENT_NOT_FOUND("COMMENT_NOT_FOUND", "존재하지 않는 댓글입니다.", 404),
     COMMENT_TOO_LONG("COMMENT_TOO_LONG", "댓글은 200자 이하여야 합니다.", 400),
@@ -182,5 +186,8 @@ enum class ErrorCode(
     ADMIN_PK_VALUE_MISSING("ADMIN_PK_VALUE_MISSING", "PK 값이 누락되었습니다.", 400),
     ADMIN_ROW_NOT_FOUND("ADMIN_ROW_NOT_FOUND", "해당 PK의 행을 찾을 수 없습니다.", 404),
     ADMIN_ROW_AFFECTED_INVALID("ADMIN_ROW_AFFECTED_INVALID", "행 수정/삭제에서 1행이 아닌 결과가 발생했습니다.", 500),
-    ADMIN_NO_FIELDS_TO_UPDATE("ADMIN_NO_FIELDS_TO_UPDATE", "수정할 컬럼이 없습니다.", 400);
+    ADMIN_NO_FIELDS_TO_UPDATE("ADMIN_NO_FIELDS_TO_UPDATE", "수정할 컬럼이 없습니다.", 400),
+    ADMIN_LOGIN_FAILED("ADMIN_LOGIN_FAILED", "이메일 또는 비밀번호가 올바르지 않습니다.", 401),
+    PII_REVEAL_PASSWORD_MISMATCH("PII_REVEAL_PASSWORD_MISMATCH", "비밀번호가 일치하지 않습니다.", 400),
+    TOO_MANY_ATTEMPTS("TOO_MANY_ATTEMPTS", "시도 횟수를 초과했습니다. 10분 뒤 다시 시도해 주세요.", 429);
 }

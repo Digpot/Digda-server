@@ -22,7 +22,8 @@ enum class NotificationType {
     DIKO_UNLOCKED,
     GAME_INVITE,
     INQUIRY_ANSWERED,
-    ANNOUNCEMENT;
+    ANNOUNCEMENT,
+    MONTHLY_HIGHLIGHT;
 
     @JsonValue
     fun toValue(): String = name.lowercase()

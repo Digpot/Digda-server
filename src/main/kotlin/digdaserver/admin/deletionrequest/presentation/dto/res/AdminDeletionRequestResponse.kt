@@ -1,8 +1,10 @@
 package digdaserver.admin.deletionrequest.presentation.dto.res
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import digdaserver.domain.deletionrequest.domain.entity.DeletionRequest
 import digdaserver.domain.deletionrequest.domain.entity.DeletionRequestStatus
 import digdaserver.domain.deletionrequest.domain.entity.DeletionRequestType
+import digdaserver.global.common.masking.MaskedEmail
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
@@ -16,6 +18,7 @@ data class AdminDeletionRequestResponse(
     val type: DeletionRequestType,
 
     @Schema(description = "가입 이메일")
+    @get:JsonSerialize(using = MaskedEmail::class)
     val email: String,
 
     @Schema(description = "그룹방 이름(데이터 삭제 요청만)")

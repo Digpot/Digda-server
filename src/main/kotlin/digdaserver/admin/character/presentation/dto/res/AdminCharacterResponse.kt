@@ -1,8 +1,10 @@
 package digdaserver.admin.character.presentation.dto.res
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import digdaserver.domain.character.application.level.CharacterLevelTable
 import digdaserver.domain.character.domain.entity.CharacterStage
 import digdaserver.domain.character.domain.entity.GroupCharacter
+import digdaserver.global.common.masking.MaskedName
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
@@ -25,6 +27,7 @@ data class AdminCharacterResponse(
     val groupRoomName: String,
 
     @Schema(description = "방장 이름")
+    @get:JsonSerialize(using = MaskedName::class)
     val ownerName: String,
 
     @Schema(description = "그룹방 삭제 시각 (null = 활성)")

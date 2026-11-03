@@ -1,6 +1,8 @@
 package digdaserver.admin.grouproom.presentation.dto.res
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import digdaserver.domain.group_room.domain.entity.GroupRoom
+import digdaserver.global.common.masking.MaskedName
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
@@ -23,6 +25,7 @@ data class AdminGroupRoomResponse(
     val ownerId: String,
 
     @Schema(description = "방장 이름")
+    @get:JsonSerialize(using = MaskedName::class)
     val ownerName: String,
 
     @Schema(description = "마지막 활동 시각")

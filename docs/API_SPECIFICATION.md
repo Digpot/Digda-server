@@ -13,7 +13,7 @@
 | 서버 | Spring Boot (Kotlin) + JPA(MySQL) + Redis |
 | 인증 방식 | 소셜 로그인(카카오·네이버·애플) + 관리자 계정 + JWT (Access/Refresh) |
 | API 스타일 | RESTful JSON |
-| Base URL | 호스트 직하 (context-path 없음). 예: `https://api.digda.app` |
+| Base URL | 호스트 직하 (context-path 없음). 예: `https://<API_HOST>` (실제 도메인은 서버 .env / 앱 .env 로만 관리) |
 | 날짜 형식 | ISO 8601 (`LocalDate` `2026-06-17`, `LocalTime` `09:00`, `LocalDateTime`) |
 | 식별자 | 사용자 = UUID(BINARY16), 그 외 도메인 = Long(auto-increment) |
 | 에러 응답 | `ErrorCode` 기반 `{ code, message }` (HTTP status 동봉) |
@@ -516,7 +516,8 @@ Authorization: Bearer {accessToken}
 
 | 도메인 | 메서드 | 경로 | 설명 |
 |--------|--------|------|------|
-| Auth | POST | `/api/admin/auth/login` | 관리자 로그인 (이메일/비밀번호, 비인증 허용) |
+| Auth | POST | `/api/admin/auth/login` | 관리자 로그인 (이메일/비밀번호, 비인증 허용). 5회 실패 시 10분 잠금(429), 실패 사유는 구분하지 않음(`ADMIN_LOGIN_FAILED`) |
+| PII | POST | `/api/admin/pii/reveal` | 개인정보 원문 열람 — 관리자 비밀번호 재확인 (`password`, `targetType` USER/DELETION_REQUEST/DB_ROW, `targetId` 또는 `table`+`pk`). 5회 실패 시 10분 잠금, 열람 이력은 `user_action_log`(targetType=PII_REVEAL) |
 | Dashboard | GET | `/api/admin/dashboard/summary` | 요약 통계 (사용자/그룹방/일기/일정/댓글/할일) |
 | User | GET | `/api/admin/users` | 사용자 목록 (키워드/권한 필터, 페이징) |
 | User | GET | `/api/admin/users/{userId}` | 사용자 상세 |
@@ -565,13 +566,15 @@ Authorization: Bearer {accessToken}
 | RegionMap | DELETE | `/api/admin/region-map?groupRoomId=` | 그룹 채움 전체 해제 |
 | DB | GET | `/api/admin/db/tables` | 테이블 목록 |
 | DB | GET | `/api/admin/db/tables/{name}/columns` | 컬럼 정보 |
-| DB | GET | `/api/admin/db/tables/{name}/rows` | 행 조회 (페이징·정렬, size≤200) |
+| DB | GET | `/api/admin/db/tables/{name}/rows` | 행 조회 (페이징·정렬, size≤200). 개인정보 컬럼은 마스킹, 비밀번호·토큰 컬럼은 `[REDACTED]` |
 | DB | POST | `/api/admin/db/tables/{name}/rows` | 행 추가 |
 | DB | PATCH | `/api/admin/db/tables/{name}/rows` | 행 수정 (PK 매칭, 1행 강제) |
 | DB | DELETE | `/api/admin/db/tables/{name}/rows` | 행 삭제 (PK 매칭, 1행 강제) |
 | Log | GET | `/api/admin/logs` | 유저 행동 로그 (actor/action/기간/키워드 필터) |
 
-**관련 어드민 에러**: `ADMIN_NOT_FOUND`, `ADMIN_PASSWORD_MISMATCH`, `NOT_ADMIN_USER`, `INVALID_ROLE`, `USER_RESTRICTED`, `ADMIN_TABLE_NOT_ALLOWED`, `ADMIN_TABLE_NOT_FOUND`, `ADMIN_COLUMN_NOT_ALLOWED`, `ADMIN_PK_NOT_FOUND`, `ADMIN_PK_VALUE_MISSING`, `ADMIN_ROW_NOT_FOUND`, `ADMIN_ROW_AFFECTED_INVALID`, `ADMIN_NO_FIELDS_TO_UPDATE`
+**개인정보 마스킹**: 어드민 응답의 사용자 이름(`name`, `authorName`, `ownerName`, `reporterName`, `userName` …)과 이메일은 서버가 마스킹해 내려준다 (홍길동→홍*동, chltm517@naver.com→ch******@naver.com). 원문은 `/api/admin/pii/reveal` 로만.
+
+**관련 어드민 에러**: `ADMIN_LOGIN_FAILED`, `PII_REVEAL_PASSWORD_MISMATCH`, `TOO_MANY_ATTEMPTS`, `NOT_ADMIN_USER`, `INVALID_ROLE`, `USER_RESTRICTED`, `ADMIN_TABLE_NOT_ALLOWED`, `ADMIN_TABLE_NOT_FOUND`, `ADMIN_COLUMN_NOT_ALLOWED`, `ADMIN_PK_NOT_FOUND`, `ADMIN_PK_VALUE_MISSING`, `ADMIN_ROW_NOT_FOUND`, `ADMIN_ROW_AFFECTED_INVALID`, `ADMIN_NO_FIELDS_TO_UPDATE`
 
 ---
 
@@ -699,3 +702,18 @@ Authorization: Bearer {accessToken}
 DB 구조는 [`ERD.md`](./ERD.md) 참고 — **39개 MySQL 테이블 + 2개 Redis 엔티티**.
 주요 도메인: 사용자/인증, 그룹방·일정·일기·할일·댓글, 그룹 캐릭터(모찌)·퀴즈·상점, 칭호,
 신고/차단/숨김, 문의, 삭제 요청, 어드민(자격증명·공지·감사 로그·앱 설정).
+
+---
+
+## 월간 하이라이트 (v2.6.0)
+
+매월 1일 00:00(KST) 스케줄러가 지난달 일기를 그룹별로 집계해 `monthly_highlight` 에 저장하고, 앱은 저장된 결과만 조회한다. 지난달 일기가 없는 그룹은 만들지 않는다. (group_room_id, target_month) 유니크로 중복 생성 방지.
+
+| Method | Path | 설명 |
+|---|---|---|
+| GET | `/group-rooms/{groupRoomId}/highlights` | 생성된 하이라이트 목록(최신 월 먼저). `{highlights:[{month,year,monthValue,title,totalDiaryCount,coverImageUrl,generatedAt}]}` |
+| GET | `/group-rooms/{groupRoomId}/highlights/{month}` | 상세. `month`=`yyyy-MM`. 없으면 404 `HIGHLIGHT_NOT_FOUND` |
+
+상세 응답: `month, year, monthValue, title, groupRoomName, generatedAt, totalDiaryCount, activeDays, daysInMonth, members[{userId,name,profileImage,diaryCount}], topWriters[], coverImageUrl?, photos[], featuredDiaries[{diaryId,title,excerpt,date,authorName,imageUrl?,likeCount,reactionCount,commentCount}], topLocation?, busiestWeekday?(1=월~7=일), summary, closingMessage`
+
+알림: `MONTHLY_HIGHLIGHT` (relatedType=`HIGHLIGHT`, relatedId=`yyyyMM`). 일정 댓글 `createdAt` 은 NULL 가능(nullable).
